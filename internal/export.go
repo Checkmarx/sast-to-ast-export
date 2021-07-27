@@ -3,7 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -14,18 +14,17 @@ type Export struct {
 	Projects []Project `json:"groups"`
 }
 
-func (c *Export) SaveToFile(basePath, prefix string) (string, error) {
-	fileName := createFileName(prefix, "json")
+func (c *Export) WriteToFile(file *os.File) error {
 	jsonData, err := json.Marshal(c)
 	if err != nil {
-		return fileName, err
+		return err
 	}
-	filePath := filepath.Join(basePath, fileName)
-	err = ioutil.WriteFile(filePath, jsonData, 0600)
-	return fileName, err
+	_, err = file.Write(jsonData)
+	return err
 }
 
-func createFileName(prefix, extension string) string {
+func (c *Export) CreateFileName(basePath, prefix string) string {
 	currentTime := time.Now()
-	return fmt.Sprintf("%s-%s.%s", prefix, currentTime.Format("2006-01-02-15-04-05"), extension)
+	fileName := fmt.Sprintf("%s-%s.json", prefix, currentTime.Format("2006-01-02-15-04-05"))
+	return filepath.Join(basePath, fileName)
 }

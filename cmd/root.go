@@ -68,8 +68,18 @@ to quickly create a Cobra application.`,
 
 		// generate export file
 		export := internal.Export{Projects: projects}
-		fileName, err := export.SaveToFile(outputPath, ExportFilePrefix)
+		fileName := export.CreateFileName(outputPath, ExportFilePrefix)
+		file, err := os.Create(fileName)
 		if err != nil {
+			panic(err)
+		}
+		if err := export.WriteToFile(file); err != nil {
+			panic(err)
+		}
+		if err := file.Sync(); err != nil {
+			panic(err)
+		}
+		if err := file.Close(); err != nil {
 			panic(err)
 		}
 
