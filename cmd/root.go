@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	ProductName = "sast-export"
-	UsernameEnvVar = "SAST_EXPORT_USERNAME"
-	PasswordEnvVar = "SAST_EXPORT_PASSWORD"
+	ProductName      = "sast-export"
+	UsernameEnvVar   = "SAST_EXPORT_USERNAME"
+	PasswordEnvVar   = "SAST_EXPORT_PASSWORD" //nolint:gosec
+	ExportFilePrefix = "sast-export"
 )
 
 var cfgFile string
@@ -36,6 +37,10 @@ to quickly create a Cobra application.`,
 		//fmt.Printf("cfgFile: \"%v\"\n", cfgFile)
 
 		url := args[0]
+		outputPath, err := cmd.Flags().GetString("output")
+		if err != nil {
+			panic(err)
+		}
 		username := os.Getenv(UsernameEnvVar)
 		password := os.Getenv(PasswordEnvVar)
 		if username == "" {
@@ -54,17 +59,21 @@ to quickly create a Cobra application.`,
 		if err := client.Authenticate(username, password); err != nil {
 			panic(err)
 		}
-		fmt.Printf("Access token: %v\n", client.Token)
 
 		// fetch data via API
 		projects, err := client.GetProjects()
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Projects: %v\n", projects)
 
 		// generate export file
-		// TODO
+		export := internal.Export{Projects: projects}
+		fileName, err := export.SaveToFile(outputPath, ExportFilePrefix)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("SAST data exported to %s", fileName)
 	},
 }
 
