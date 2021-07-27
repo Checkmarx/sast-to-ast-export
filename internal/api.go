@@ -63,5 +63,3 @@ func (c *SASTClient) GetProjects() ([]Project, error) {
 	err = json.Unmarshal(responseBody, &projects)
 	return projects, err
 }
-
-func (c *SASTClient)
