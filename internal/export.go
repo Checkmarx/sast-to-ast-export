@@ -16,7 +16,7 @@ type Export struct {
 type ExportData struct {
 	Users    []User    `json:"users"`
 	Roles    []Role    `json:"roles"`
-	Projects []Project `json:"groups"`
+	Projects []Project `json:"projects"`
 }
 
 func (c *Export) WriteToFile(file *os.File) error {
