@@ -3,8 +3,8 @@
 1. Create an admin user in SAST
 2. Assign credentials in environment:
 ```
-   export SAST_EXPORT_USERNAME='myusername'
-   export SAST_EXPORT_PASSWORD='mypassw0rd'
+   export SAST_EXPORT_USERNAME='set-your-username'
+   export SAST_EXPORT_PASSWORD='set-your-password'
 ```
 3. Run export
 ```
