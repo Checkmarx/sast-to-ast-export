@@ -52,7 +52,8 @@ func TestSASTClient_Authenticate(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, client.Token)
-		assert.Equal(t, "jwttoken", client.Token.AccessToken)
+		expected := &AccessToken{AccessToken: "jwttoken", TokenType: "Bearer", ExpiresIn: 1234}
+		assert.Equal(t, client.Token, expected)
 	})
 
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
