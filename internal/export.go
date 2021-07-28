@@ -14,6 +14,19 @@ type Export struct {
 	Projects []Project `json:"groups"`
 }
 
+func NewExport(client *SASTClient) (*Export, error) {
+	projects, err := client.GetProjects()
+	if err != nil {
+		return nil, err
+	}
+
+	export := Export{
+		Projects: projects,
+	}
+
+	return &export, nil
+}
+
 func (c *Export) WriteToFile(file *os.File) error {
 	jsonData, err := json.Marshal(c)
 	if err != nil {
