@@ -10,10 +10,9 @@ import (
 )
 
 const (
-	ProductName      = "sast-export"
-	UsernameEnvVar   = "SAST_EXPORT_USERNAME"
-	PasswordEnvVar   = "SAST_EXPORT_PASSWORD" //nolint:gosec
-	ExportFilePrefix = "sast-export"
+	ProductName    = "sast-export"
+	UsernameEnvVar = "SAST_EXPORT_USERNAME"
+	PasswordEnvVar = "SAST_EXPORT_PASSWORD" //nolint:gosec
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -62,9 +61,10 @@ to quickly create a Cobra application.`,
 
 		// generate export
 		export := internal.Export{
-			Projects: projects,
+			FilePrefix: ProductName,
+			Data:       internal.ExportData{Projects: projects},
 		}
-		fileName := export.CreateFileName(outputPath, ExportFilePrefix)
+		fileName := export.CreateFileName(outputPath)
 		file, err := os.Create(fileName)
 		if err != nil {
 			panic(err)
