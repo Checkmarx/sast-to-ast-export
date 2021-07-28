@@ -1,4 +1,4 @@
-module ast-sast-export
+module sast-export
 
 go 1.16
 

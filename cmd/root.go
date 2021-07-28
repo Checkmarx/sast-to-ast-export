@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"ast-sast-export/internal"
 	"fmt"
 	"net/http"
 	"os"
+	"sast-export/internal"
 
 	"github.com/spf13/cobra"
 )
