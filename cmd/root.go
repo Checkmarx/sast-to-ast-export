@@ -79,7 +79,7 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
-		fmt.Printf("SAST data exported to %s", fileName)
+		fmt.Printf("SAST data exported to %s\n", fileName)
 	},
 }
 
