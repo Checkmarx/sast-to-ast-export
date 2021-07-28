@@ -7,7 +7,7 @@ type AccessToken struct {
 }
 
 type User struct {
-	Id            int    `json:"id"`
+	ID            int    `json:"id"`
 	UserName      string `json:"userName"`
 	LastLoginDate string `json:"lastLoginDate"`
 	RoleIds       []int  `json:"roleIds"`
@@ -17,14 +17,14 @@ type User struct {
 }
 
 type Role struct {
-	Id          int    `json:"id"`
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
 type Project struct {
-	Id       int    `json:"id"`
-	TeamId   int    `json:"teamId"`
+	ID       int    `json:"id"`
+	TeamID   int    `json:"teamId"`
 	Name     string `json:"name"`
 	IsPublic bool   `json:"isPublic"`
 }
