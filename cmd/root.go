@@ -50,8 +50,8 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			panic(err)
 		}
-		if err := client.Authenticate(username, password); err != nil {
-			panic(err)
+		if err2 := client.Authenticate(username, password); err2 != nil {
+			panic(err2)
 		}
 
 		// fetch data
@@ -89,6 +89,7 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
+//nolint:gochecknoinits
 func init() {
 	rootCmd.Flags().StringP("output", "o", "", "Output path")
 }

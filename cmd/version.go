@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//nolint:gochecknoinits
 func init() {
 	rootCmd.AddCommand(versionCmd)
 }

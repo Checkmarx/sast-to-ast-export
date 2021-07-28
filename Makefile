@@ -1,7 +1,14 @@
 BUILD = ./build
 LD_FLAGS = -ldflags="-s -w"
 
-all: windows_amd64 windows_386 linux_amd64 linux_386 darwin_amd64
+lint:
+	go fmt ./...
+	golangci-lint run
+
+build: windows_amd64 windows_386 linux_amd64 linux_386 darwin_amd64
+
+unit_test:
+	go test -short ./...
 
 clean:
 	rm -r $(BUILD)

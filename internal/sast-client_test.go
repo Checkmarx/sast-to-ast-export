@@ -10,7 +10,9 @@ import (
 )
 
 const (
-	BaseURL = "http://127.0.0.1"
+	BaseURL                 = "http://127.0.0.1"
+	ErrorResponseJSON       = `"error"`
+	InvalidDataResponseJSON = `invalid data`
 )
 
 type HTTPClientMock struct {
@@ -54,11 +56,10 @@ func TestSASTClient_Authenticate(t *testing.T) {
 	})
 
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
-		responseJSON := `"error"`
 		response := http.Response{
 			StatusCode: 400,
 			Status:     "Bad Request",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
+			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
 		}
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
@@ -70,11 +71,10 @@ func TestSASTClient_Authenticate(t *testing.T) {
 	})
 
 	t.Run("returns error if can't parse response", func(t *testing.T) {
-		responseJSON := `invalid data`
 		response := http.Response{
 			StatusCode: 200,
 			Status:     "OK",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
+			Body:       ioutil.NopCloser(bytes.NewBufferString(InvalidDataResponseJSON)),
 		}
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
@@ -115,11 +115,10 @@ func TestSASTClient_GetProjects(t *testing.T) {
 	})
 
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
-		responseJSON := `"error"`
 		response := http.Response{
 			StatusCode: 400,
 			Status:     "Bad Request",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
+			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
 		}
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
@@ -132,11 +131,10 @@ func TestSASTClient_GetProjects(t *testing.T) {
 	})
 
 	t.Run("returns error if can't parse response", func(t *testing.T) {
-		responseJSON := `invalid data`
 		response := http.Response{
 			StatusCode: 200,
 			Status:     "OK",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
+			Body:       ioutil.NopCloser(bytes.NewBufferString(InvalidDataResponseJSON)),
 		}
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
