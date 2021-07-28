@@ -1,5 +1,6 @@
 BUILD = ./build
 LD_FLAGS = -ldflags="-s -w"
+
 all: windows_amd64 windows_386 linux_amd64 linux_386 darwin_amd64
 
 clean:
