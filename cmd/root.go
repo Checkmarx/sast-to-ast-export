@@ -3,6 +3,7 @@ package cmd
 import (
 	"ast-sast-export/internal"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -45,7 +46,7 @@ to quickly create a Cobra application.`,
 		}
 
 		// create api client and authenticate
-		client, err := internal.NewSASTClient(url)
+		client, err := internal.NewSASTClient(url, &http.Client{})
 		if err != nil {
 			panic(err)
 		}
@@ -53,10 +54,15 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
-		// generate export
-		export, err := internal.NewExport(client)
+		// fetch data
+		projects, err := client.GetProjects()
 		if err != nil {
 			panic(err)
+		}
+
+		// generate export
+		export := internal.Export{
+			Projects: projects,
 		}
 		fileName := export.CreateFileName(outputPath, ExportFilePrefix)
 		file, err := os.Create(fileName)

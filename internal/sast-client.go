@@ -7,16 +7,20 @@ import (
 	"net/http"
 )
 
+type HTTPAdapter interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type SASTClient struct {
 	BaseURL string
-	Adapter *http.Client
+	Adapter HTTPAdapter
 	Token   *AccessToken
 }
 
-func NewSASTClient(baseURL string) (*SASTClient, error) {
+func NewSASTClient(baseURL string, adapter HTTPAdapter) (*SASTClient, error) {
 	client := SASTClient{
 		BaseURL: baseURL,
-		Adapter: &http.Client{},
+		Adapter: adapter,
 	}
 	return &client, nil
 }
@@ -26,40 +30,52 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	if err != nil {
 		return err
 	}
-	resp, err := c.Adapter.Do(req)
+
+	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
 		return err
 	}
+
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("invalid response: %v", resp)
-	}
 	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
+
 	c.Token = &AccessToken{}
 	return json.Unmarshal(responseBody, c.Token)
 }
 
 func (c *SASTClient) GetProjects() ([]Project, error) {
 	var projects []Project
+
 	req, err := CreateGetProjectsRequest(c.BaseURL, c.Token)
 	if err != nil {
 		return projects, err
 	}
-	resp, err := c.Adapter.Do(req)
+
+	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
 		return projects, err
 	}
+
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return projects, fmt.Errorf("invalid response: %v", resp)
-	}
 	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
+
 	err = json.Unmarshal(responseBody, &projects)
 	return projects, err
+}
+
+func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
+	resp, err := c.Adapter.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != expectStatusCode {
+		return nil, fmt.Errorf("invalid response: %v", resp)
+	}
+	return resp, nil
 }
