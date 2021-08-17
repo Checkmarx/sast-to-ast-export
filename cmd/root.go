@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"sast-export/internal"
@@ -48,47 +48,54 @@ to quickly create a Cobra application.`,
 			panic(err2)
 		}
 
-		// fetch data
-		projects, err := client.GetProjects()
+		export, err := internal.CreateExport(ProductName)
+		if err != nil {
+			panic(err)
+		}
+		defer os.RemoveAll(export.TmpDir)
+
+		// fetch users
+		usersData, err := client.GetUsersResponseBody()
+		if err != nil {
+			panic(err)
+		}
+		if exportErr := export.AddFile(internal.UsersFile, usersData); exportErr != nil {
+			panic(exportErr)
+		}
+
+		// fetch teams
+		teamsData, err := client.GetTeamsResponseBody()
+		if err != nil {
+			panic(err)
+		}
+		if exportErr := export.AddFile(internal.TeamsFile, teamsData); exportErr != nil {
+			panic(exportErr)
+		}
+
+		zipFileName, zipErr := export.CreateZip(ProductName)
+		if zipErr != nil {
+			panic(zipErr)
+		}
+		defer os.Remove(zipFileName)
+
+		// encrypt
+		plaintext, err := ioutil.ReadFile(zipFileName)
 		if err != nil {
 			panic(err)
 		}
 
-		// generate export
-		export := internal.Export{
-			FilePrefix: ProductName,
-			Data:       internal.ExportData{Projects: projects},
-		}
-		fileName := export.CreateFileName("")
-		buf := bytes.NewBufferString("")
-		if writeErr := export.WriteToFile(buf); writeErr != nil {
-			panic(writeErr)
-		}
-
-		// encrypt
-		plaintext := buf.String()
-		ciphertext, err := internal.Encrypt(internal.RSAPublicKey, plaintext)
+		ciphertext, err := internal.Encrypt(internal.RSAPublicKey, string(plaintext))
 		if err != nil {
 			panic(err)
 		}
 
 		// write encrypted data to file
-		file, err := os.Create(fileName)
-		if err != nil {
-			panic(err)
-		}
-		_, err = file.Write([]byte(ciphertext))
-		if err != nil {
-			panic(err)
-		}
-		if err := file.Sync(); err != nil {
-			panic(err)
-		}
-		if err := file.Close(); err != nil {
-			panic(err)
+		exportFileName := internal.CreateFileName(".", ProductName)
+		if exportErr := ioutil.WriteFile(exportFileName, []byte(ciphertext), 0600); exportErr != nil {
+			panic(exportErr)
 		}
 
-		fmt.Printf("SAST data exported to %s\n", fileName)
+		fmt.Printf("SAST data exported to %s\n", exportFileName)
 	},
 }
 

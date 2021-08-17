@@ -25,8 +25,17 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	return req, nil
 }
 
-func CreateGetProjectsRequest(baseURL string, token *AccessToken) (*http.Request, error) {
-	resp, err := http.NewRequest("GET", fmt.Sprintf("%s/CxRestAPI/help/projects", baseURL), nil)
+func CreateGetUsersRequest(baseURL string, token *AccessToken) (*http.Request, error) {
+	resp, err := http.NewRequest("GET", fmt.Sprintf("%s/CxRestAPI/auth/Users", baseURL), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
+	return resp, nil
+}
+
+func CreateGetTeamsRequest(baseURL string, token *AccessToken) (*http.Request, error) {
+	resp, err := http.NewRequest("GET", fmt.Sprintf("%s/CxRestAPI/auth/Teams", baseURL), nil)
 	if err != nil {
 		return nil, err
 	}
