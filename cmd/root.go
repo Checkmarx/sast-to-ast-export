@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,14 +11,12 @@ import (
 )
 
 const (
-	ProductName    = "sast-export"
-	UsernameEnvVar = "SAST_EXPORT_USERNAME"
-	PasswordEnvVar = "SAST_EXPORT_PASSWORD" //nolint:gosec
+	ProductName = "cxsast_exporter"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   fmt.Sprintf("%s [SAST url]", ProductName),
+	Use:   ProductName,
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
@@ -25,23 +24,19 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// process input
-		url := args[0]
-		outputPath, err := cmd.Flags().GetString("output")
+		url, err := cmd.Flags().GetString("url")
 		if err != nil {
 			panic(err)
 		}
-		username := os.Getenv(UsernameEnvVar)
-		password := os.Getenv(PasswordEnvVar)
-		if username == "" {
-			fmt.Printf("please set api username for export with %s env var\n", UsernameEnvVar)
-			os.Exit(1)
+		username, err := cmd.Flags().GetString("user")
+		if err != nil {
+			panic(err)
 		}
-		if password == "" {
-			fmt.Printf("please set api password for export with %s env var\n", PasswordEnvVar)
-			os.Exit(1)
+		password, err := cmd.Flags().GetString("pass")
+		if err != nil {
+			panic(err)
 		}
 
 		// create api client and authenticate
@@ -64,14 +59,26 @@ to quickly create a Cobra application.`,
 			FilePrefix: ProductName,
 			Data:       internal.ExportData{Projects: projects},
 		}
-		fileName := export.CreateFileName(outputPath)
+		fileName := export.CreateFileName("")
+		buf := bytes.NewBufferString("")
+		if err := export.WriteToFile(buf); err != nil {
+			panic(err)
+		}
+
+		// encrypt
+		plaintext := buf.String()
+		ciphertext, err := internal.Encrypt(internal.RSAPublicKey, plaintext)
+		if err != nil {
+			panic(err)
+		}
+
+		// write encrypted export to file
 		file, err := os.Create(fileName)
 		if err != nil {
 			panic(err)
 		}
-		if err := export.WriteToFile(file); err != nil {
-			panic(err)
-		}
+
+		_, err = file.Write([]byte(ciphertext))
 		if err := file.Sync(); err != nil {
 			panic(err)
 		}
@@ -91,5 +98,16 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	rootCmd.Flags().StringP("output", "o", "", "Output path")
+	rootCmd.Flags().StringP("user", "", "", "SAST admin username")
+	rootCmd.Flags().StringP("pass", "", "", "SAST admin password")
+	rootCmd.Flags().StringP("url", "", "", "SAST url")
+	if err := rootCmd.MarkFlagRequired("user"); err != nil {
+		panic(err)
+	}
+	if err := rootCmd.MarkFlagRequired("pass"); err != nil {
+		panic(err)
+	}
+	if err := rootCmd.MarkFlagRequired("url"); err != nil {
+		panic(err)
+	}
 }

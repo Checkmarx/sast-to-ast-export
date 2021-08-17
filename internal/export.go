@@ -3,7 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"io"
 	"path/filepath"
 	"time"
 )
@@ -19,12 +19,12 @@ type ExportData struct {
 	Projects []Project `json:"projects"`
 }
 
-func (c *Export) WriteToFile(file *os.File) error {
+func (c *Export) WriteToFile(out io.Writer) error {
 	jsonData, err := json.Marshal(c.Data)
 	if err != nil {
 		return err
 	}
-	_, err = file.Write(jsonData)
+	_, err = io.WriteString(out, string(jsonData))
 	return err
 }
 
