@@ -13,8 +13,12 @@ import (
 )
 
 const (
-	UsersFile = "users.json"
-	TeamsFile = "teams.json"
+	UsersFileName        = "users.json"
+	TeamsFileName        = "teams.json"
+	EncryptedKeyFileName = "key.enc.bin"
+	EncryptedZipFileName = "zip.enc.bin"
+	SymmetricKeySize     = 32
+	FilePerm             = 0600
 )
 
 type Export struct {
@@ -36,7 +40,7 @@ func (e *Export) AddFile(fileName string, data []byte) error {
 	e.FileList = append(e.FileList, fileName)
 
 	usersFile := path.Join(e.TmpDir, fileName)
-	return ioutil.WriteFile(usersFile, data, 0600)
+	return ioutil.WriteFile(usersFile, data, FilePerm)
 }
 
 func (e *Export) CreateZip(prefix string) (string, error) {
@@ -45,41 +49,47 @@ func (e *Export) CreateZip(prefix string) (string, error) {
 		log.Fatal(err)
 	}
 
-	zipWriter := zip.NewWriter(tmpZipFile)
+	zipErr := CreateZipFile(tmpZipFile, e.FileList)
 
-	for _, fileName := range e.FileList {
+	return tmpZipFile.Name(), zipErr
+}
+
+func CreateFileName(basePath, prefix string) string {
+	currentTime := time.Now()
+	fileName := fmt.Sprintf("%s-%s.zip", prefix, currentTime.Format("2006-01-02-15-04-05"))
+	return filepath.Join(basePath, fileName)
+}
+
+func CreateZipFile(zipFile *os.File, fileList []string) error {
+	zipWriter := zip.NewWriter(zipFile)
+
+	for _, fileName := range fileList {
 		// open file to zip
-		file, fileErr := os.Open(path.Join(e.TmpDir, fileName))
+		file, fileErr := os.Open(fileName)
 		if fileErr != nil {
-			return "", fileErr
+			return fileErr
 		}
 
 		// create zip entry
 		entryFile, zipErr := zipWriter.Create(fileName)
 		if zipErr != nil {
-			return "", zipErr
+			return zipErr
 		}
 
 		// copy file to zip entry
 		if _, copyErr := io.Copy(entryFile, file); copyErr != nil {
-			return "", copyErr
+			return copyErr
 		}
 
 		// close file
 		if closeErr := file.Close(); closeErr != nil {
-			return "", closeErr
+			return closeErr
 		}
 	}
 
 	if zipCloseErr := zipWriter.Close(); zipCloseErr != nil {
-		return "", zipCloseErr
+		return zipCloseErr
 	}
 
-	return tmpZipFile.Name(), nil
-}
-
-func CreateFileName(basePath, prefix string) string {
-	currentTime := time.Now()
-	fileName := fmt.Sprintf("%s-%s.json", prefix, currentTime.Format("2006-01-02-15-04-05"))
-	return filepath.Join(basePath, fileName)
+	return nil
 }

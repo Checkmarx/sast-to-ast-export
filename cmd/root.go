@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"sast-export/internal"
 
 	"github.com/spf13/cobra"
@@ -39,6 +40,11 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
+		outputPath, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+
 		// create api client and authenticate
 		client, err := internal.NewSASTClient(url, &http.Client{})
 		if err != nil {
@@ -54,12 +60,17 @@ to quickly create a Cobra application.`,
 		}
 		defer os.RemoveAll(export.TmpDir)
 
+		// change to export dir
+		if chdirErr := os.Chdir(export.TmpDir); chdirErr != nil {
+			panic(chdirErr)
+		}
+
 		// fetch users
 		usersData, err := client.GetUsersResponseBody()
 		if err != nil {
 			panic(err)
 		}
-		if exportErr := export.AddFile(internal.UsersFile, usersData); exportErr != nil {
+		if exportErr := export.AddFile(internal.UsersFileName, usersData); exportErr != nil {
 			panic(exportErr)
 		}
 
@@ -68,7 +79,7 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			panic(err)
 		}
-		if exportErr := export.AddFile(internal.TeamsFile, teamsData); exportErr != nil {
+		if exportErr := export.AddFile(internal.TeamsFileName, teamsData); exportErr != nil {
 			panic(exportErr)
 		}
 
@@ -79,19 +90,45 @@ to quickly create a Cobra application.`,
 		defer os.Remove(zipFileName)
 
 		// encrypt
-		plaintext, err := ioutil.ReadFile(zipFileName)
+		zipContents, err := ioutil.ReadFile(zipFileName)
 		if err != nil {
 			panic(err)
 		}
 
-		ciphertext, err := internal.Encrypt(internal.RSAPublicKey, string(plaintext))
-		if err != nil {
-			panic(err)
+		symmetricKey, keyErr := internal.CreateSymmetricKey(internal.SymmetricKeySize)
+		if keyErr != nil {
+			panic(keyErr)
 		}
 
-		// write encrypted data to file
-		exportFileName := internal.CreateFileName(".", ProductName)
-		if exportErr := ioutil.WriteFile(exportFileName, []byte(ciphertext), 0600); exportErr != nil {
+		zipCiphertext, aesErr := internal.AESEncrypt(symmetricKey, zipContents)
+		if aesErr != nil {
+			panic(aesErr)
+		}
+
+		symmetricKeyCiphertext, rsaErr := internal.RSAEncrypt([]byte(internal.RSAPublicKey), symmetricKey)
+		if rsaErr != nil {
+			panic(rsaErr)
+		}
+
+		// create encrypted files
+		os.RemoveAll(export.TmpDir)
+		if ioErr := ioutil.WriteFile(internal.EncryptedKeyFileName, symmetricKeyCiphertext, internal.FilePerm); ioErr != nil {
+			panic(ioErr)
+		}
+		if ioErr := ioutil.WriteFile(internal.EncryptedZipFileName, zipCiphertext, internal.FilePerm); ioErr != nil {
+			panic(ioErr)
+		}
+
+		// package encrypted files
+		exportFileName := path.Join(outputPath, internal.CreateFileName(".", ProductName))
+		exportFile, ioErr := os.Create(exportFileName)
+		if ioErr != nil {
+			panic(ioErr)
+		}
+		defer exportFile.Close()
+
+		exportErr := internal.CreateZipFile(exportFile, []string{internal.EncryptedKeyFileName, internal.EncryptedZipFileName})
+		if exportErr != nil {
 			panic(exportErr)
 		}
 
