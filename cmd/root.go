@@ -61,8 +61,8 @@ to quickly create a Cobra application.`,
 		}
 		fileName := export.CreateFileName("")
 		buf := bytes.NewBufferString("")
-		if err := export.WriteToFile(buf); err != nil {
-			panic(err)
+		if writeErr := export.WriteToFile(buf); writeErr != nil {
+			panic(writeErr)
 		}
 
 		// encrypt
@@ -72,13 +72,15 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
-		// write encrypted export to file
+		// write encrypted data to file
 		file, err := os.Create(fileName)
 		if err != nil {
 			panic(err)
 		}
-
 		_, err = file.Write([]byte(ciphertext))
+		if err != nil {
+			panic(err)
+		}
 		if err := file.Sync(); err != nil {
 			panic(err)
 		}
