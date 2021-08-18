@@ -21,6 +21,15 @@ aws kms get-public-key --key-id $env:SAST_EXPORT_KMS_KEY_ID | jq -r .PublicKey >
 go run -ldflags "-X sast-export/internal.buildTimeRSAPublicKey=$(cat .\public.key)" . --user <admin_username> --pass <admin_password> --url http://localhost
 ```
 
+Once the public.key file is created we can run and test using the file reference:
+```
+go run -ldflags "-X sast-export/internal.buildTimeRSAPublicKey=$(cat .\public.key)" .
+```
+
+```
+go test -ldflags "-X sast-export/internal.buildTimeRSAPublicKey=$(cat .\public.key)" .\...
+```
+
 # How to build
 
 1. Set KMS key id environment variable
