@@ -14,11 +14,13 @@ import (
 )
 
 const (
-	plaintext = "this is a test"
+	plaintext           = "this is a test"
+	asymmetricKeyLength = 4096
+	symmetricKeyLength  = 32
 )
 
 func TestCreatePublicKeyFromPEM(t *testing.T) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := rsa.GenerateKey(rand.Reader, asymmetricKeyLength)
 	assert.NoError(t, err)
 
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
@@ -35,7 +37,7 @@ func TestCreatePublicKeyFromPEM(t *testing.T) {
 }
 
 func TestEncryptAsymmetric(t *testing.T) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := rsa.GenerateKey(rand.Reader, asymmetricKeyLength)
 	assert.NoError(t, err)
 
 	// encrypt
@@ -51,7 +53,7 @@ func TestEncryptAsymmetric(t *testing.T) {
 }
 
 func TestEncryptSymmetric(t *testing.T) {
-	key, keyErr := CreateSymmetricKey(32)
+	key, keyErr := CreateSymmetricKey(symmetricKeyLength)
 	assert.NoError(t, keyErr)
 
 	// encrypt
