@@ -47,11 +47,17 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	if err != nil {
 		return "", err
 	}
+	defer tmpZipFile.Close()
 
-	chdirErr := os.Chdir(e.TmpDir)
-	if chdirErr != nil {
+	initialPath, getwdErr := os.Getwd()
+	if getwdErr != nil {
+		return "", getwdErr
+	}
+
+	if chdirErr := os.Chdir(e.TmpDir); chdirErr != nil {
 		return "", chdirErr
 	}
+	defer os.Chdir(initialPath)
 
 	zipErr := CreateZipFile(tmpZipFile, e.FileList)
 	if zipErr != nil {

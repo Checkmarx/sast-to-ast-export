@@ -12,11 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	prefix = "ast-sast-export-test-export"
-)
-
 func TestCreateExport(t *testing.T) {
+	prefix := "cxsast-create-export"
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
 	defer export.Clean()
@@ -28,6 +25,7 @@ func TestCreateExport(t *testing.T) {
 }
 
 func TestExport_AddFile(t *testing.T) {
+	prefix := "cxsast-add-file"
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
 	defer export.Clean()
@@ -49,13 +47,24 @@ func TestExport_AddFile(t *testing.T) {
 }
 
 func TestExport_CreateExportPackage(t *testing.T) {
+	prefix := "cxsast-create-export-package"
 	tmpDir, err := ioutil.TempDir(os.TempDir(), prefix)
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func(path string) {
+		removeErr := os.RemoveAll(path)
+		assert.NoError(t, removeErr)
+	}(tmpDir)
 
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
-	defer export.Clean()
+	defer func(export *Export) {
+		cleanErr := export.Clean()
+		assert.NoError(t, cleanErr)
+
+		_, statErr := os.Stat(export.TmpDir)
+		assert.Error(t, statErr)
+		assert.True(t, os.IsNotExist(statErr))
+	}(&export)
 
 	addErr1 := export.AddFile("test1.txt", []byte("this is test1"))
 	assert.NoError(t, addErr1)
@@ -71,11 +80,12 @@ func TestExport_CreateExportPackage(t *testing.T) {
 	assert.False(t, info.IsDir())
 	assert.Contains(t, exportFileName, prefix)
 
-	chdirErr := os.Chdir(tmpDir)
-	assert.NoError(t, chdirErr)
-
 	zipReader, zipErr := zip.OpenReader(exportFileName)
 	assert.NoError(t, zipErr)
+	defer func(zipReader *zip.ReadCloser) {
+		closeErr := zipReader.Close()
+		assert.NoError(t, closeErr)
+	}(zipReader)
 
 	encryptedKeyFile, zipErr := zipReader.Open(EncryptedKeyFileName)
 	assert.NoError(t, zipErr)
@@ -91,6 +101,7 @@ func TestExport_CreateExportPackage(t *testing.T) {
 }
 
 func TestExport_Clean(t *testing.T) {
+	prefix := "cxsast-clean"
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
 
@@ -103,6 +114,7 @@ func TestExport_Clean(t *testing.T) {
 }
 
 func TestCreateExportFileName(t *testing.T) {
+	prefix := "cxsast-create-export-file-name"
 	now := time.Date(2021, time.August, 18, 12, 27, 34, 0, time.UTC)
 
 	result := CreateExportFileName(prefix, now)

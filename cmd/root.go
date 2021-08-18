@@ -59,11 +59,6 @@ to quickly create a Cobra application.`,
 		}
 		defer export.Clean()
 
-		// change to export dir
-		if chdirErr := os.Chdir(export.TmpDir); chdirErr != nil {
-			panic(chdirErr)
-		}
-
 		// fetch users and save to export dir
 		usersData, err := client.GetUsersResponseBody()
 		if err != nil {
