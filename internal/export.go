@@ -38,8 +38,8 @@ func CreateExport(prefix string) (Export, error) {
 func (e *Export) AddFile(fileName string, data []byte) error {
 	e.FileList = append(e.FileList, fileName)
 
-	usersFile := path.Join(e.TmpDir, fileName)
-	return ioutil.WriteFile(usersFile, data, FilePerm)
+	filePath := path.Join(e.TmpDir, fileName)
+	return ioutil.WriteFile(filePath, data, FilePerm)
 }
 
 func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) {
@@ -48,6 +48,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		return "", err
 	}
 
+	os.Chdir(e.TmpDir)
 	zipErr := CreateZipFile(tmpZipFile, e.FileList)
 	if zipErr != nil {
 		return "", zipErr

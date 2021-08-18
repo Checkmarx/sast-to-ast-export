@@ -8,7 +8,7 @@ lint:
 build: windows_amd64 windows_386 linux_amd64 linux_386 darwin_amd64
 
 unit_test:
-	go test -short ./... -coverprofile=coverage.out
+	go test -short $(LD_FLAGS) ./... -coverprofile=coverage.out
 
 clean:
 	rm -r $(BUILD)
