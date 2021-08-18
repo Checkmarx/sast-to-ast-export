@@ -12,14 +12,17 @@ import (
 	"io"
 )
 
+// buildTimeRSAPublicKey value is defined during build
 var buildTimeRSAPublicKey string
 
+// RSAPublicKey in PEM format
 var RSAPublicKey = fmt.Sprintf(`
 -----BEGIN PUBLIC KEY-----
 %s
 -----END PUBLIC KEY-----
 `, buildTimeRSAPublicKey)
 
+// CreatePublicKeyFromPEM converts a PEM block into an RSA PublicKey
 func CreatePublicKeyFromPEM(pemKey string) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode([]byte(pemKey))
 	if block == nil {
@@ -40,10 +43,12 @@ func CreatePublicKeyFromPEM(pemKey string) (*rsa.PublicKey, error) {
 	return publicKey, nil
 }
 
+// EncryptAsymmetric does RSA-OAEP with SHA-256
 func EncryptAsymmetric(key *rsa.PublicKey, plaintext []byte) ([]byte, error) {
 	return rsa.EncryptOAEP(sha256.New(), rand.Reader, key, plaintext, []byte{})
 }
 
+// EncryptSymmetric does AES-GCM
 func EncryptSymmetric(key, plaintext []byte) ([]byte, error) {
 	c, err := aes.NewCipher(key)
 	if err != nil {
@@ -66,6 +71,7 @@ func EncryptSymmetric(key, plaintext []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
+// CreateSymmetricKey creates a cryptographically secure random key of the specified length
 func CreateSymmetricKey(length int) ([]byte, error) {
 	key := make([]byte, length)
 
