@@ -20,33 +20,31 @@ var RSAPublicKey = fmt.Sprintf(`
 -----END PUBLIC KEY-----
 `, buildTimeRSAPublicKey)
 
-func RSAEncrypt(key, plaintext []byte) ([]byte, error) {
-	block, _ := pem.Decode(key)
+func CreatePublicKeyFromPEM(pemKey string) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(pemKey))
 	if block == nil {
-		return []byte{}, fmt.Errorf("failed to parse PEM block containing the public key")
+		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	publicKey, ok := pub.(*rsa.PublicKey)
 
 	if !ok {
-		return []byte{}, fmt.Errorf("invalid public key")
+		return nil, fmt.Errorf("invalid public key")
 	}
 
-	label := []byte("")
-
-	// crypto/rand.Reader is a good source of entropy for randomizing the
-	// encryption function.
-	rng := rand.Reader
-
-	return rsa.EncryptOAEP(sha256.New(), rng, publicKey, plaintext, label)
+	return publicKey, nil
 }
 
-func AESEncrypt(key, plaintext []byte) ([]byte, error) {
+func EncryptAsymmetric(key *rsa.PublicKey, plaintext []byte) ([]byte, error) {
+	return rsa.EncryptOAEP(sha256.New(), rand.Reader, key, plaintext, []byte{})
+}
+
+func EncryptSymmetric(key, plaintext []byte) ([]byte, error) {
 	c, err := aes.NewCipher(key)
 	if err != nil {
 		return []byte{}, err

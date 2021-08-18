@@ -17,7 +17,7 @@ const (
 	plaintext = "this is a test"
 )
 
-func TestRSAEncrypt(t *testing.T) {
+func TestCreatePublicKeyFromPEM(t *testing.T) {
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NoError(t, err)
 
@@ -27,8 +27,19 @@ func TestRSAEncrypt(t *testing.T) {
 	publicKeyBlock := &pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes}
 	publicKey := pem.EncodeToMemory(publicKeyBlock)
 
+	result, err := CreatePublicKeyFromPEM(string(publicKey))
+
+	assert.NoError(t, err)
+	assert.Equal(t, rsaKey.PublicKey.E, result.E)
+	assert.Equal(t, rsaKey.PublicKey.N, result.N)
+}
+
+func TestEncryptAsymmetric(t *testing.T) {
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	assert.NoError(t, err)
+
 	// encrypt
-	ciphertext, encryptErr := RSAEncrypt(publicKey, []byte(plaintext))
+	ciphertext, encryptErr := EncryptAsymmetric(&rsaKey.PublicKey, []byte(plaintext))
 	assert.NoError(t, encryptErr)
 
 	// decrypt
@@ -39,12 +50,12 @@ func TestRSAEncrypt(t *testing.T) {
 	assert.Equal(t, plaintext, string(result))
 }
 
-func TestAESEncrypt(t *testing.T) {
+func TestEncryptSymmetric(t *testing.T) {
 	key, keyErr := CreateSymmetricKey(32)
 	assert.NoError(t, keyErr)
 
 	// encrypt
-	ciphertext, encryptErr := AESEncrypt(key, []byte(plaintext))
+	ciphertext, encryptErr := EncryptSymmetric(key, []byte(plaintext))
 	assert.NoError(t, encryptErr)
 
 	// decrypt

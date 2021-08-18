@@ -70,12 +70,17 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		return "", keyErr
 	}
 
-	zipCiphertext, aesErr := AESEncrypt(symmetricKey, zipContents)
+	zipCiphertext, aesErr := EncryptSymmetric(symmetricKey, zipContents)
 	if aesErr != nil {
 		return "", aesErr
 	}
 
-	symmetricKeyCiphertext, rsaErr := RSAEncrypt([]byte(RSAPublicKey), symmetricKey)
+	publicKey, pemErr := CreatePublicKeyFromPEM(RSAPublicKey)
+	if pemErr != nil {
+		panic(pemErr)
+	}
+
+	symmetricKeyCiphertext, rsaErr := EncryptAsymmetric(publicKey, symmetricKey)
 	if rsaErr != nil {
 		return "", rsaErr
 	}
