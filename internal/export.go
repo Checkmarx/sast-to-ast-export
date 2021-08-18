@@ -48,7 +48,11 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		return "", err
 	}
 
-	os.Chdir(e.TmpDir)
+	chdirErr := os.Chdir(e.TmpDir)
+	if chdirErr != nil {
+		return "", chdirErr
+	}
+
 	zipErr := CreateZipFile(tmpZipFile, e.FileList)
 	if zipErr != nil {
 		return "", zipErr
@@ -77,7 +81,9 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	}
 
 	// write encrypted zip and key to files
-	os.RemoveAll(e.TmpDir)
+	if removeErr := os.RemoveAll(e.TmpDir); removeErr != nil {
+		return "", removeErr
+	}
 	if ioErr := ioutil.WriteFile(EncryptedKeyFileName, symmetricKeyCiphertext, FilePerm); ioErr != nil {
 		return "", ioErr
 	}
