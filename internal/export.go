@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
 )
 
@@ -43,21 +42,66 @@ func (e *Export) AddFile(fileName string, data []byte) error {
 	return ioutil.WriteFile(usersFile, data, FilePerm)
 }
 
-func (e *Export) CreateZip(prefix string) (string, error) {
+func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) {
 	tmpZipFile, err := ioutil.TempFile(e.TmpDir, fmt.Sprintf("%s.*.zip", prefix))
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	zipErr := CreateZipFile(tmpZipFile, e.FileList)
+	if zipErr != nil {
+		return "", zipErr
+	}
+	tmpZipFileName := tmpZipFile.Name()
 
-	return tmpZipFile.Name(), zipErr
+	// encrypt zip and key
+	zipContents, err := ioutil.ReadFile(tmpZipFileName)
+	if err != nil {
+		return "", err
+	}
+
+	symmetricKey, keyErr := CreateSymmetricKey(SymmetricKeySize)
+	if keyErr != nil {
+		return "", keyErr
+	}
+
+	zipCiphertext, aesErr := AESEncrypt(symmetricKey, zipContents)
+	if aesErr != nil {
+		return "", aesErr
+	}
+
+	symmetricKeyCiphertext, rsaErr := RSAEncrypt([]byte(RSAPublicKey), symmetricKey)
+	if rsaErr != nil {
+		return "", rsaErr
+	}
+
+	// write encrypted zip and key to files
+	os.RemoveAll(e.TmpDir)
+	if ioErr := ioutil.WriteFile(EncryptedKeyFileName, symmetricKeyCiphertext, FilePerm); ioErr != nil {
+		return "", ioErr
+	}
+	if ioErr := ioutil.WriteFile(EncryptedZipFileName, zipCiphertext, FilePerm); ioErr != nil {
+		return "", ioErr
+	}
+
+	// create final zip with encrypted files
+	exportFileName := path.Join(outputPath, CreateExportFileName(prefix, time.Now()))
+	exportFile, ioErr := os.Create(exportFileName)
+	if ioErr != nil {
+		return "", ioErr
+	}
+	defer exportFile.Close()
+
+	exportErr := CreateZipFile(exportFile, []string{EncryptedKeyFileName, EncryptedZipFileName})
+	return exportFileName, exportErr
 }
 
-func CreateFileName(basePath, prefix string) string {
-	currentTime := time.Now()
-	fileName := fmt.Sprintf("%s-%s.zip", prefix, currentTime.Format("2006-01-02-15-04-05"))
-	return filepath.Join(basePath, fileName)
+func (e *Export) Clean() error {
+	return os.RemoveAll(e.TmpDir)
+}
+
+func CreateExportFileName(prefix string, now time.Time) string {
+	return fmt.Sprintf("%s-%s.zip", prefix, now.Format("2006-01-02-15-04-05"))
 }
 
 func CreateZipFile(zipFile *os.File, fileList []string) error {

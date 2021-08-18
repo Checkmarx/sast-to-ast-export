@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"path"
 	"sast-export/internal"
 
 	"github.com/spf13/cobra"
@@ -54,18 +52,19 @@ to quickly create a Cobra application.`,
 			panic(err2)
 		}
 
+		// start export
 		export, err := internal.CreateExport(ProductName)
 		if err != nil {
 			panic(err)
 		}
-		defer os.RemoveAll(export.TmpDir)
+		defer export.Clean()
 
 		// change to export dir
 		if chdirErr := os.Chdir(export.TmpDir); chdirErr != nil {
 			panic(chdirErr)
 		}
 
-		// fetch users
+		// fetch users and save to export dir
 		usersData, err := client.GetUsersResponseBody()
 		if err != nil {
 			panic(err)
@@ -74,7 +73,7 @@ to quickly create a Cobra application.`,
 			panic(exportErr)
 		}
 
-		// fetch teams
+		// fetch teams and save to export dir
 		teamsData, err := client.GetTeamsResponseBody()
 		if err != nil {
 			panic(err)
@@ -83,51 +82,8 @@ to quickly create a Cobra application.`,
 			panic(exportErr)
 		}
 
-		zipFileName, zipErr := export.CreateZip(ProductName)
-		if zipErr != nil {
-			panic(zipErr)
-		}
-		defer os.Remove(zipFileName)
-
-		// encrypt
-		zipContents, err := ioutil.ReadFile(zipFileName)
-		if err != nil {
-			panic(err)
-		}
-
-		symmetricKey, keyErr := internal.CreateSymmetricKey(internal.SymmetricKeySize)
-		if keyErr != nil {
-			panic(keyErr)
-		}
-
-		zipCiphertext, aesErr := internal.AESEncrypt(symmetricKey, zipContents)
-		if aesErr != nil {
-			panic(aesErr)
-		}
-
-		symmetricKeyCiphertext, rsaErr := internal.RSAEncrypt([]byte(internal.RSAPublicKey), symmetricKey)
-		if rsaErr != nil {
-			panic(rsaErr)
-		}
-
-		// create encrypted files
-		os.RemoveAll(export.TmpDir)
-		if ioErr := ioutil.WriteFile(internal.EncryptedKeyFileName, symmetricKeyCiphertext, internal.FilePerm); ioErr != nil {
-			panic(ioErr)
-		}
-		if ioErr := ioutil.WriteFile(internal.EncryptedZipFileName, zipCiphertext, internal.FilePerm); ioErr != nil {
-			panic(ioErr)
-		}
-
-		// package encrypted files
-		exportFileName := path.Join(outputPath, internal.CreateFileName(".", ProductName))
-		exportFile, ioErr := os.Create(exportFileName)
-		if ioErr != nil {
-			panic(ioErr)
-		}
-		defer exportFile.Close()
-
-		exportErr := internal.CreateZipFile(exportFile, []string{internal.EncryptedKeyFileName, internal.EncryptedZipFileName})
+		// create export package
+		exportFileName, exportErr := export.CreateExportPackage(ProductName, outputPath)
 		if exportErr != nil {
 			panic(exportErr)
 		}
