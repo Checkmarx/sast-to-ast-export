@@ -20,7 +20,7 @@ var RSAPublicKey = fmt.Sprintf(`
 -----END PUBLIC KEY-----
 `, buildTimeRSAPublicKey)
 
-func RSAEncrypt(key []byte, plaintext []byte) ([]byte, error) {
+func RSAEncrypt(key, plaintext []byte) ([]byte, error) {
 	block, _ := pem.Decode(key)
 	if block == nil {
 		return []byte{}, fmt.Errorf("failed to parse PEM block containing the public key")
@@ -43,12 +43,10 @@ func RSAEncrypt(key []byte, plaintext []byte) ([]byte, error) {
 	// encryption function.
 	rng := rand.Reader
 
-	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rng, publicKey, plaintext, label)
-
-	return ciphertext, nil
+	return rsa.EncryptOAEP(sha256.New(), rng, publicKey, plaintext, label)
 }
 
-func AESEncrypt(key []byte, plaintext []byte) ([]byte, error) {
+func AESEncrypt(key, plaintext []byte) ([]byte, error) {
 	c, err := aes.NewCipher(key)
 	if err != nil {
 		return []byte{}, err
