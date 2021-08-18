@@ -81,9 +81,6 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	}
 
 	// write encrypted zip and key to files
-	if removeErr := os.RemoveAll(e.TmpDir); removeErr != nil {
-		return "", removeErr
-	}
 	if ioErr := ioutil.WriteFile(EncryptedKeyFileName, symmetricKeyCiphertext, FilePerm); ioErr != nil {
 		return "", ioErr
 	}
