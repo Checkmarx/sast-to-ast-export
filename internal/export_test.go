@@ -25,7 +25,7 @@ func TestCreateExport(t *testing.T) {
 	assert.Contains(t, export.TmpDir, prefix)
 }
 
-func TestExportAddFile(t *testing.T) {
+func TestExport_AddFile(t *testing.T) {
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
 
@@ -46,7 +46,7 @@ func TestExportAddFile(t *testing.T) {
 	assert.Equal(t, "this is test1", string(content))
 }
 
-func TestExportClean(t *testing.T) {
+func TestExport_Clean(t *testing.T) {
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
 
