@@ -13,9 +13,9 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: fmt.Sprintf("Print the version number of %s", ProductName),
-	Long:  fmt.Sprintf(`All software has versions. This is %s's`, ProductName),
+	Short: fmt.Sprintf("Print the version number of %s", productName),
+	Long:  fmt.Sprintf(`All software has versions. This is %s's`, productName),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s %s\n", ProductName, ProductVersion)
+		fmt.Printf("%s %s\n", productName, productVersion)
 	},
 }

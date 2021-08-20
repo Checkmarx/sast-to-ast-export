@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	ProductName    = "cxsast_exporter"
-	ProductVersion = "0.1"
+	productName    = "cxsast_exporter"
+	productVersion = "0.1"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   ProductName,
+	Use:   productName,
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
@@ -54,7 +54,7 @@ to quickly create a Cobra application.`,
 		}
 
 		// start export
-		export, err := internal.CreateExport(ProductName)
+		export, err := internal.CreateExport(productName)
 		if err != nil {
 			panic(err)
 		}
@@ -79,7 +79,7 @@ to quickly create a Cobra application.`,
 		}
 
 		// create export package
-		exportFileName, exportErr := export.CreateExportPackage(ProductName, outputPath)
+		exportFileName, exportErr := export.CreateExportPackage(productName, outputPath)
 		if exportErr != nil {
 			panic(exportErr)
 		}
