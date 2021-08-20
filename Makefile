@@ -1,6 +1,9 @@
 BUILD = ./build
 PUBLIC_KEY = $(shell cat public.key)
-LD_FLAGS = -ldflags="-s -w -X sast-export/internal.buildTimeRSAPublicKey=$(PUBLIC_KEY)"
+PRODUCT_NAME = cxsast_exporter
+VERSION = $(shell cat VERSION)
+BUILD_ID=$(shell date +%Y%m%d%H%M%S)
+LD_FLAGS = -ldflags="-s -w -X sast-export/cmd.productName=$(PRODUCT_NAME) -X sast-export/cmd.productVersion=$(VERSION) -X sast-export/cmd.productBuild=$(BUILD_ID) -X sast-export/internal.buildTimeRSAPublicKey=$(PUBLIC_KEY)"
 
 lint:
 	go fmt ./...
@@ -15,19 +18,19 @@ clean:
 	rm -r $(BUILD)
 
 windows_amd64: check_public_key
-	env GOOS=windows GOARCH=amd64 go build -o $(BUILD)/windows/amd64/cxsast_exporter.exe $(LD_FLAGS)
+	env GOOS=windows GOARCH=amd64 go build -o $(BUILD)/windows/amd64/$(PRODUCT_NAME).exe $(LD_FLAGS)
 
 windows_386: check_public_key
-	env GOOS=windows GOARCH=386 go build -o $(BUILD)/windows/386/cxsast_exporter.exe $(LD_FLAGS)
+	env GOOS=windows GOARCH=386 go build -o $(BUILD)/windows/386/$(PRODUCT_NAME).exe $(LD_FLAGS)
 
 linux_amd64: check_public_key
-	env GOOS=linux GOARCH=amd64 go build -o $(BUILD)/linux/amd64/cxsast_exporter $(LD_FLAGS)
+	env GOOS=linux GOARCH=amd64 go build -o $(BUILD)/linux/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
 
 linux_386: check_public_key
-	env GOOS=linux GOARCH=386 go build -o $(BUILD)/linux/386/cxsast_exporter $(LD_FLAGS)
+	env GOOS=linux GOARCH=386 go build -o $(BUILD)/linux/386/$(PRODUCT_NAME) $(LD_FLAGS)
 
 darwin_amd64: check_public_key
-	env GOOS=darwin GOARCH=amd64 go build -o $(BUILD)/darwin/amd64/cxsast_exporter $(LD_FLAGS)
+	env GOOS=darwin GOARCH=amd64 go build -o $(BUILD)/darwin/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
 
 public_key:
 	if [ -z $(SAST_EXPORT_KMS_KEY_ID) ]; then echo "Please specify env var SAST_EXPORT_KMS_KEY_ID"; exit 1; fi
