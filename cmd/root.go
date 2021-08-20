@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	ProductName = "cxsast_exporter"
+	ProductName    = "cxsast_exporter"
+	ProductVersion = "0.1"
 )
 
 // rootCmd represents the base command when called without any subcommands

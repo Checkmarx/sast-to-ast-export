@@ -16,6 +16,6 @@ var versionCmd = &cobra.Command{
 	Short: fmt.Sprintf("Print the version number of %s", ProductName),
 	Long:  fmt.Sprintf(`All software has versions. This is %s's`, ProductName),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s v0.1 -- HEAD\n", ProductName)
+		fmt.Printf("%s %s\n", ProductName, ProductVersion)
 	},
 }
