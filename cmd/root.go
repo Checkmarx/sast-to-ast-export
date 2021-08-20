@@ -12,7 +12,7 @@ import (
 // productName is defined in Makefile and initialized during build
 var productName string
 
-// productVersion is defined VERSION and initialized during build
+// productVersion is defined in VERSION and initialized during build
 var productVersion string
 
 // productBuild is defined in Makefile and initialized during build
