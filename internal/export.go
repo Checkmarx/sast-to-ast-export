@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"time"
@@ -26,16 +25,17 @@ type Export struct {
 	FileList []string
 }
 
+// CreateExport creates export structure and temporary directory
+// The caller is responsible for calling the Export.Clear function
+// when it's done with the export
 func CreateExport(prefix string) (Export, error) {
 	tmpDir := os.TempDir()
 	tmpExportDir, err := ioutil.TempDir(tmpDir, prefix)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return Export{TmpDir: tmpExportDir, FileList: []string{}}, nil
+	return Export{TmpDir: tmpExportDir, FileList: []string{}}, err
 }
 
+// AddFile creates a file with the specified name and content in
+// export's temporary directory.
 func (e *Export) AddFile(fileName string, data []byte) error {
 	e.FileList = append(e.FileList, fileName)
 
@@ -43,6 +43,7 @@ func (e *Export) AddFile(fileName string, data []byte) error {
 	return ioutil.WriteFile(filePath, data, FilePerm)
 }
 
+// CreateExportPackage compresses and encrypts all files added so far
 func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) {
 	tmpZipFile, err := ioutil.TempFile(e.TmpDir, fmt.Sprintf("%s.*.zip", prefix))
 	if err != nil {
@@ -117,14 +118,17 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	return exportFileName, exportErr
 }
 
+// Clean removes export's temporary directory and it's contents
 func (e *Export) Clean() error {
 	return os.RemoveAll(e.TmpDir)
 }
 
+// CreateExportFileName creates a file name with the format: {prefix}-yyyy-mm-dd-HH-MM-SS.zip
 func CreateExportFileName(prefix string, now time.Time) string {
 	return fmt.Sprintf("%s-%s.zip", prefix, now.Format("2006-01-02-15-04-05"))
 }
 
+// CreateZipFile zips the list of files and saves into the specified file handle
 func CreateZipFile(zipFile *os.File, fileList []string) error {
 	zipWriter := zip.NewWriter(zipFile)
 
