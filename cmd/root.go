@@ -9,8 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// productName is defined in Makefile and initialized during build
 var productName string
+
+// productVersion is defined VERSION and initialized during build
 var productVersion string
+
+// productBuild is defined in Makefile and initialized during build
 var productBuild string
 
 // rootCmd represents the base command when called without any subcommands
