@@ -7,7 +7,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/pem"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,17 +18,14 @@ const (
 	symmetricKeyLength  = 32
 )
 
-func TestCreatePublicKeyFromPEM(t *testing.T) {
+func TestCreatePublicKeyFromKeyBytes(t *testing.T) {
 	rsaKey, err := rsa.GenerateKey(rand.Reader, asymmetricKeyLength)
 	assert.NoError(t, err)
 
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
 	assert.NoError(t, err)
 
-	publicKeyBlock := &pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes}
-	publicKey := pem.EncodeToMemory(publicKeyBlock)
-
-	result, err := CreatePublicKeyFromPEM(string(publicKey))
+	result, err := CreatePublicKeyFromKeyBytes(publicKeyBytes)
 
 	assert.NoError(t, err)
 	assert.Equal(t, rsaKey.PublicKey.E, result.E)

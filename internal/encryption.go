@@ -7,7 +7,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"io"
 )
@@ -15,21 +14,9 @@ import (
 // buildTimeRSAPublicKey value is defined during build
 var buildTimeRSAPublicKey string
 
-// RSAPublicKey in PEM format
-var RSAPublicKey = fmt.Sprintf(`
------BEGIN PUBLIC KEY-----
-%s
------END PUBLIC KEY-----
-`, buildTimeRSAPublicKey)
-
-// CreatePublicKeyFromPEM converts a PEM block into an RSA PublicKey
-func CreatePublicKeyFromPEM(pemKey string) (*rsa.PublicKey, error) {
-	block, _ := pem.Decode([]byte(pemKey))
-	if block == nil {
-		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+// CreatePublicKeyFromKeyBytes creates an RSA PublicKey structure from public key bytes
+func CreatePublicKeyFromKeyBytes(keyBytes []byte) (*rsa.PublicKey, error) {
+	pub, err := x509.ParsePKIXPublicKey(keyBytes)
 	if err != nil {
 		return nil, err
 	}

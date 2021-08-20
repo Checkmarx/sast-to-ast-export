@@ -2,6 +2,7 @@ package internal
 
 import (
 	"archive/zip"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -81,9 +82,14 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		return "", aesErr
 	}
 
-	publicKey, pemErr := CreatePublicKeyFromPEM(RSAPublicKey)
-	if pemErr != nil {
-		panic(pemErr)
+	keyBytes, decodeErr := base64.StdEncoding.DecodeString(buildTimeRSAPublicKey)
+	if decodeErr != nil {
+		return "", decodeErr
+	}
+
+	publicKey, keyErr := CreatePublicKeyFromKeyBytes(keyBytes)
+	if keyErr != nil {
+		return "", keyErr
 	}
 
 	symmetricKeyCiphertext, rsaErr := EncryptAsymmetric(publicKey, symmetricKey)
