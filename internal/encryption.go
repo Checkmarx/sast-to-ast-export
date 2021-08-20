@@ -11,7 +11,7 @@ import (
 	"io"
 )
 
-// buildTimeRSAPublicKey value is defined during build
+// buildTimeRSAPublicKey is a base64-encoded RSA public key, defined at build time
 var buildTimeRSAPublicKey string
 
 // CreatePublicKeyFromKeyBytes creates an RSA PublicKey structure from public key bytes
