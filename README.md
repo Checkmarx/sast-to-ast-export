@@ -24,7 +24,7 @@ make build
 
 # How to run repo
 
-In order to run during development we'll need to fetch key, like for build.
+In order to run during development we'll need to `make public_key`, like for build.
 Once the public.key file exists, we can run and test using the file reference:
 ```
 go run -ldflags "-X sast-export/internal.buildTimeRSAPublicKey=$(cat .\public.key)" .
