@@ -9,15 +9,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	ProductName    = "sast-export"
-	UsernameEnvVar = "SAST_EXPORT_USERNAME"
-	PasswordEnvVar = "SAST_EXPORT_PASSWORD" //nolint:gosec
-)
+// productName is defined in Makefile and initialized during build
+var productName string
+
+// productVersion is defined in VERSION and initialized during build
+var productVersion string
+
+// productBuild is defined in Makefile and initialized during build
+var productBuild string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   fmt.Sprintf("%s [SAST url]", ProductName),
+	Use:   productName,
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
@@ -25,23 +28,24 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// process input
-		url := args[0]
-		outputPath, err := cmd.Flags().GetString("output")
+		url, err := cmd.Flags().GetString("url")
 		if err != nil {
 			panic(err)
 		}
-		username := os.Getenv(UsernameEnvVar)
-		password := os.Getenv(PasswordEnvVar)
-		if username == "" {
-			fmt.Printf("please set api username for export with %s env var\n", UsernameEnvVar)
-			os.Exit(1)
+		username, err := cmd.Flags().GetString("user")
+		if err != nil {
+			panic(err)
 		}
-		if password == "" {
-			fmt.Printf("please set api password for export with %s env var\n", PasswordEnvVar)
-			os.Exit(1)
+		password, err := cmd.Flags().GetString("pass")
+		if err != nil {
+			panic(err)
+		}
+
+		outputPath, err := os.Getwd()
+		if err != nil {
+			panic(err)
 		}
 
 		// create api client and authenticate
@@ -53,33 +57,38 @@ to quickly create a Cobra application.`,
 			panic(err2)
 		}
 
-		// fetch data
-		projects, err := client.GetProjects()
+		// start export
+		export, err := internal.CreateExport(productName)
 		if err != nil {
 			panic(err)
 		}
+		defer export.Clean()
 
-		// generate export
-		export := internal.Export{
-			FilePrefix: ProductName,
-			Data:       internal.ExportData{Projects: projects},
-		}
-		fileName := export.CreateFileName(outputPath)
-		file, err := os.Create(fileName)
+		// fetch users and save to export dir
+		usersData, err := client.GetUsersResponseBody()
 		if err != nil {
 			panic(err)
 		}
-		if err := export.WriteToFile(file); err != nil {
-			panic(err)
-		}
-		if err := file.Sync(); err != nil {
-			panic(err)
-		}
-		if err := file.Close(); err != nil {
-			panic(err)
+		if exportErr := export.AddFile(internal.UsersFileName, usersData); exportErr != nil {
+			panic(exportErr)
 		}
 
-		fmt.Printf("SAST data exported to %s\n", fileName)
+		// fetch teams and save to export dir
+		teamsData, err := client.GetTeamsResponseBody()
+		if err != nil {
+			panic(err)
+		}
+		if exportErr := export.AddFile(internal.TeamsFileName, teamsData); exportErr != nil {
+			panic(exportErr)
+		}
+
+		// create export package
+		exportFileName, exportErr := export.CreateExportPackage(productName, outputPath)
+		if exportErr != nil {
+			panic(exportErr)
+		}
+
+		fmt.Printf("SAST data exported to %s\n", exportFileName)
 	},
 }
 
@@ -91,5 +100,16 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	rootCmd.Flags().StringP("output", "o", "", "Output path")
+	rootCmd.Flags().StringP("user", "", "", "SAST admin username")
+	rootCmd.Flags().StringP("pass", "", "", "SAST admin password")
+	rootCmd.Flags().StringP("url", "", "", "SAST url")
+	if err := rootCmd.MarkFlagRequired("user"); err != nil {
+		panic(err)
+	}
+	if err := rootCmd.MarkFlagRequired("pass"); err != nil {
+		panic(err)
+	}
+	if err := rootCmd.MarkFlagRequired("url"); err != nil {
+		panic(err)
+	}
 }

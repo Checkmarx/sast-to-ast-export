@@ -46,27 +46,34 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	return json.Unmarshal(responseBody, c.Token)
 }
 
-func (c *SASTClient) GetProjects() ([]Project, error) {
-	var projects []Project
-
-	req, err := CreateGetProjectsRequest(c.BaseURL, c.Token)
+func (c *SASTClient) GetUsersResponseBody() ([]byte, error) {
+	req, err := CreateGetUsersRequest(c.BaseURL, c.Token)
 	if err != nil {
-		return projects, err
+		return []byte{}, err
 	}
 
 	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
-		return projects, err
+		return []byte{}, err
 	}
-
 	defer resp.Body.Close()
-	responseBody, err := ioutil.ReadAll(resp.Body)
+
+	return ioutil.ReadAll(resp.Body)
+}
+
+func (c *SASTClient) GetTeamsResponseBody() ([]byte, error) {
+	req, err := CreateGetTeamsRequest(c.BaseURL, c.Token)
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
 
-	err = json.Unmarshal(responseBody, &projects)
-	return projects, err
+	resp, err := c.doRequest(req, http.StatusOK)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer resp.Body.Close()
+
+	return ioutil.ReadAll(resp.Body)
 }
 
 func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
