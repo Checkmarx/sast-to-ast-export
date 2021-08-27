@@ -42,6 +42,10 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			panic(err)
 		}
+		debug, err := cmd.Flags().GetBool("debug")
+		if err != nil {
+			panic(err)
+		}
 
 		outputPath, err := os.Getwd()
 		if err != nil {
@@ -62,7 +66,9 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			panic(err)
 		}
-		defer export.Clean()
+		if !debug {
+			defer export.Clean()
+		}
 
 		// fetch users and save to export dir
 		usersData, err := client.GetUsersResponseBody()
@@ -83,12 +89,15 @@ to quickly create a Cobra application.`,
 		}
 
 		// create export package
-		exportFileName, exportErr := export.CreateExportPackage(productName, outputPath)
-		if exportErr != nil {
-			panic(exportErr)
+		if !debug {
+			exportFileName, exportErr := export.CreateExportPackage(productName, outputPath)
+			if exportErr != nil {
+				panic(exportErr)
+			}
+			fmt.Printf("SAST data exported to %s\n", exportFileName)
+		} else {
+			fmt.Printf("Debug mode: SAST data exported to %s\n", export.TmpDir)
 		}
-
-		fmt.Printf("SAST data exported to %s\n", exportFileName)
 	},
 }
 
@@ -103,6 +112,7 @@ func init() {
 	rootCmd.Flags().StringP("user", "", "", "SAST admin username")
 	rootCmd.Flags().StringP("pass", "", "", "SAST admin password")
 	rootCmd.Flags().StringP("url", "", "", "SAST url")
+	rootCmd.Flags().Bool("debug", false, "Activate debug mode")
 	if err := rootCmd.MarkFlagRequired("user"); err != nil {
 		panic(err)
 	}

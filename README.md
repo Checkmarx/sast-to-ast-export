@@ -8,6 +8,8 @@
 
 This will generate an export package in the same folder where the command is run.
 
+add --debug parameter to bypass the zip and encryption process. 
+
 # How to build
 
 1. Make sure you have access to AWS KMS
