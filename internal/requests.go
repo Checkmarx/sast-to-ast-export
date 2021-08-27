@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -25,17 +27,13 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	return req, nil
 }
 
-func CreateGetUsersRequest(baseURL string, token *AccessToken) (*http.Request, error) {
-	resp, err := http.NewRequest("GET", fmt.Sprintf("%s/CxRestAPI/auth/Users", baseURL), nil)
-	if err != nil {
-		return nil, err
+func CreateRequest(httpMethod, url string, body interface{}, token *AccessToken) (*http.Request, error) {
+	requestByte, errConvert := json.Marshal(body)
+	if errConvert != nil {
+		return nil, errConvert
 	}
-	resp.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
-	return resp, nil
-}
 
-func CreateGetTeamsRequest(baseURL string, token *AccessToken) (*http.Request, error) {
-	resp, err := http.NewRequest("GET", fmt.Sprintf("%s/CxRestAPI/auth/Teams", baseURL), nil)
+	resp, err := http.NewRequest(httpMethod, url, bytes.NewReader(requestByte))
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,17 @@ import (
 	"net/http"
 )
 
+const USERS_ENDPOINT = "/CxRestAPI/auth/Users"
+const TEAMS_ENDPOINT = "/CxRestAPI/auth/Teams"
+const ROLES_ENDPOINT = "/CxRestAPI/auth/Roles"
+
+const LDAP_SERVERS_ENDPOINT = "/CxRestAPI/auth/LDAPServers"
+const LDAP_ROLE_MAPPINGS_ENDPOINT = "/CxRestAPI/auth/LDAPRoleMappings"
+const LDAP_TEAM_MAPPINGS_ENDPOINT = "/CxRestAPI/auth/LDAPTeamMappings"
+const SAML_IDENTITY_PROVIDERS_ENDPOINT = "/CxRestAPI/auth/SamlIdentityProviders"
+const SAML_ROLE_MAPPINGS_ENDPOINT = "/CxRestAPI/auth/SamlRoleMappings"
+const TEAM_MAPPINGS_ENDPOINT = "/CxRestAPI/auth/SamlTeamMappings"
+
 type HTTPAdapter interface {
 	Do(req *http.Request) (*http.Response, error)
 }
@@ -46,8 +57,9 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	return json.Unmarshal(responseBody, c.Token)
 }
 
-func (c *SASTClient) GetUsersResponseBody() ([]byte, error) {
-	req, err := CreateGetUsersRequest(c.BaseURL, c.Token)
+func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
+	return []byte(endpoint), nil
+	req, err := CreateRequest(http.MethodGet, c.BaseURL+endpoint, nil, c.Token)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -61,19 +73,40 @@ func (c *SASTClient) GetUsersResponseBody() ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (c *SASTClient) GetTeamsResponseBody() ([]byte, error) {
-	req, err := CreateGetTeamsRequest(c.BaseURL, c.Token)
-	if err != nil {
-		return []byte{}, err
-	}
+func (c *SASTClient) GetUsers() ([]byte, error) {
+	return c.GetResponseBody(USERS_ENDPOINT)
+}
 
-	resp, err := c.doRequest(req, http.StatusOK)
-	if err != nil {
-		return []byte{}, err
-	}
-	defer resp.Body.Close()
+func (c *SASTClient) GetRoles() ([]byte, error) {
+	return c.GetResponseBody(ROLES_ENDPOINT)
+}
 
-	return ioutil.ReadAll(resp.Body)
+func (c *SASTClient) GetTeams() ([]byte, error) {
+	return c.GetResponseBody(TEAMS_ENDPOINT)
+}
+
+func (c *SASTClient) GetLdapServers() ([]byte, error) {
+	return c.GetResponseBody(LDAP_SERVERS_ENDPOINT)
+}
+
+func (c *SASTClient) GetLdapRoleMappings() ([]byte, error) {
+	return c.GetResponseBody(LDAP_ROLE_MAPPINGS_ENDPOINT)
+}
+
+func (c *SASTClient) GetLdapTeamMappings() ([]byte, error) {
+	return c.GetResponseBody(LDAP_TEAM_MAPPINGS_ENDPOINT)
+}
+
+func (c *SASTClient) GetSamlIdentityProviders() ([]byte, error) {
+	return c.GetResponseBody(SAML_IDENTITY_PROVIDERS_ENDPOINT)
+}
+
+func (c *SASTClient) GetSamlRoleMappings() ([]byte, error) {
+	return c.GetResponseBody(SAML_ROLE_MAPPINGS_ENDPOINT)
+}
+
+func (c *SASTClient) GetSamlTeamMappings() ([]byte, error) {
+	return c.GetResponseBody(TEAM_MAPPINGS_ENDPOINT)
 }
 
 func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {

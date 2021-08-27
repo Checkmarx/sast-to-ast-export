@@ -70,23 +70,90 @@ to quickly create a Cobra application.`,
 			defer export.Clean()
 		}
 
-		// fetch users and save to export dir
-		usersData, err := client.GetUsersResponseBody()
-		if err != nil {
-			panic(err)
+		//todo: if USERS cmd selected, move to function
+		if true {
+			usersData, err := client.GetUsers()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.UsersFileName, usersData); exportErr != nil {
+				panic(exportErr)
+			}
+
+			rolesData, err := client.GetRoles()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.RolesFileName, rolesData); exportErr != nil {
+				panic(exportErr)
+			}
+
+			ldapRolesData, err := client.GetLdapRoleMappings()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.LdapRoleMappingsFileName, ldapRolesData); exportErr != nil {
+				panic(exportErr)
+			}
+
+			samlRolesData, err := client.GetSamlRoleMappings()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
+				panic(exportErr)
+			}
 		}
-		if exportErr := export.AddFile(internal.UsersFileName, usersData); exportErr != nil {
-			panic(exportErr)
+
+		//todo: if USERS | TEAMS selected, refactor to function
+		if true {
+			ldapServersData, err := client.GetLdapServers()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.LdapServersFileName, ldapServersData); exportErr != nil {
+				panic(exportErr)
+			}
+
+			samlIdpsData, err := client.GetSamlIdentityProviders()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.SamlIdpFileName, samlIdpsData); exportErr != nil {
+				panic(exportErr)
+			}
 		}
 
 		// fetch teams and save to export dir
-		teamsData, err := client.GetTeamsResponseBody()
-		if err != nil {
-			panic(err)
+		//todo: if TEAMS selected, refactor to function
+		if true {
+			teamsData, err := client.GetTeams()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.TeamsFileName, teamsData); exportErr != nil {
+				panic(exportErr)
+			}
+
+			ldapTeamsData, err := client.GetLdapTeamMappings()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.LdapTeamMappingsFileName, ldapTeamsData); exportErr != nil {
+				panic(exportErr)
+			}
+
+			samlTeamsData, err := client.GetSamlTeamMappings()
+			if err != nil {
+				panic(err)
+			}
+			if exportErr := export.AddFile(internal.SamlTeamMappingsFileName, samlTeamsData); exportErr != nil {
+				panic(exportErr)
+			}
 		}
-		if exportErr := export.AddFile(internal.TeamsFileName, teamsData); exportErr != nil {
-			panic(exportErr)
-		}
+
+		// fetch results and save to export dir
+		//todo: RESULTS selected, implement....
 
 		// create export package
 		if !debug {
