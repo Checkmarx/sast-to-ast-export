@@ -25,9 +25,9 @@ type Export struct {
 	FileList []string
 }
 
-// CreateExport creates export structure and temporary directory
+// CreateExport creates ExportProducer structure and temporary directory
 // The caller is responsible for calling the Export.Clear function
-// when it's done with the export
+// when it's done with the ExportProducer
 func CreateExport(prefix string) (Export, error) {
 	tmpDir := os.TempDir()
 	tmpExportDir, err := ioutil.TempDir(tmpDir, prefix)
@@ -35,7 +35,7 @@ func CreateExport(prefix string) (Export, error) {
 }
 
 // AddFile creates a file with the specified name and content in
-// export's temporary directory.
+// ExportProducer's temporary directory.
 func (e *Export) AddFile(fileName string, data []byte) error {
 	e.FileList = append(e.FileList, fileName)
 
@@ -118,7 +118,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	return exportFileName, exportErr
 }
 
-// Clean removes export's temporary directory and it's contents
+// Clean removes ExportProducer's temporary directory and it's contents
 func (e *Export) Clean() error {
 	return os.RemoveAll(e.TmpDir)
 }

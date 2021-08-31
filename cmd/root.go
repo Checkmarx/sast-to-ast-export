@@ -48,47 +48,7 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
-		// create api client and authenticate
-		client, err := internal.NewSASTClient(url, &http.Client{})
-		if err != nil {
-			panic(err)
-		}
-		if err2 := client.Authenticate(username, password); err2 != nil {
-			panic(err2)
-		}
-
-		// start export
-		export, err := internal.CreateExport(productName)
-		if err != nil {
-			panic(err)
-		}
-		defer export.Clean()
-
-		// fetch users and save to export dir
-		usersData, err := client.GetUsersResponseBody()
-		if err != nil {
-			panic(err)
-		}
-		if exportErr := export.AddFile(internal.UsersFileName, usersData); exportErr != nil {
-			panic(exportErr)
-		}
-
-		// fetch teams and save to export dir
-		teamsData, err := client.GetTeamsResponseBody()
-		if err != nil {
-			panic(err)
-		}
-		if exportErr := export.AddFile(internal.TeamsFileName, teamsData); exportErr != nil {
-			panic(exportErr)
-		}
-
-		// create export package
-		exportFileName, exportErr := export.CreateExportPackage(productName, outputPath)
-		if exportErr != nil {
-			panic(exportErr)
-		}
-
-		fmt.Printf("SAST data exported to %s\n", exportFileName)
+		internal.GetAllData(url, username, password, export, outputPath, productName)
 	},
 }
 

@@ -1,10 +1,17 @@
 package internal
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+)
+
+const (
+	JSONContentType = "application/json"
 )
 
 func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request, error) {
@@ -25,20 +32,41 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	return req, nil
 }
 
-func CreateGetUsersRequest(baseURL string, token *AccessToken) (*http.Request, error) {
-	resp, err := http.NewRequest("GET", fmt.Sprintf("%s/CxRestAPI/auth/Users", baseURL), nil)
+func CreateRequest(httpMethod, url string, requestBody io.Reader, token *AccessToken) (*http.Request, error) {
+	resp, err := http.NewRequest(httpMethod, url, requestBody)
 	if err != nil {
 		return nil, err
 	}
+
+	resp.Header.Add("Content-Type", JSONContentType)
 	resp.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
 	return resp, nil
 }
 
-func CreateGetTeamsRequest(baseURL string, token *AccessToken) (*http.Request, error) {
-	resp, err := http.NewRequest("GET", fmt.Sprintf("%s/CxRestAPI/auth/Teams", baseURL), nil)
+func dataToJSONReader(data interface{}) io.Reader {
+	jsonStr, err := json.Marshal(data)
 	if err != nil {
-		return nil, err
+		fmt.Errorf("failed to stringify request data: %s", err)
 	}
-	resp.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
-	return resp, nil
+	return bytes.NewBuffer(jsonStr)
+}
+
+func CreateGetUsersRequest(baseURL string, token *AccessToken) (*http.Request, error) {
+	return CreateRequest(http.MethodGet, fmt.Sprintf("%s/CxRestAPI/auth/Users", baseURL), nil, token)
+}
+
+func CreateGetTeamsRequest(baseURL string, token *AccessToken) (*http.Request, error) {
+	return CreateRequest(http.MethodGet, fmt.Sprintf("%s/CxRestAPI/auth/Teams", baseURL), nil, token)
+}
+
+func GetListProjectsRequest(baseURL string, token *AccessToken) (*http.Request, error) {
+	return CreateRequest(http.MethodGet, fmt.Sprintf("%s/CxRestAPI/help/projects", baseURL), nil, token)
+}
+
+func GetLastScanDataRequest(baseURL string, projectId int, token *AccessToken) (*http.Request, error) {
+	return CreateRequest(http.MethodGet, fmt.Sprintf("%s/CxRestAPI/help/sast/scans?ProjectId=%d&last=1", baseURL, projectId), nil, token)
+}
+
+func GetReportIDStatusRequest(baseURL, reportId string, token *AccessToken) (*http.Request, error) {
+	return CreateRequest(http.MethodGet, fmt.Sprintf("%s/CxRestAPI/help/reports/sastScan/%s/status", baseURL, reportId), nil, token)
 }
