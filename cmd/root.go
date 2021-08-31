@@ -1,12 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-	"net/http"
+	"github.com/spf13/cobra"
 	"os"
 	"sast-export/internal"
-
-	"github.com/spf13/cobra"
 )
 
 // productName is defined in Makefile and initialized during build
@@ -42,6 +39,10 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			panic(err)
 		}
+		export, err := cmd.Flags().GetString("export")
+		if err != nil {
+			panic(err)
+		}
 
 		outputPath, err := os.Getwd()
 		if err != nil {
@@ -63,6 +64,7 @@ func init() {
 	rootCmd.Flags().StringP("user", "", "", "SAST admin username")
 	rootCmd.Flags().StringP("pass", "", "", "SAST admin password")
 	rootCmd.Flags().StringP("url", "", "", "SAST url")
+	rootCmd.Flags().StringP("export", "", "", "SAST export options --export users,results,teams")
 	if err := rootCmd.MarkFlagRequired("user"); err != nil {
 		panic(err)
 	}
@@ -70,6 +72,9 @@ func init() {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagRequired("url"); err != nil {
+		panic(err)
+	}
+	if err := rootCmd.MarkFlagCustom("export", "users,results,teams"); err != nil {
 		panic(err)
 	}
 }
