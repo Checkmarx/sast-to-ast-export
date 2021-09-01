@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"os"
-	"sast-export/internal"
 )
 
 // productName is defined in Makefile and initialized during build
@@ -26,30 +24,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// process input
-		url, err := cmd.Flags().GetString("url")
-		if err != nil {
-			panic(err)
-		}
-		username, err := cmd.Flags().GetString("user")
-		if err != nil {
-			panic(err)
-		}
-		password, err := cmd.Flags().GetString("pass")
-		if err != nil {
-			panic(err)
-		}
-		export, err := cmd.Flags().GetString("export")
-		if err != nil {
-			panic(err)
-		}
-
-		outputPath, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-
-		internal.GetAllData(url, username, password, export, outputPath, productName)
+		GetArgs(cmd, productName)
 	},
 }
 
@@ -65,6 +40,7 @@ func init() {
 	rootCmd.Flags().StringP("pass", "", "", "SAST admin password")
 	rootCmd.Flags().StringP("url", "", "", "SAST url")
 	rootCmd.Flags().StringP("export", "", "", "SAST export options --export users,results,teams")
+	rootCmd.Flags().Bool("debug", false, "Activate debug mode")
 	if err := rootCmd.MarkFlagRequired("user"); err != nil {
 		panic(err)
 	}

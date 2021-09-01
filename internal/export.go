@@ -8,21 +8,33 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"time"
 )
 
 const (
-	UsersFileName        = "users.json"
-	TeamsFileName        = "teams.json"
-	EncryptedKeyFileName = "key.enc.bin"
-	EncryptedZipFileName = "zip.enc.bin"
-	SymmetricKeySize     = 32
-	FilePerm             = 0600
+	SymmetricKeySize = 32
+	FilePerm         = 0600
+
+	UsersFileName            = "users.json"
+	RolesFileName            = "roles.json"
+	LdapServersFileName      = "ldap_servers.json"
+	LdapRoleMappingsFileName = "ldap_role_mappings.json"
+	LdapTeamMappingsFileName = "ldap_team_mappings.json"
+	SamlIdpFileName          = "saml_identity_providers.json"
+	SamlRoleMappingsFileName = "saml_role_mappings.json"
+	SamlTeamMappingsFileName = "saml_team_mappings.json"
+	TeamsFileName            = "teams.json"
+	EncryptedKeyFileName     = "key.enc.bin"
+	EncryptedZipFileName     = "zip.enc.bin"
+
+	DateTimeFormat = "2006-01-02-15-04-05"
 )
 
 type Export struct {
-	TmpDir   string
-	FileList []string
+	sync.Mutex // wraps a synchronization flag
+	TmpDir     string
+	FileList   []string
 }
 
 // CreateExport creates ExportProducer structure and temporary directory
@@ -125,7 +137,7 @@ func (e *Export) Clean() error {
 
 // CreateExportFileName creates a file name with the format: {prefix}-yyyy-mm-dd-HH-MM-SS.zip
 func CreateExportFileName(prefix string, now time.Time) string {
-	return fmt.Sprintf("%s-%s.zip", prefix, now.Format("2006-01-02-15-04-05"))
+	return fmt.Sprintf("%s-%s.zip", prefix, now.Format(DateTimeFormat))
 }
 
 // CreateZipFile zips the list of files and saves into the specified file handle

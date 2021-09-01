@@ -1,5 +1,15 @@
 package internal
 
+type Args struct {
+	Url,
+	Username,
+	Password,
+	Export,
+	OutputPath,
+	ProductName string
+	Debug bool
+}
+
 type AccessToken struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`

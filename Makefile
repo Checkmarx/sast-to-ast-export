@@ -5,11 +5,18 @@ PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
 PUBLIC_KEY = $(shell cat public.key)
 LD_FLAGS = -ldflags="-s -w -X sast-export/cmd.productName=$(PRODUCT_NAME) -X sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X sast-export/cmd.productBuild=$(PRODUCT_BUILD) -X sast-export/internal.buildTimeRSAPublicKey=$(PUBLIC_KEY)"
 
+SAST_EXPORT_USER = '###########'
+SAST_EXPORT_PASS = '###########'
+
 lint:
 	go fmt ./...
 	golangci-lint run
 
 build: windows_amd64 windows_386 linux_amd64 linux_386 darwin_amd64
+
+run: windows_amd64 run_windows
+
+debug: windows_amd64 debug_windows
 
 unit_test:
 	go test -short $(LD_FLAGS) ./... -coverprofile=coverage.out
@@ -38,3 +45,9 @@ public_key:
 
 check_public_key:
 	if [ -z $(PUBLIC_KEY) ]; then echo "Please run: make public_key"; exit 1; fi
+
+run_windows:
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams
+
+debug_windows:
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --debug
