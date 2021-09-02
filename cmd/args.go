@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func GetArgs(cmd *cobra.Command, productName string) {
+func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	args := internal.Args{}
 	args.ProductName = productName
 	var err error
@@ -32,11 +32,15 @@ func GetArgs(cmd *cobra.Command, productName string) {
 	if err != nil {
 		panic(err)
 	}
+	args.ResultsProjectActiveSince, err = cmd.Flags().GetInt("results-project-active-since")
+	if err != nil {
+		panic(err)
+	}
 
 	args.OutputPath, err = os.Getwd()
 	if err != nil {
 		panic(err)
 	}
 
-	internal.RunExport(args)
+	return args
 }

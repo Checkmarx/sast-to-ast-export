@@ -153,7 +153,7 @@ func (c *SASTClient) produceReports(reports chan<- ReportConsumer, projectIds []
 	}
 
 	for _, projectId := range projectIds {
-		dataScansOut, errGetLast := c.GetLastScanData(projectId, 100)
+		dataScansOut, errGetLast := c.GetLastScanData(projectId, 1)
 		if errGetLast != nil {
 			return errGetLast
 		}

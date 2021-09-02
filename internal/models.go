@@ -7,7 +7,8 @@ type Args struct {
 	Export,
 	OutputPath,
 	ProductName string
-	Debug bool
+	ResultsProjectActiveSince int
+	Debug                     bool
 }
 
 type AccessToken struct {
