@@ -4,9 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+)
+
+const (
+	Accept                    = "Accept"
+	ContentType               = "Content-Type"
+	Authorization             = "Authorization"
+	JSONContentType           = "application/json"
+	FormUrlEncodedContentType = "application/x-www-form-urlencoded"
 )
 
 func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request, error) {
@@ -22,21 +31,26 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Accept", "application/x-www-form-urlencoded")
+	req.Header.Add(ContentType, FormUrlEncodedContentType)
+	req.Header.Add(Accept, FormUrlEncodedContentType)
 	return req, nil
 }
 
-func CreateRequest(httpMethod, url string, body interface{}, token *AccessToken) (*http.Request, error) {
-	requestByte, errConvert := json.Marshal(body)
-	if errConvert != nil {
-		return nil, errConvert
-	}
-
-	resp, err := http.NewRequest(httpMethod, url, bytes.NewReader(requestByte))
+func CreateRequest(httpMethod, url string, requestBody io.Reader, token *AccessToken) (*http.Request, error) {
+	resp, err := http.NewRequest(httpMethod, url, requestBody)
 	if err != nil {
 		return nil, err
 	}
-	resp.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
+
+	resp.Header.Add(ContentType, JSONContentType)
+	resp.Header.Add(Authorization, fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
 	return resp, nil
+}
+
+func dataToJSONReader(data interface{}) io.Reader {
+	jsonStr, err := json.Marshal(data)
+	if err != nil {
+		fmt.Errorf("failed to stringify request data: %s", err)
+	}
+	return bytes.NewBuffer(jsonStr)
 }

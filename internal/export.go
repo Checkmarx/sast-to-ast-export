@@ -8,10 +8,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"time"
 )
 
 const (
+	SymmetricKeySize = 32
+	FilePerm         = 0600
+
 	UsersFileName            = "users.json"
 	RolesFileName            = "roles.json"
 	LdapServersFileName      = "ldap_servers.json"
@@ -23,18 +27,19 @@ const (
 	TeamsFileName            = "teams.json"
 	EncryptedKeyFileName     = "key.enc.bin"
 	EncryptedZipFileName     = "zip.enc.bin"
-	SymmetricKeySize         = 32
-	FilePerm                 = 0600
+
+	DateTimeFormat = "2006-01-02-15-04-05"
 )
 
 type Export struct {
-	TmpDir   string
-	FileList []string
+	sync.Mutex // wraps a synchronization flag
+	TmpDir     string
+	FileList   []string
 }
 
-// CreateExport creates export structure and temporary directory
+// CreateExport creates ExportProducer structure and temporary directory
 // The caller is responsible for calling the Export.Clear function
-// when it's done with the export
+// when it's done with the ExportProducer
 func CreateExport(prefix string) (Export, error) {
 	tmpDir := os.TempDir()
 	tmpExportDir, err := ioutil.TempDir(tmpDir, prefix)
@@ -42,7 +47,7 @@ func CreateExport(prefix string) (Export, error) {
 }
 
 // AddFile creates a file with the specified name and content in
-// export's temporary directory.
+// ExportProducer's temporary directory.
 func (e *Export) AddFile(fileName string, data []byte) error {
 	e.FileList = append(e.FileList, fileName)
 
@@ -125,14 +130,14 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	return exportFileName, exportErr
 }
 
-// Clean removes export's temporary directory and it's contents
+// Clean removes ExportProducer's temporary directory and it's contents
 func (e *Export) Clean() error {
 	return os.RemoveAll(e.TmpDir)
 }
 
 // CreateExportFileName creates a file name with the format: {prefix}-yyyy-mm-dd-HH-MM-SS.zip
 func CreateExportFileName(prefix string, now time.Time) string {
-	return fmt.Sprintf("%s-%s.zip", prefix, now.Format("2006-01-02-15-04-05"))
+	return fmt.Sprintf("%s-%s.zip", prefix, now.Format(DateTimeFormat))
 }
 
 // CreateZipFile zips the list of files and saves into the specified file handle
