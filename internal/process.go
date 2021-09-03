@@ -11,13 +11,13 @@ import (
 )
 
 func GetNumCPU() int {
-	numCpu := runtime.GOMAXPROCS(runtime.NumCPU())
+	numCpu := runtime.NumCPU()
 	// Not allow more than 4 cpu's
 	if numCpu > 4 {
 		numCpu = 4
 	}
 	if isDebug {
-		fmt.Printf("Core count: %v\n", numCpu)
+		fmt.Printf("NumCPU used: %v\n", numCpu)
 	}
 	return numCpu
 }
@@ -92,7 +92,7 @@ func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- b
 
 func RunExport(args Args) {
 	isDebug = args.Debug
-	consumerCount := 3 // default 3 consumerCount, for the max groups ("users", "results", "teams")
+	consumerCount := GetNumCPU()
 	exports := make(chan string)
 	finished := make(chan bool, consumerCount)
 	// create api client and authenticate
@@ -106,11 +106,6 @@ func RunExport(args Args) {
 
 	if args.Export != "" {
 		exportList = strings.Split(args.Export, ",")
-		optionsCount := len(exportList)
-		if optionsCount > 0 {
-			// reset the default 3 consumerCount, if is only to export "users" for example
-			consumerCount = optionsCount
-		}
 	} else {
 		exportList = []string{Users, Results, Teams}
 	}
@@ -325,7 +320,7 @@ func ExportResultsToFile(args Args, exportValues *Export) {
 	}
 }
 
-func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep time.Duration, response ReportResponse, status StatusResponse) (err error) {
+func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep time.Duration, response ReportResponse, status *StatusResponse) (err error) {
 	state := true
 	var errDoStatusReq error
 	for state {

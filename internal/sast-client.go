@@ -44,7 +44,7 @@ const (
 	SamlRoleMappingsEndpoint      = "/CxRestAPI/auth/SamlRoleMappings"
 	TeamMappingsEndpoint          = "/CxRestAPI/auth/SamlTeamMappings"
 	ReportsListProjectsEndpoint   = "/CxRestAPI/help/projects"
-	ReportsLastScanEndpoint       = "/CxRestAPI/help/sast/scans?ProjectId=%d&last=%d"
+	ReportsLastScanEndpoint       = "/CxRestAPI/help/sast/scans?ProjectId=%d&last=%d&scanStatus=Finished"
 	ReportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
 	ReportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
 	CreateReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
@@ -136,19 +136,19 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	return ioutil.ReadAll(resp.Body)
 }
 
-func GetReportStatusResponse(c *SASTClient, report ReportResponse) (StatusResponse, error) {
+func GetReportStatusResponse(c *SASTClient, report ReportResponse) (*StatusResponse, error) {
 	statusUnm, errGetStatus := c.GetReportIDStatus(report.ReportID)
 	if errGetStatus != nil {
-		return StatusResponse{}, errGetStatus
+		return &StatusResponse{}, errGetStatus
 	}
 
 	var status StatusResponse
 	errStatusSheriff := json.Unmarshal(statusUnm, &status)
 	if errStatusSheriff != nil {
-		return StatusResponse{}, errStatusSheriff
+		return &StatusResponse{}, errStatusSheriff
 	}
 
-	return status, nil
+	return &status, nil
 }
 
 func (c *SASTClient) GetUsers() ([]byte, error) {

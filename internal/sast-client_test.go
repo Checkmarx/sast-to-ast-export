@@ -103,7 +103,7 @@ func TestSASTClient_GetUsersResponseBody(t *testing.T) {
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
 
-		result, err := client.GetUsersResponseBody()
+		result, err := client.GetUsers()
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -120,7 +120,7 @@ func TestSASTClient_GetUsersResponseBody(t *testing.T) {
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
 
-		result, err := client.GetUsersResponseBody()
+		result, err := client.GetUsers()
 
 		assert.Error(t, err)
 		assert.Len(t, result, 0)
@@ -143,7 +143,7 @@ func TestSASTClient_GetTeamsResponseBody(t *testing.T) {
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
 
-		result, err := client.GetTeamsResponseBody()
+		result, err := client.GetTeams()
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -160,7 +160,7 @@ func TestSASTClient_GetTeamsResponseBody(t *testing.T) {
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
 
-		result, err := client.GetTeamsResponseBody()
+		result, err := client.GetTeams()
 
 		assert.Error(t, err)
 		assert.Len(t, result, 0)
