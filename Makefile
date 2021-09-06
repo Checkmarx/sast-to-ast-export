@@ -5,8 +5,6 @@ PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
 PUBLIC_KEY = $(shell cat public.key)
 LD_FLAGS = -ldflags="-s -w -X sast-export/cmd.productName=$(PRODUCT_NAME) -X sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X sast-export/cmd.productBuild=$(PRODUCT_BUILD) -X sast-export/internal.buildTimeRSAPublicKey=$(PUBLIC_KEY)"
 
-SAST_EXPORT_USER = '###########'
-SAST_EXPORT_PASS = '###########'
 
 lint:
 	go fmt ./...
@@ -47,7 +45,7 @@ check_public_key:
 	if [ -z $(PUBLIC_KEY) ]; then echo "Please run: make public_key"; exit 1; fi
 
 run_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 1
 
 debug_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --debug
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 10 --debug
