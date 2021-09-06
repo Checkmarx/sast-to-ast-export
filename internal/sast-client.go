@@ -8,7 +8,18 @@ import (
 	"net/http"
 )
 
-var exportData []ExportData
+var (
+	exportData []ExportData
+	usersData,
+	rolesData,
+	ldapRolesData,
+	samlRolesData,
+	teamsData,
+	samlTeamsData,
+	ldapTeamsData,
+	samlIDpsData,
+	ldapServersData []byte
+)
 
 const (
 	Users         = "users"

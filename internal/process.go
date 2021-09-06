@@ -16,28 +16,27 @@ func produce(export chan<- string, exportList []string) {
 	close(export)
 }
 
-func (c *SASTClient) consume(worker int, args Args, export <-chan string, finished chan<- bool) ResultsConsumer {
+func (c *SASTClient) consume(worker int, args Args, export <-chan string, finished chan<- bool) {
 	var err error
-	var resultsConsumer ResultsConsumer
 	for ch := range export {
 		if isDebug {
 			fmt.Printf("%v is consumed by worker %v.\n", ch, worker)
 		}
 		switch ch {
 		case Users: // fetch users and save to export dir
-			resultsConsumer.UsersData, err = c.GetUsers()
+			usersData, err = c.GetUsers()
 			if err != nil {
 				panic(err)
 			}
-			resultsConsumer.RolesData, err = c.GetRoles()
+			rolesData, err = c.GetRoles()
 			if err != nil {
 				panic(err)
 			}
-			resultsConsumer.LdapRolesData, err = c.GetLdapRoleMappings()
+			ldapRolesData, err = c.GetLdapRoleMappings()
 			if err != nil {
 				panic(err)
 			}
-			resultsConsumer.SamlRolesData, err = c.GetSamlRoleMappings()
+			samlRolesData, err = c.GetSamlRoleMappings()
 			if err != nil {
 				panic(err)
 			}
@@ -47,15 +46,15 @@ func (c *SASTClient) consume(worker int, args Args, export <-chan string, finish
 				panic(errResults)
 			}
 		case Teams: // fetch teams and save to export dir
-			resultsConsumer.TeamsData, err = c.GetTeams()
+			teamsData, err = c.GetTeams()
 			if err != nil {
 				panic(err)
 			}
-			resultsConsumer.LdapTeamsData, err = c.GetLdapTeamMappings()
+			ldapTeamsData, err = c.GetLdapTeamMappings()
 			if err != nil {
 				panic(err)
 			}
-			resultsConsumer.SamlTeamsData, err = c.GetSamlTeamMappings()
+			samlTeamsData, err = c.GetSamlTeamMappings()
 			if err != nil {
 				panic(err)
 			}
@@ -63,12 +62,12 @@ func (c *SASTClient) consume(worker int, args Args, export <-chan string, finish
 
 		switch ch {
 		case Users, Teams: // fetch users | teams and save to export dir
-			resultsConsumer.LdapServersData, err = c.GetLdapServers()
+			ldapServersData, err = c.GetLdapServers()
 			if err != nil {
 				panic(err)
 			}
 
-			resultsConsumer.SamlIDpsData, err = c.GetSamlIdentityProviders()
+			samlIDpsData, err = c.GetSamlIdentityProviders()
 			if err != nil {
 				panic(err)
 			}
@@ -76,7 +75,6 @@ func (c *SASTClient) consume(worker int, args Args, export <-chan string, finish
 	}
 
 	finished <- true
-	return resultsConsumer
 }
 
 func RunExport(args Args) {
@@ -85,7 +83,6 @@ func RunExport(args Args) {
 	consumerCount := GetNumCPU()
 	exports := make(chan string)
 	finished := make(chan bool, consumerCount)
-	var resultsConsumer ResultsConsumer
 	// create api client and authenticate
 	client, err := NewSASTClient(args.Url, &http.Client{})
 	if err != nil {
@@ -113,15 +110,15 @@ func RunExport(args Args) {
 		defer func(exportValues *Export) {
 			errClean := exportValues.Clean()
 			if errClean != nil {
-
+				// logs
 			}
 		}(&exportValues)
 	}
 
 	for i := 1; i <= consumerCount; i++ {
-		i := i
+		z := i
 		go func() {
-			resultsConsumer = client.consume(i, args, exports, finished)
+			client.consume(z, args, exports, finished)
 			if err != nil {
 			}
 		}()
@@ -130,7 +127,7 @@ func RunExport(args Args) {
 		<-finished
 	}
 
-	ExportResultsToFile(args, &exportValues, resultsConsumer)
+	ExportResultsToFile(args, &exportValues)
 }
 
 func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
@@ -223,9 +220,9 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 	}()
 
 	for i := 1; i <= consumerCount; i++ {
-		i := i
+		z := i
 		go func() {
-			err = c.consumeReports(i, reports, done)
+			err = c.consumeReports(z, reports, done)
 			if err != nil {
 			}
 		}()
@@ -238,22 +235,22 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 	return nil
 }
 
-func ExportResultsToFile(args Args, exportValues *Export, resultsConsumer ResultsConsumer) {
+func ExportResultsToFile(args Args, exportValues *Export) {
 
 	if strings.Contains(args.Export, Users) {
-		if exportErr := exportValues.AddFile(UsersFileName, resultsConsumer.UsersData); exportErr != nil {
+		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
 			panic(exportErr)
 		}
 
-		if exportErr := exportValues.AddFile(RolesFileName, resultsConsumer.RolesData); exportErr != nil {
+		if exportErr := exportValues.AddFile(RolesFileName, rolesData); exportErr != nil {
 			panic(exportErr)
 		}
 
-		if exportErr := exportValues.AddFile(LdapRoleMappingsFileName, resultsConsumer.LdapRolesData); exportErr != nil {
+		if exportErr := exportValues.AddFile(LdapRoleMappingsFileName, ldapRolesData); exportErr != nil {
 			panic(exportErr)
 		}
 
-		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, resultsConsumer.SamlRolesData); exportErr != nil {
+		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
 			panic(exportErr)
 		}
 
@@ -268,24 +265,24 @@ func ExportResultsToFile(args Args, exportValues *Export, resultsConsumer Result
 	}
 
 	if strings.Contains(args.Export, Teams) {
-		if exportErr := exportValues.AddFile(TeamsFileName, resultsConsumer.TeamsData); exportErr != nil {
+		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
 			panic(exportErr)
 		}
 
-		if exportErr := exportValues.AddFile(LdapTeamMappingsFileName, resultsConsumer.LdapTeamsData); exportErr != nil {
+		if exportErr := exportValues.AddFile(LdapTeamMappingsFileName, ldapTeamsData); exportErr != nil {
 			panic(exportErr)
 		}
 
-		if exportErr := exportValues.AddFile(SamlTeamMappingsFileName, resultsConsumer.SamlTeamsData); exportErr != nil {
+		if exportErr := exportValues.AddFile(SamlTeamMappingsFileName, samlTeamsData); exportErr != nil {
 			panic(exportErr)
 		}
 	}
 
 	if strings.Contains(args.Export, Users) || strings.Contains(args.Export, Teams) {
-		if exportErr := exportValues.AddFile(LdapServersFileName, resultsConsumer.LdapServersData); exportErr != nil {
+		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
 			panic(exportErr)
 		}
-		if exportErr := exportValues.AddFile(SamlIdpFileName, resultsConsumer.SamlIDpsData); exportErr != nil {
+		if exportErr := exportValues.AddFile(SamlIdpFileName, samlIDpsData); exportErr != nil {
 			panic(exportErr)
 		}
 	}

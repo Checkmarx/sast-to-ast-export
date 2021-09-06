@@ -90,18 +90,6 @@ type ReportConsumer struct {
 	ReportResponse ReportResponse
 }
 
-type ResultsConsumer struct {
-	UsersData,
-	RolesData,
-	LdapRolesData,
-	SamlRolesData,
-	TeamsData,
-	SamlTeamsData,
-	LdapTeamsData,
-	SamlIDpsData,
-	LdapServersData []byte
-}
-
 type ReportRequest struct {
 	ReportType string `json:"reportType"`
 	ScanID     int    `json:"scanId"`
