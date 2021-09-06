@@ -30,7 +30,7 @@ func dataToArray(data LastTriagedResponse) []LastTriagedScanProducer {
 		})
 	}
 
-	return uniqueAndMax(result)
+	return GetUniqueAndMax(result)
 }
 
 func contains(projectId, scanId int, list []LastTriagedScanProducer) bool {
@@ -42,7 +42,7 @@ func contains(projectId, scanId int, list []LastTriagedScanProducer) bool {
 	return false
 }
 
-func uniqueAndMax(strList []LastTriagedScanProducer) []LastTriagedScanProducer {
+func GetUniqueAndMax(strList []LastTriagedScanProducer) []LastTriagedScanProducer {
 	var result []LastTriagedScanProducer
 	for _, item := range strList {
 		if contains(item.ProjectID, item.ScanID, result) == false {

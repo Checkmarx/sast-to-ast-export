@@ -1,35 +1,63 @@
 package internal
 
 import (
-	"fmt"
+	"bytes"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net/http"
 	"testing"
 )
 
-func TestRequests_CreateAccessTokenRequest(t *testing.T) {
-	tokenURL := "/CxRestAPI/auth/identity/connect/token"
-	username := "abcd"
-	password := "Cx1234"
-	data := "client_id=resource_owner_client&client_secret=014DF517-39D1-4453-B7B3-9930C563627C&grant_type=password&password=%s&scope=sast_rest_api+access_control_api&username=%s"
+const (
+	tokenURL = "/CxRestAPI/auth/identity/connect/token"
+	username = "abcd"
+	password = "Cx1234"
+)
 
+func TestRequests_CreateAccessTokenRequest(t *testing.T) {
 	t.Run("create token successfully", func(t *testing.T) {
-		body, _ := fmt.Printf(data, password, username)
 		request, err := CreateAccessTokenRequest(BaseURL, username, password)
 		assert.NoError(t, err)
 		assert.NotNil(t, request)
 		assert.Equal(t, request.Method, http.MethodPost)
 		assert.Equal(t, request.URL.Path, tokenURL)
-		assert.Equal(t, request.Body, body)
 	})
+}
 
-	t.Run("create token not successfully", func(t *testing.T) {
-		//body, _ := fmt.Printf(data, password, username)
-		request, err := CreateAccessTokenRequest(BaseURL, "", "")
+func TestRequests_CreateRequest(t *testing.T) {
+
+	t.Run("create request successfully", func(t *testing.T) {
+		response := http.Response{
+			StatusCode: 200,
+			Status:     "Success",
+			Body:       nil,
+		}
+		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+
+		err := client.Authenticate(username, password)
+
+		request, err := CreateRequest(http.MethodGet, BaseURL, nil, client.Token)
 		assert.NoError(t, err)
 		assert.NotNil(t, request)
-		assert.Equal(t, request.Method, http.MethodPost)
-		assert.Equal(t, request.URL.Path, tokenURL)
-		//assert.Equal(t, request.Body, body)
+		assert.Equal(t, request.Method, http.MethodGet)
+	})
+
+	t.Run("create request unsuccessfully", func(t *testing.T) {
+		response := http.Response{
+			StatusCode: 400,
+			Status:     "Bad Request",
+			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
+		}
+		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+
+		errAuth := client.Authenticate(username, password)
+		assert.Error(t, errAuth)
+
+		request, errCreate := CreateRequest(http.MethodGet, BaseURL, nil, client.Token)
+		assert.NoError(t, errCreate)
+		assert.NotNil(t, request)
+		assert.Equal(t, request.Method, http.MethodGet)
 	})
 }

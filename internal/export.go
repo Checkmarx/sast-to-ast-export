@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"sync"
 	"time"
 )
 
@@ -32,9 +31,8 @@ const (
 )
 
 type Export struct {
-	sync.Mutex // wraps a synchronization flag
-	TmpDir     string
-	FileList   []string
+	TmpDir   string
+	FileList []string
 }
 
 // CreateExport creates ExportProducer structure and temporary directory

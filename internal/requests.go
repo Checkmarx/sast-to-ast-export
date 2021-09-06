@@ -41,22 +41,8 @@ func CreateRequest(httpMethod, url string, requestBody io.Reader, token *AccessT
 	}
 
 	resp.Header.Add(ContentType, JSONContentType)
-	resp.Header.Add(Authorization, fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
-	return resp, nil
-}
-
-func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
-	resp, err := c.Adapter.Do(request)
-	if err != nil {
-		return nil, err
+	if token != nil {
+		resp.Header.Add(Authorization, fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
 	}
-	if resp.StatusCode != expectStatusCode {
-		return nil, fmt.Errorf("invalid response: %v", resp)
-	}
-
-	if isDebug {
-		fmt.Printf("doRequest url: %s - method: %s - status response: %d\n", request.URL, request.Method, resp.StatusCode)
-	}
-
 	return resp, nil
 }

@@ -63,13 +63,8 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	defer func(Body io.ReadCloser) {
-		errClose := Body.Close()
-		if errClose != nil {
-
-		}
-	}(resp.Body)
 	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -89,12 +84,7 @@ func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 	if err != nil {
 		panic(err)
 	}
-	defer func(Body io.ReadCloser) {
-		errClose := Body.Close()
-		if errClose != nil {
-
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
 }
@@ -109,14 +99,25 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	if err != nil {
 		panic(err)
 	}
-	defer func(Body io.ReadCloser) {
-		errClose := Body.Close()
-		if errClose != nil {
-
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
+}
+
+func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
+	resp, err := c.Adapter.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != expectStatusCode {
+		return nil, fmt.Errorf("invalid response: %v", resp)
+	}
+
+	if isDebug {
+		fmt.Printf("doRequest url: %s - method: %s - status response: %d\n", request.URL, request.Method, resp.StatusCode)
+	}
+
+	return resp, nil
 }
 
 func GetReportStatusResponse(c *SASTClient, report ReportResponse) (*StatusResponse, error) {
