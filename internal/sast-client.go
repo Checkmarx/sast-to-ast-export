@@ -8,30 +8,14 @@ import (
 	"net/http"
 )
 
+var exportData []ExportData
+
 const (
 	Users         = "users"
 	Results       = "results"
 	Teams         = "teams"
 	ReportType    = "XML"
 	ScansFileName = "%d.xml"
-)
-
-type Result []interface{}
-
-var (
-	exportData []ExportData
-	usersData,
-	rolesData,
-	ldapRolesData,
-	samlRolesData,
-	teamsData,
-	samlTeamsData,
-	ldapTeamsData,
-	samlIdpsData,
-	ldapServersData []byte
-)
-
-const (
 	UsersEndpoint = "/CxRestAPI/auth/Users"
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"
 	RolesEndpoint = "/CxRestAPI/auth/Roles"
@@ -42,7 +26,7 @@ const (
 	SamlIdentityProvidersEndpoint  = "/CxRestAPI/auth/SamlIdentityProviders"
 	SamlRoleMappingsEndpoint       = "/CxRestAPI/auth/SamlRoleMappings"
 	TeamMappingsEndpoint           = "/CxRestAPI/auth/SamlTeamMappings"
-	ReportsLastTriagedScanEndpoint = "/CxWebInterface/odata/v1/Results?$select=Id,ScanId,Date,Scan&$expand=Scan($select=ProjectId)&$filter=" // &$expand=Scan($select=ProjectId)&$filter=Date gt %s and Comment ne null"
+	ReportsLastTriagedScanEndpoint = "/CxWebInterface/odata/v1/Results?$select=Id,ScanId,Date,Scan&$expand=Scan($select=ProjectId)&$filter="
 	ReportsCheckStatusEndpoint     = "/CxRestAPI/help/reports/sastScan/%d/status"
 	ReportsResultEndpoint          = "/CxRestAPI/help/reports/sastScan/%d"
 	CreateReportIDEndpoint         = "/CxRestAPI/help/reports/sastScan"

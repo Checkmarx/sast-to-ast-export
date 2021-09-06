@@ -2,6 +2,8 @@ package internal
 
 import "time"
 
+type Result []interface{}
+
 type Args struct {
 	Url,
 	Username,
@@ -86,6 +88,18 @@ type ReportConsumer struct {
 	ProjectId      int
 	ReportId       int
 	ReportResponse ReportResponse
+}
+
+type ResultsConsumer struct {
+	UsersData,
+	RolesData,
+	LdapRolesData,
+	SamlRolesData,
+	TeamsData,
+	SamlTeamsData,
+	LdapTeamsData,
+	SamlIDpsData,
+	LdapServersData []byte
 }
 
 type ReportRequest struct {
