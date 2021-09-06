@@ -5,31 +5,18 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 )
 
-func GetNumCPU() int {
-	numCpu := runtime.NumCPU()
-	// Not allow more than 4 cpu's
-	if numCpu > 4 {
-		numCpu = 4
-	}
-	if isDebug {
-		fmt.Printf("NumCPU used: %v\n", numCpu)
-	}
-	return numCpu
-}
-
-func produce(export chan<- string) {
+func produce(export chan<- string, exportList []string) {
 	for _, exp := range exportList {
 		export <- exp
 	}
 	close(export)
 }
 
-func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- bool) {
+func (c *SASTClient) consume(worker int, args Args, export <-chan string, finished chan<- bool) {
 	var err error
 	for ch := range export {
 		if isDebug {
@@ -54,7 +41,7 @@ func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- b
 				panic(err)
 			}
 		case Results: // fetch scans and save to export dir
-			errResults := c.GetScanDataResponse()
+			errResults := c.GetScanDataResponse(args)
 			if errResults != nil {
 				panic(errResults)
 			}
@@ -92,6 +79,7 @@ func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- b
 
 func RunExport(args Args) {
 	isDebug = args.Debug
+	var exportList []string
 	consumerCount := GetNumCPU()
 	exports := make(chan string)
 	finished := make(chan bool, consumerCount)
@@ -110,7 +98,7 @@ func RunExport(args Args) {
 		exportList = []string{Users, Results, Teams}
 	}
 
-	go produce(exports)
+	go produce(exports, exportList)
 
 	// start export
 	exportValues, errCreateExport := CreateExport(args.ProductName)
@@ -130,7 +118,7 @@ func RunExport(args Args) {
 	for i := 1; i <= consumerCount; i++ {
 		i := i
 		go func() {
-			client.consume(i, exports, finished)
+			client.consume(i, args, exports, finished)
 			if err != nil {
 			}
 		}()
@@ -142,48 +130,31 @@ func RunExport(args Args) {
 	ExportResultsToFile(args, &exportValues)
 }
 
-func (c *SASTClient) produceReports(reports chan<- ReportConsumer, projectIds []int) error {
-	if isDebug {
-		fmt.Printf("producer with reports: %v\n", projectIds)
-	}
+func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
 
-	for _, projectId := range projectIds {
-		dataScansOut, errGetLast := c.GetLastScanData(projectId, 1)
-		if errGetLast != nil {
-			return errGetLast
+	for _, scan := range scans {
+		reportBody := &ReportRequest{
+			ReportType: ReportType,
+			ScanID:     scan.ScanID,
 		}
 
-		var scans Result
-
-		if errScansSheriff := json.Unmarshal(dataScansOut, &scans); errScansSheriff != nil {
-			return errScansSheriff
+		body := dataToJSONReader(reportBody)
+		dataReportOut, errCreate := c.PostReportID(body)
+		if errCreate != nil {
+			return errCreate
 		}
 
-		for _, scan := range scans {
-			s := scan.(map[string]interface{})
-			reportBody := &ReportRequest{
-				ReportType: ReportType,
-				ScanID:     int(s["id"].(float64)),
-			}
+		var report ReportResponse
+		errReportsSheriff := json.Unmarshal(dataReportOut, &report)
+		if errReportsSheriff != nil {
+			return errReportsSheriff
+		}
 
-			body := dataToJSONReader(reportBody)
-			dataReportOut, errCreate := c.PostReportID(body)
-			if errCreate != nil {
-				return errCreate
-			}
-
-			var report ReportResponse
-			errReportsSheriff := json.Unmarshal(dataReportOut, &report)
-			if errReportsSheriff != nil {
-				return errReportsSheriff
-			}
-
-			// add project and report id to producer list call
-			reports <- ReportConsumer{
-				ProjectId:      projectId,
-				ReportId:       report.ReportID,
-				ReportResponse: report,
-			}
+		// add project and report id to producer list call
+		reports <- ReportConsumer{
+			ProjectId:      scan.ProjectID,
+			ReportId:       report.ReportID,
+			ReportResponse: report,
 		}
 	}
 	close(reports)
@@ -219,19 +190,37 @@ func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, d
 	return nil
 }
 
-func (c *SASTClient) GetScanDataResponse() error {
+func (c *SASTClient) GetScanDataResponse(args Args) error {
 	consumerCount := GetNumCPU()
 	reports := make(chan ReportConsumer)
 	done := make(chan bool, consumerCount)
 	var err error
 
-	projects, errLoadProjects := c.GetAllProjects()
+	/*projects, errLoadProjects := c.GetAllProjects()
 	if errLoadProjects != nil {
 		panic(err)
+	}*/
+
+	fromDate := GetDateFromDays(args.ResultsProjectActiveSince)
+
+	if isDebug {
+		fmt.Printf("GetDateFromDays: %s\n", fromDate)
 	}
 
+	var scans LastTriagedResponse
+	dataScansOut, errGetLast := c.GetLastTriagedScanData(fromDate)
+	if errGetLast != nil {
+		return errGetLast
+	}
+
+	if errScansSheriff := json.Unmarshal(dataScansOut, &scans); errScansSheriff != nil {
+		return errScansSheriff
+	}
+
+	scansList := dataToArray(scans)
+
 	go func() {
-		err = c.produceReports(reports, projects)
+		err = c.produceReports(reports, scansList)
 		if err != nil {
 		}
 	}()

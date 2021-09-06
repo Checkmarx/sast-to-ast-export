@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,8 +22,8 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	data.Add("username", username)
 	data.Add("password", password)
 	data.Add("grant_type", "password")
-	data.Add("scope", "sast_rest_api access_control_api")
-	data.Add("client_id", "resource_owner_client")
+	data.Add("scope", "access_control_api sast_api")
+	data.Add("client_id", "resource_owner_sast_client")
 	data.Add("client_secret", "014DF517-39D1-4453-B7B3-9930C563627C")
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -47,10 +45,18 @@ func CreateRequest(httpMethod, url string, requestBody io.Reader, token *AccessT
 	return resp, nil
 }
 
-func dataToJSONReader(data interface{}) io.Reader {
-	jsonStr, err := json.Marshal(data)
+func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
+	resp, err := c.Adapter.Do(request)
 	if err != nil {
-		fmt.Errorf("failed to stringify request data: %s", err)
+		return nil, err
 	}
-	return bytes.NewBuffer(jsonStr)
+	if resp.StatusCode != expectStatusCode {
+		return nil, fmt.Errorf("invalid response: %v", resp)
+	}
+
+	if isDebug {
+		fmt.Printf("doRequest url: %s - method: %s - status response: %d\n", request.URL, request.Method, resp.StatusCode)
+	}
+
+	return resp, nil
 }

@@ -19,7 +19,6 @@ const (
 type Result []interface{}
 
 var (
-	exportList []string
 	exportData []ExportData
 	usersData,
 	rolesData,
@@ -37,17 +36,17 @@ const (
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"
 	RolesEndpoint = "/CxRestAPI/auth/Roles"
 
-	LdapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
-	LdapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
-	LdapTeamMappingsEndpoint      = "/CxRestAPI/auth/LDAPTeamMappings"
-	SamlIdentityProvidersEndpoint = "/CxRestAPI/auth/SamlIdentityProviders"
-	SamlRoleMappingsEndpoint      = "/CxRestAPI/auth/SamlRoleMappings"
-	TeamMappingsEndpoint          = "/CxRestAPI/auth/SamlTeamMappings"
-	ReportsListProjectsEndpoint   = "/CxRestAPI/help/projects"
-	ReportsLastScanEndpoint       = "/CxRestAPI/help/sast/scans?ProjectId=%d&last=%d&scanStatus=Finished"
-	ReportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
-	ReportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
-	CreateReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
+	LdapServersEndpoint            = "/CxRestAPI/auth/LDAPServers"
+	LdapRoleMappingsEndpoint       = "/CxRestAPI/auth/LDAPRoleMappings"
+	LdapTeamMappingsEndpoint       = "/CxRestAPI/auth/LDAPTeamMappings"
+	SamlIdentityProvidersEndpoint  = "/CxRestAPI/auth/SamlIdentityProviders"
+	SamlRoleMappingsEndpoint       = "/CxRestAPI/auth/SamlRoleMappings"
+	TeamMappingsEndpoint           = "/CxRestAPI/auth/SamlTeamMappings"
+	ReportsLastTriagedScanEndpoint = "/CxWebInterface/odata/v1/Results?$select=Id,ScanId,Date,Scan&$expand=Scan($select=ProjectId)&$filter=" // &$expand=Scan($select=ProjectId)&$filter=Date gt %s and Comment ne null"
+	ReportsCheckStatusEndpoint     = "/CxRestAPI/help/reports/sastScan/%d/status"
+	ReportsResultEndpoint          = "/CxRestAPI/help/reports/sastScan/%d"
+	CreateReportIDEndpoint         = "/CxRestAPI/help/reports/sastScan"
+	LastTriagedFilters             = "Date gt %s and Comment ne null"
 )
 
 var isDebug bool
@@ -187,12 +186,8 @@ func (c *SASTClient) GetSamlTeamMappings() ([]byte, error) {
 	return c.GetResponseBody(TeamMappingsEndpoint)
 }
 
-func (c *SASTClient) GetListProjects() ([]byte, error) {
-	return c.GetResponseBody(ReportsListProjectsEndpoint)
-}
-
-func (c *SASTClient) GetLastScanData(projectId, lastNumScans int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsLastScanEndpoint, projectId, lastNumScans))
+func (c *SASTClient) GetLastTriagedScanData(fromDate string) ([]byte, error) {
+	return c.GetResponseBody(ReportsLastTriagedScanEndpoint + GetEncodingUrl(LastTriagedFilters, fromDate))
 }
 
 func (c *SASTClient) GetReportIDStatus(reportId int) ([]byte, error) {
@@ -205,38 +200,4 @@ func (c *SASTClient) GetReportResult(reportId int) ([]byte, error) {
 
 func (c *SASTClient) PostReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(CreateReportIDEndpoint, body)
-}
-
-func (c *SASTClient) GetAllProjects() ([]int, error) {
-	var projectIds []int
-	dataOut, err := c.GetListProjects()
-	if err != nil {
-		return []int{}, err
-	}
-
-	var projectsInter Result
-	if errSheriff := json.Unmarshal(dataOut, &projectsInter); errSheriff != nil {
-		return []int{}, errSheriff
-	}
-
-	for _, proj := range projectsInter {
-		m := proj.(map[string]interface{})
-		projectIds = append(projectIds, int(m["id"].(float64)))
-	}
-
-	return projectIds, nil
-}
-
-func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
-	if isDebug {
-		fmt.Printf("doRequest url: %s - method: %s\n", request.URL, request.Method)
-	}
-	resp, err := c.Adapter.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != expectStatusCode {
-		return nil, fmt.Errorf("invalid response: %v", resp)
-	}
-	return resp, nil
 }
