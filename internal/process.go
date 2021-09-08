@@ -218,7 +218,7 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 		return errScansSheriff
 	}
 
-	scansList := dataToArray(scans)
+	scansList := convertTriagedScansResponseToLastScansList(scans)
 
 	go func() {
 		err = c.produceReports(reports, scansList)
