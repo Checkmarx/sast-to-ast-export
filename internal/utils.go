@@ -1,22 +1,11 @@
 package internal
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/url"
 	"runtime"
 	"time"
 )
-
-func dataToJSONReader(data interface{}) io.Reader {
-	jsonStr, err := json.Marshal(data)
-	if err != nil {
-		fmt.Errorf("failed to stringify request data: %s", err)
-	}
-	return bytes.NewBuffer(jsonStr)
-}
 
 func dataToArray(data LastTriagedResponse) []LastTriagedScanProducer {
 	if isDebug {

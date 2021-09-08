@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -132,14 +133,18 @@ func RunExport(args Args) {
 }
 
 func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
-
 	for _, scan := range scans {
 		reportBody := &ReportRequest{
 			ReportType: ReportType,
 			ScanID:     scan.ScanID,
 		}
 
-		body := dataToJSONReader(reportBody)
+		reportJSON, marshalErr := json.Marshal(reportBody)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		body := bytes.NewBuffer(reportJSON)
+
 		dataReportOut, errCreate := c.PostReportID(body)
 		if errCreate != nil {
 			return errCreate
