@@ -97,6 +97,7 @@ func RunExport(args Args) {
 	} else {
 		exportList = []string{Users, Results, Teams}
 	}
+	args.Export = strings.Join(exportList, ",")
 
 	go produce(exports, exportList)
 
