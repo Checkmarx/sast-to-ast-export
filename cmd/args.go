@@ -12,7 +12,7 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	args.ProductName = productName
 	var err error
 	// process input
-	args.Url, err = cmd.Flags().GetString("url")
+	args.URL, err = cmd.Flags().GetString("url")
 	if err != nil {
 		panic(err)
 	}

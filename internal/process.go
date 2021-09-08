@@ -1,35 +1,27 @@
 package internal
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 )
 
-func GetNumCPU() int {
-	numCpu := runtime.NumCPU()
-	// Not allow more than 4 cpu's
-	if numCpu > 4 {
-		numCpu = 4
-	}
-	if isDebug {
-		fmt.Printf("NumCPU used: %v\n", numCpu)
-	}
-	return numCpu
-}
+const (
+	statusCreated = "Created"
+)
 
-func produce(export chan<- string) {
+func produce(export chan<- string, exportList []string) {
 	for _, exp := range exportList {
 		export <- exp
 	}
 	close(export)
 }
 
-func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- bool) {
+func (c *SASTClient) consume(worker int, args Args, export <-chan string, finished chan<- bool) {
 	var err error
 	for ch := range export {
 		if isDebug {
@@ -54,7 +46,7 @@ func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- b
 				panic(err)
 			}
 		case Results: // fetch scans and save to export dir
-			errResults := c.GetScanDataResponse()
+			errResults := c.GetScanDataResponse(args)
 			if errResults != nil {
 				panic(errResults)
 			}
@@ -80,7 +72,7 @@ func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- b
 				panic(err)
 			}
 
-			samlIdpsData, err = c.GetSamlIdentityProviders()
+			samlIDpsData, err = c.GetSamlIdentityProviders()
 			if err != nil {
 				panic(err)
 			}
@@ -92,11 +84,12 @@ func (c *SASTClient) consume(worker int, export <-chan string, finished chan<- b
 
 func RunExport(args Args) {
 	isDebug = args.Debug
+	var exportList []string
 	consumerCount := GetNumCPU()
 	exports := make(chan string)
 	finished := make(chan bool, consumerCount)
 	// create api client and authenticate
-	client, err := NewSASTClient(args.Url, &http.Client{})
+	client, err := NewSASTClient(args.URL, &http.Client{})
 	if err != nil {
 		panic(err)
 	}
@@ -109,8 +102,9 @@ func RunExport(args Args) {
 	} else {
 		exportList = []string{Users, Results, Teams}
 	}
+	args.Export = strings.Join(exportList, ",")
 
-	go produce(exports)
+	go produce(exports, exportList)
 
 	// start export
 	exportValues, errCreateExport := CreateExport(args.ProductName)
@@ -122,16 +116,17 @@ func RunExport(args Args) {
 		defer func(exportValues *Export) {
 			errClean := exportValues.Clean()
 			if errClean != nil {
-
+				fmt.Printf("Error cleaning export: %v", err)
 			}
 		}(&exportValues)
 	}
 
 	for i := 1; i <= consumerCount; i++ {
-		i := i
+		z := i
 		go func() {
-			client.consume(i, exports, finished)
+			client.consume(z, args, exports, finished)
 			if err != nil {
+				fmt.Printf("Error consuming: %v", err)
 			}
 		}()
 	}
@@ -142,55 +137,42 @@ func RunExport(args Args) {
 	ExportResultsToFile(args, &exportValues)
 }
 
-func (c *SASTClient) produceReports(reports chan<- ReportConsumer, projectIds []int) error {
-	if isDebug {
-		fmt.Printf("producer with reports: %v\n", projectIds)
-	}
-
-	for _, projectId := range projectIds {
-		dataScansOut, errGetLast := c.GetLastScanData(projectId, 1)
-		if errGetLast != nil {
-			return errGetLast
+func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
+	for _, scan := range scans {
+		reportBody := &ReportRequest{
+			ReportType: ReportType,
+			ScanID:     scan.ScanID,
 		}
 
-		var scans Result
+		reportJSON, marshalErr := json.Marshal(reportBody)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		body := bytes.NewBuffer(reportJSON)
 
-		if errScansSheriff := json.Unmarshal(dataScansOut, &scans); errScansSheriff != nil {
-			return errScansSheriff
+		dataReportOut, errCreate := c.PostReportID(body)
+		if errCreate != nil {
+			return errCreate
 		}
 
-		for _, scan := range scans {
-			s := scan.(map[string]interface{})
-			reportBody := &ReportRequest{
-				ReportType: ReportType,
-				ScanID:     int(s["id"].(float64)),
-			}
+		var report ReportResponse
+		errReportsSheriff := json.Unmarshal(dataReportOut, &report)
+		if errReportsSheriff != nil {
+			return errReportsSheriff
+		}
 
-			body := dataToJSONReader(reportBody)
-			dataReportOut, errCreate := c.PostReportID(body)
-			if errCreate != nil {
-				return errCreate
-			}
-
-			var report ReportResponse
-			errReportsSheriff := json.Unmarshal(dataReportOut, &report)
-			if errReportsSheriff != nil {
-				return errReportsSheriff
-			}
-
-			// add project and report id to producer list call
-			reports <- ReportConsumer{
-				ProjectId:      projectId,
-				ReportId:       report.ReportID,
-				ReportResponse: report,
-			}
+		// add project and report id to producer list call
+		reports <- ReportConsumer{
+			ProjectId:      scan.ProjectID,
+			ReportId:       report.ReportID,
+			ReportResponse: report,
 		}
 	}
 	close(reports)
 	return nil
 }
 
-func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, done chan<- bool) error {
+func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, done chan<- bool) (err error) {
 	sleep := 2 * time.Second // default first time waiting, will increase in every loop
 	retryAttempts := 4
 	for rep := range reports {
@@ -203,15 +185,15 @@ func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, d
 			return errDoStatusReq
 		}
 
-		if status.Status.Value == "Created" {
-			errDoStatusResult := c.GetReportData(rep.ReportId, rep.ProjectId)
-			if errDoStatusResult != nil {
-				return errDoStatusResult
+		if status.Status.Value == statusCreated {
+			err = c.GetReportData(rep.ReportId, rep.ProjectId)
+			if err != nil {
+				return err
 			}
 		} else {
-			errDoRetry := c.retryGetReport(retryAttempts, rep.ReportId, rep.ProjectId, sleep, rep.ReportResponse, status)
-			if errDoRetry != nil {
-				return errDoRetry
+			err = c.retryGetReport(retryAttempts, rep.ReportId, rep.ProjectId, sleep, rep.ReportResponse, status)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -219,28 +201,42 @@ func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, d
 	return nil
 }
 
-func (c *SASTClient) GetScanDataResponse() error {
+func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 	consumerCount := GetNumCPU()
 	reports := make(chan ReportConsumer)
 	done := make(chan bool, consumerCount)
-	var err error
 
-	projects, errLoadProjects := c.GetAllProjects()
-	if errLoadProjects != nil {
-		panic(err)
+	fromDate := GetDateFromDays(args.ResultsProjectActiveSince)
+
+	if isDebug {
+		fmt.Printf("GetDateFromDays: %s\n", fromDate)
 	}
 
+	var scans LastTriagedResponse
+	dataScansOut, errGetLast := c.GetLastTriagedScanData(fromDate)
+	if errGetLast != nil {
+		return errGetLast
+	}
+
+	if errScansSheriff := json.Unmarshal(dataScansOut, &scans); errScansSheriff != nil {
+		return errScansSheriff
+	}
+
+	scansList := convertTriagedScansResponseToLastScansList(scans)
+
 	go func() {
-		err = c.produceReports(reports, projects)
+		err = c.produceReports(reports, scansList)
 		if err != nil {
+			fmt.Printf("Error producing reports: %v", err)
 		}
 	}()
 
 	for i := 1; i <= consumerCount; i++ {
-		i := i
+		consumerID := i
 		go func() {
-			err = c.consumeReports(i, reports, done)
+			err = c.consumeReports(consumerID, reports, done)
 			if err != nil {
+				fmt.Printf("Error consuming reports: %v", err)
 			}
 		}()
 	}
@@ -270,7 +266,6 @@ func ExportResultsToFile(args Args, exportValues *Export) {
 		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
 			panic(exportErr)
 		}
-
 	}
 
 	if strings.Contains(args.Export, Results) {
@@ -299,7 +294,7 @@ func ExportResultsToFile(args Args, exportValues *Export) {
 		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
 			panic(exportErr)
 		}
-		if exportErr := exportValues.AddFile(SamlIdpFileName, samlIdpsData); exportErr != nil {
+		if exportErr := exportValues.AddFile(SamlIdpFileName, samlIDpsData); exportErr != nil {
 			panic(exportErr)
 		}
 	}
@@ -313,14 +308,11 @@ func ExportResultsToFile(args Args, exportValues *Export) {
 		fmt.Printf("SAST data exported to %s\n", exportFileName)
 	} else {
 		fmt.Printf("Debug mode: SAST data exported to %s\n", exportValues.TmpDir)
-		cmd := exec.Command(`explorer`, `/select,`, exportValues.TmpDir)
-		errRun := cmd.Run()
-		if errRun != nil {
-		}
+		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
 	}
 }
 
-func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep time.Duration, response ReportResponse, status *StatusResponse) (err error) {
+func (c *SASTClient) retryGetReport(attempts, reportID, projectID int, sleep time.Duration, response ReportResponse, status *StatusResponse) (err error) {
 	state := true
 	var errDoStatusReq error
 	for state {
@@ -331,18 +323,18 @@ func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep tim
 			return errDoStatusReq
 		}
 
-		state = status.Status.Value != "Created"
+		state = status.Status.Value != statusCreated
 
 		// Code to repeatedly execute until we have create status
-		if status.Status.Value == "Created" {
+		if status.Status.Value == statusCreated {
 			state = false
-			errDoStatusResult := c.GetReportData(reportId, projectId)
-			if errDoStatusResult != nil {
-				return errDoStatusResult
+			errReportData := c.GetReportData(reportID, projectID)
+			if errReportData != nil {
+				return errReportData
 			}
 		}
 
-		attempts -= 1
+		attempts--
 		if attempts == 0 {
 			return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 		}
@@ -350,19 +342,19 @@ func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep tim
 	return nil
 }
 
-func (c *SASTClient) GetReportData(reportId, projectId int) error {
-	finalResultOut, errGetResult := c.GetReportResult(reportId)
+func (c *SASTClient) GetReportData(reportID, projectID int) error {
+	finalResultOut, errGetResult := c.GetReportResult(reportID)
 	if errGetResult != nil {
 		return errGetResult
 	}
 
 	exportData = append(exportData, ExportData{
-		FileName: fmt.Sprintf(ScansFileName, projectId),
+		FileName: fmt.Sprintf(ScansFileName, projectID),
 		Data:     finalResultOut,
 	})
 
 	if isDebug {
-		fmt.Printf("End creating final report with ReportId: %d\n", reportId)
+		fmt.Printf("End creating final report with ReportId: %d\n", reportID)
 	}
 	return nil
 }

@@ -47,7 +47,7 @@ check_public_key:
 	if [ -z $(PUBLIC_KEY) ]; then echo "Please run: make public_key"; exit 1; fi
 
 run_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 1
 
 debug_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --debug
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 10 --debug

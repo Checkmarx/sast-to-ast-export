@@ -8,18 +8,7 @@ import (
 	"net/http"
 )
 
-const (
-	Users         = "users"
-	Results       = "results"
-	Teams         = "teams"
-	ReportType    = "XML"
-	ScansFileName = "%d.xml"
-)
-
-type Result []interface{}
-
 var (
-	exportList []string
 	exportData []ExportData
 	usersData,
 	rolesData,
@@ -28,26 +17,31 @@ var (
 	teamsData,
 	samlTeamsData,
 	ldapTeamsData,
-	samlIdpsData,
+	samlIDpsData,
 	ldapServersData []byte
 )
 
 const (
+	Users         = "users"
+	Results       = "results"
+	Teams         = "teams"
+	ReportType    = "XML"
+	ScansFileName = "%d.xml"
 	UsersEndpoint = "/CxRestAPI/auth/Users"
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"
 	RolesEndpoint = "/CxRestAPI/auth/Roles"
 
-	LdapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
-	LdapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
-	LdapTeamMappingsEndpoint      = "/CxRestAPI/auth/LDAPTeamMappings"
-	SamlIdentityProvidersEndpoint = "/CxRestAPI/auth/SamlIdentityProviders"
-	SamlRoleMappingsEndpoint      = "/CxRestAPI/auth/SamlRoleMappings"
-	TeamMappingsEndpoint          = "/CxRestAPI/auth/SamlTeamMappings"
-	ReportsListProjectsEndpoint   = "/CxRestAPI/help/projects"
-	ReportsLastScanEndpoint       = "/CxRestAPI/help/sast/scans?ProjectId=%d&last=%d&scanStatus=Finished"
-	ReportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
-	ReportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
-	CreateReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
+	LdapServersEndpoint            = "/CxRestAPI/auth/LDAPServers"
+	LdapRoleMappingsEndpoint       = "/CxRestAPI/auth/LDAPRoleMappings"
+	LdapTeamMappingsEndpoint       = "/CxRestAPI/auth/LDAPTeamMappings"
+	SamlIdentityProvidersEndpoint  = "/CxRestAPI/auth/SamlIdentityProviders"
+	SamlRoleMappingsEndpoint       = "/CxRestAPI/auth/SamlRoleMappings"
+	TeamMappingsEndpoint           = "/CxRestAPI/auth/SamlTeamMappings"
+	ReportsLastTriagedScanEndpoint = "/CxWebInterface/odata/v1/Results?$select=Id,ScanId,Date,Scan&$expand=Scan($select=ProjectId)&$filter="
+	ReportsCheckStatusEndpoint     = "/CxRestAPI/help/reports/sastScan/%d/status"
+	ReportsResultEndpoint          = "/CxRestAPI/help/reports/sastScan/%d"
+	CreateReportIDEndpoint         = "/CxRestAPI/help/reports/sastScan"
+	LastTriagedFilters             = "Date gt %s and Comment ne null"
 )
 
 var isDebug bool
@@ -80,13 +74,8 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	defer func(Body io.ReadCloser) {
-		errClose := Body.Close()
-		if errClose != nil {
-
-		}
-	}(resp.Body)
 	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -99,19 +88,14 @@ func (c *SASTClient) Authenticate(username, password string) error {
 func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 	req, err := CreateRequest(http.MethodGet, c.BaseURL+endpoint, nil, c.Token)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 
 	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
-	defer func(Body io.ReadCloser) {
-		errClose := Body.Close()
-		if errClose != nil {
-
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
 }
@@ -126,14 +110,25 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	if err != nil {
 		panic(err)
 	}
-	defer func(Body io.ReadCloser) {
-		errClose := Body.Close()
-		if errClose != nil {
-
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
+}
+
+func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
+	resp, err := c.Adapter.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != expectStatusCode {
+		return nil, fmt.Errorf("invalid response: %v", resp)
+	}
+
+	if isDebug {
+		fmt.Printf("doRequest url: %s - method: %s - status response: %d\n", request.URL, request.Method, resp.StatusCode)
+	}
+
+	return resp, nil
 }
 
 func GetReportStatusResponse(c *SASTClient, report ReportResponse) (*StatusResponse, error) {
@@ -187,12 +182,8 @@ func (c *SASTClient) GetSamlTeamMappings() ([]byte, error) {
 	return c.GetResponseBody(TeamMappingsEndpoint)
 }
 
-func (c *SASTClient) GetListProjects() ([]byte, error) {
-	return c.GetResponseBody(ReportsListProjectsEndpoint)
-}
-
-func (c *SASTClient) GetLastScanData(projectId, lastNumScans int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsLastScanEndpoint, projectId, lastNumScans))
+func (c *SASTClient) GetLastTriagedScanData(fromDate string) ([]byte, error) {
+	return c.GetResponseBody(ReportsLastTriagedScanEndpoint + GetEncodingURL(LastTriagedFilters, fromDate))
 }
 
 func (c *SASTClient) GetReportIDStatus(reportId int) ([]byte, error) {
@@ -205,38 +196,4 @@ func (c *SASTClient) GetReportResult(reportId int) ([]byte, error) {
 
 func (c *SASTClient) PostReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(CreateReportIDEndpoint, body)
-}
-
-func (c *SASTClient) GetAllProjects() ([]int, error) {
-	var projectIds []int
-	dataOut, err := c.GetListProjects()
-	if err != nil {
-		return []int{}, err
-	}
-
-	var projectsInter Result
-	if errSheriff := json.Unmarshal(dataOut, &projectsInter); errSheriff != nil {
-		return []int{}, errSheriff
-	}
-
-	for _, proj := range projectsInter {
-		m := proj.(map[string]interface{})
-		projectIds = append(projectIds, int(m["id"].(float64)))
-	}
-
-	return projectIds, nil
-}
-
-func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
-	if isDebug {
-		fmt.Printf("doRequest url: %s - method: %s\n", request.URL, request.Method)
-	}
-	resp, err := c.Adapter.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != expectStatusCode {
-		return nil, fmt.Errorf("invalid response: %v", resp)
-	}
-	return resp, nil
 }

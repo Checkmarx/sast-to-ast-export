@@ -1,7 +1,11 @@
 package internal
 
+import "time"
+
+type Result []interface{}
+
 type Args struct {
-	Url,
+	URL,
 	Username,
 	Password,
 	Export,
@@ -66,6 +70,20 @@ type ReportResponse struct {
 	} `json:"links"`
 }
 
+type ValueOdata struct {
+	ID     int       `json:"Id"`
+	ScanID int       `json:"ScanId"`
+	Date   time.Time `json:"Date"`
+	Scan   struct {
+		ProjectID int `json:"ProjectId"`
+	} `json:"Scan"`
+}
+
+type LastTriagedResponse struct {
+	OdataContext string       `json:"@odata.context"`
+	Value        []ValueOdata `json:"value"`
+}
+
 type ReportConsumer struct {
 	ProjectId      int
 	ReportId       int
@@ -75,6 +93,11 @@ type ReportConsumer struct {
 type ReportRequest struct {
 	ReportType string `json:"reportType"`
 	ScanID     int    `json:"scanId"`
+}
+
+type LastTriagedScanProducer struct {
+	ProjectID int
+	ScanID    int
 }
 
 type ExportData struct {
