@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	maxCPUs = 4
+)
+
 func convertTriagedScansResponseToLastScansList(triagedScansResponse LastTriagedResponse) []LastTriagedScanProducer {
 	if isDebug {
 		fmt.Printf("convertTriagedScansResponseToLastScansList len: %d\n", len(triagedScansResponse.Value))
@@ -68,8 +72,8 @@ func GetDateFromDays(numDays int) string {
 func GetNumCPU() int {
 	numCpu := runtime.NumCPU() - 1
 	// Not allow more than 4 cpu's
-	if numCpu > 4 {
-		numCpu = 4
+	if numCpu > maxCPUs {
+		numCpu = maxCPUs
 	}
 	if isDebug {
 		fmt.Printf("NumCPU used: %v\n", numCpu)
@@ -77,6 +81,6 @@ func GetNumCPU() int {
 	return numCpu
 }
 
-func GetEncodingUrl(params, str string) string {
+func GetEncodingURL(params, str string) string {
 	return url.QueryEscape(fmt.Sprintf(params, str))
 }

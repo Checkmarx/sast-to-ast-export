@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+const (
+	statusCreated = "Created"
+)
+
 func produce(export chan<- string, exportList []string) {
 	for _, exp := range exportList {
 		export <- exp
@@ -181,7 +185,7 @@ func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, d
 			return errDoStatusReq
 		}
 
-		if status.Status.Value == "Created" {
+		if status.Status.Value == statusCreated {
 			err = c.GetReportData(rep.ReportId, rep.ProjectId)
 			if err != nil {
 				return err
@@ -323,10 +327,10 @@ func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep tim
 			return errDoStatusReq
 		}
 
-		state = status.Status.Value != "Created"
+		state = status.Status.Value != statusCreated
 
 		// Code to repeatedly execute until we have create status
-		if status.Status.Value == "Created" {
+		if status.Status.Value == statusCreated {
 			state = false
 			errReportData := c.GetReportData(reportId, projectId)
 			if errReportData != nil {
@@ -334,7 +338,7 @@ func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep tim
 			}
 		}
 
-		attempts -= 1
+		attempts--
 		if attempts == 0 {
 			return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 		}
@@ -342,8 +346,8 @@ func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep tim
 	return nil
 }
 
-func (c *SASTClient) GetReportData(reportId, projectId int) error {
-	finalResultOut, errGetResult := c.GetReportResult(reportId)
+func (c *SASTClient) GetReportData(reportID, projectId int) error {
+	finalResultOut, errGetResult := c.GetReportResult(reportID)
 	if errGetResult != nil {
 		return errGetResult
 	}
@@ -354,7 +358,7 @@ func (c *SASTClient) GetReportData(reportId, projectId int) error {
 	})
 
 	if isDebug {
-		fmt.Printf("End creating final report with ReportId: %d\n", reportId)
+		fmt.Printf("End creating final report with ReportId: %d\n", reportID)
 	}
 	return nil
 }

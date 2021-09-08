@@ -183,7 +183,7 @@ func (c *SASTClient) GetSamlTeamMappings() ([]byte, error) {
 }
 
 func (c *SASTClient) GetLastTriagedScanData(fromDate string) ([]byte, error) {
-	return c.GetResponseBody(ReportsLastTriagedScanEndpoint + GetEncodingUrl(LastTriagedFilters, fromDate))
+	return c.GetResponseBody(ReportsLastTriagedScanEndpoint + GetEncodingURL(LastTriagedFilters, fromDate))
 }
 
 func (c *SASTClient) GetReportIDStatus(reportId int) ([]byte, error) {
