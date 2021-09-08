@@ -88,12 +88,12 @@ func (c *SASTClient) Authenticate(username, password string) error {
 func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 	req, err := CreateRequest(http.MethodGet, c.BaseURL+endpoint, nil, c.Token)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 
 	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 	defer resp.Body.Close()
 
