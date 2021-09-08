@@ -3,8 +3,10 @@ package internal
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -27,10 +29,11 @@ func TestRequests_CreateAccessTokenRequest(t *testing.T) {
 func TestRequests_CreateRequest(t *testing.T) {
 
 	t.Run("create request successfully", func(t *testing.T) {
+		responseContent := "{\"access_token\": \"eyJhbGcOiJ...YRfzdQ\",\"expires_in\": 86400,\"token_type\": \"Bearer\"}"
 		response := http.Response{
 			StatusCode: 200,
 			Status:     "Success",
-			Body:       nil,
+			Body:       io.NopCloser(strings.NewReader(responseContent)),
 		}
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
