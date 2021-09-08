@@ -112,7 +112,7 @@ func RunExport(args Args) {
 		defer func(exportValues *Export) {
 			errClean := exportValues.Clean()
 			if errClean != nil {
-				// logs
+				fmt.Printf("Error cleaning export: %v", err)
 			}
 		}(&exportValues)
 	}
@@ -122,6 +122,7 @@ func RunExport(args Args) {
 		go func() {
 			client.consume(z, args, exports, finished)
 			if err != nil {
+				fmt.Printf("Error consuming: %v", err)
 			}
 		}()
 	}
@@ -222,14 +223,16 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 	go func() {
 		err = c.produceReports(reports, scansList)
 		if err != nil {
+			fmt.Printf("Error producing reports: %v", err)
 		}
 	}()
 
 	for i := 1; i <= consumerCount; i++ {
-		z := i
+		consumerID := i
 		go func() {
-			err = c.consumeReports(z, reports, done)
+			err = c.consumeReports(consumerID, reports, done)
 			if err != nil {
+				fmt.Printf("Error consuming reports: %v", err)
 			}
 		}()
 	}
