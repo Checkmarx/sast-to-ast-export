@@ -89,7 +89,7 @@ func RunExport(args Args) {
 	exports := make(chan string)
 	finished := make(chan bool, consumerCount)
 	// create api client and authenticate
-	client, err := NewSASTClient(args.Url, &http.Client{})
+	client, err := NewSASTClient(args.URL, &http.Client{})
 	if err != nil {
 		panic(err)
 	}
@@ -266,7 +266,6 @@ func ExportResultsToFile(args Args, exportValues *Export) {
 		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
 			panic(exportErr)
 		}
-
 	}
 
 	if strings.Contains(args.Export, Results) {
@@ -309,14 +308,11 @@ func ExportResultsToFile(args Args, exportValues *Export) {
 		fmt.Printf("SAST data exported to %s\n", exportFileName)
 	} else {
 		fmt.Printf("Debug mode: SAST data exported to %s\n", exportValues.TmpDir)
-		cmd := exec.Command(`explorer`, `/select,`, exportValues.TmpDir)
-		errRun := cmd.Run()
-		if errRun != nil {
-		}
+		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
 	}
 }
 
-func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep time.Duration, response ReportResponse, status *StatusResponse) (err error) {
+func (c *SASTClient) retryGetReport(attempts, reportID, projectID int, sleep time.Duration, response ReportResponse, status *StatusResponse) (err error) {
 	state := true
 	var errDoStatusReq error
 	for state {
@@ -332,7 +328,7 @@ func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep tim
 		// Code to repeatedly execute until we have create status
 		if status.Status.Value == statusCreated {
 			state = false
-			errReportData := c.GetReportData(reportId, projectId)
+			errReportData := c.GetReportData(reportID, projectID)
 			if errReportData != nil {
 				return errReportData
 			}
@@ -346,14 +342,14 @@ func (c *SASTClient) retryGetReport(attempts, reportId, projectId int, sleep tim
 	return nil
 }
 
-func (c *SASTClient) GetReportData(reportID, projectId int) error {
+func (c *SASTClient) GetReportData(reportID, projectID int) error {
 	finalResultOut, errGetResult := c.GetReportResult(reportID)
 	if errGetResult != nil {
 		return errGetResult
 	}
 
 	exportData = append(exportData, ExportData{
-		FileName: fmt.Sprintf(ScansFileName, projectId),
+		FileName: fmt.Sprintf(ScansFileName, projectID),
 		Data:     finalResultOut,
 	})
 

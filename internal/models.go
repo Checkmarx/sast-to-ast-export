@@ -5,7 +5,7 @@ import "time"
 type Result []interface{}
 
 type Args struct {
-	Url,
+	URL,
 	Username,
 	Password,
 	Export,
