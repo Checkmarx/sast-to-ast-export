@@ -119,17 +119,17 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 
 func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
 	resp, err := c.Adapter.Do(request)
+	log.Debug().
+		Str("method", request.Method).
+		Str("url", request.URL.String()).
+		Int("statusCode", resp.StatusCode).
+		Msg("request")
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != expectStatusCode {
 		return nil, fmt.Errorf("invalid response: %v", resp)
 	}
-	log.Debug().
-		Str("url", request.URL.String()).
-		Str("method", request.Method).
-		Int("statusCode", resp.StatusCode).
-		Msg("request")
 	return resp, nil
 }
 
