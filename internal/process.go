@@ -360,7 +360,9 @@ func (c *SASTClient) retryGetReport(attempts, reportID, projectID int, sleep tim
 	for state {
 		log.Debug().
 			Int("attempt", attempts).
+			Int("projectID", projectID).
 			Int("reportID", reportID).
+			Str("sleep", sleep.String()).
 			Msg("retrying report create")
 		time.Sleep(sleep)
 		sleep *= 2
