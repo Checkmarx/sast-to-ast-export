@@ -1,14 +1,15 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"time"
 
+	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-
-	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 )
 
 // productName is defined in Makefile and initialized during build
@@ -31,6 +32,31 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// setup logging
+		verbose, flagErr := cmd.Flags().GetBool("verbose")
+		if flagErr != nil {
+			panic(flagErr)
+		}
+
+		aolErr := aol.Init(productName, "", "trace", "")
+		if aolErr != nil {
+			panic(aolErr)
+		}
+
+		now := time.Now()
+		logFileName := fmt.Sprintf("%s-%s.log", productName, now.Format(internal.DateTimeFormat))
+		logFileWriter, err := os.Create(logFileName)
+		if err != nil {
+			panic(err)
+		}
+		defer logFileWriter.Close()
+
+		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+
+		levelWriter := internal.NewMultiLevelWriter(verbose, zerolog.InfoLevel, consoleWriter, logFileWriter)
+		log.Logger = log.Logger.Output(&levelWriter)
+
+		// start export
 		allArgs := GetArgs(cmd, productName)
 		internal.RunExport(allArgs)
 	},
@@ -50,6 +76,8 @@ func init() {
 	rootCmd.Flags().StringP("export", "", "", "SAST [optional] export options --export users,results,teams, all if nothing defined")
 	rootCmd.Flags().IntP("results-project-active-since", "", 180, "SAST [optional] custom results project active since (days) - 180 if nothing defined")
 	rootCmd.Flags().Bool("debug", false, "Activate debug mode")
+	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose logging to console")
+
 	if err := rootCmd.MarkFlagRequired("user"); err != nil {
 		panic(err)
 	}
@@ -65,22 +93,4 @@ func init() {
 	if err := rootCmd.MarkFlagCustom("results-project-active-since", "SAST custom results project active since (days) 180 if nothing defined"); err != nil {
 		panic(err)
 	}
-
-	aolErr := aol.Init(productName, "", "trace", "")
-	if aolErr != nil {
-		panic(aolErr)
-	}
-
-	logFileWriter, err := os.Create("test.log")
-	if err != nil {
-		panic(err)
-	}
-	defer logFileWriter.Close()
-
-	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
-
-	levelWriter := internal.NewMultiLevelWriter(false, zerolog.InfoLevel, consoleWriter, logFileWriter)
-	log.Logger = log.Logger.Output(&levelWriter)
-
-	log.Info().Msg("Inited")
 }
