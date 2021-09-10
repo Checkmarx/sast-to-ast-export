@@ -35,19 +35,19 @@ func getLastScansByProject(scans []LastTriagedScanProducer) []LastTriagedScanPro
 	return result
 }
 
-func getLastScanByProject(list []LastTriagedScanProducer, projectId int) int {
+func getLastScanByProject(list []LastTriagedScanProducer, projectID int) int {
 	lastScan := 0
 	for _, scan := range list {
-		if scan.ScanID > lastScan && scan.ProjectID == projectId {
+		if scan.ScanID > lastScan && scan.ProjectID == projectID {
 			lastScan = scan.ScanID
 		}
 	}
 	return lastScan
 }
 
-func isScanInList(projectId, scanId int, list []LastTriagedScanProducer) bool {
+func isScanInList(projectID, scanID int, list []LastTriagedScanProducer) bool {
 	for _, a := range list {
-		if a.ProjectID == projectId && a.ScanID == scanId {
+		if a.ProjectID == projectID && a.ScanID == scanID {
 			return true
 		}
 	}
@@ -63,12 +63,12 @@ func GetDateFromDays(numDays int) string {
 }
 
 func GetNumCPU() int {
-	numCpu := runtime.NumCPU() - 1
+	numCPU := runtime.NumCPU() - 1
 	// Not allow more than 4 cpu's
-	if numCpu > maxCPUs {
-		numCpu = maxCPUs
+	if numCPU > maxCPUs {
+		numCPU = maxCPUs
 	}
-	return numCpu
+	return numCPU
 }
 
 func GetEncodingURL(params, str string) string {

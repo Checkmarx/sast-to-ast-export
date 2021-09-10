@@ -102,7 +102,7 @@ func RunExport(args Args) {
 	log.Debug().
 		Str("url", args.URL).
 		Str("export", args.Export).
-		Int("results-project-active-since", args.ResultsProjectActiveSince).
+		Int("resultsProjectActiveSince", args.ResultsProjectActiveSince).
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
@@ -168,7 +168,7 @@ func RunExport(args Args) {
 		log.Error().Err(exportErr).Msg("error exporting collected data")
 	}
 
-	log.Info().Str("export file", *exportFileName).Msg("export completed")
+	log.Info().Str("exportFile", *exportFileName).Msg("export completed")
 }
 
 func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
@@ -210,7 +210,7 @@ func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, d
 	sleep := 2 * time.Second // default first time waiting, will increase in every loop
 	retryAttempts := 4
 	for rep := range reports {
-		log.Debug().Msgf("ReportId %v is consumed by report worker %v.", rep.ReportId, worker)
+		log.Debug().Msgf("reportID %v is consumed by report worker %v.", rep.ReportId, worker)
 
 		status, errDoStatusReq := GetReportStatusResponse(c, rep.ReportResponse)
 		if errDoStatusReq != nil {
@@ -242,7 +242,7 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 
 	log.Debug().
 		Int("consumers", consumerCount).
-		Str("start date", fromDate).
+		Str("startDate", fromDate).
 		Msg("collecting results")
 
 	var scans LastTriagedResponse

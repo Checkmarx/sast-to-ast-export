@@ -128,7 +128,7 @@ func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*ht
 	log.Debug().
 		Str("url", request.URL.String()).
 		Str("method", request.Method).
-		Int("response status code", resp.StatusCode).
+		Int("statusCode", resp.StatusCode).
 		Msg("request")
 	return resp, nil
 }
@@ -188,12 +188,12 @@ func (c *SASTClient) GetLastTriagedScanData(fromDate string) ([]byte, error) {
 	return c.GetResponseBody(ReportsLastTriagedScanEndpoint + GetEncodingURL(LastTriagedFilters, fromDate))
 }
 
-func (c *SASTClient) GetReportIDStatus(reportId int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsCheckStatusEndpoint, reportId))
+func (c *SASTClient) GetReportIDStatus(reportID int) ([]byte, error) {
+	return c.GetResponseBody(fmt.Sprintf(ReportsCheckStatusEndpoint, reportID))
 }
 
-func (c *SASTClient) GetReportResult(reportId int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsResultEndpoint, reportId))
+func (c *SASTClient) GetReportResult(reportID int) ([]byte, error) {
+	return c.GetResponseBody(fmt.Sprintf(ReportsResultEndpoint, reportID))
 }
 
 func (c *SASTClient) PostReportID(body io.Reader) ([]byte, error) {

@@ -25,7 +25,7 @@ func NewMultiLevelWriter(isVerbose bool, consoleMinLevel zerolog.Level, consoleW
 
 // WriteLevel writes to all applicable writers, given the verbosity level and logging level
 // if one writer returns an error, the writing stops and the error is returned
-// the number of bytes writen is the sum of bytes written to all writers
+// the number of bytes written is the sum of bytes written to all writers
 func (mlw *MultiLevelWriter) WriteLevel(l zerolog.Level, p []byte) (int, error) {
 	var total, n int
 	var err error
