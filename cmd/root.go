@@ -68,6 +68,13 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 		levelWriter := internal.NewMultiLevelWriter(verbose, zerolog.InfoLevel, consoleWriter, logFileWriter)
 		log.Logger = log.Logger.Output(&levelWriter)
 
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error().Msgf("panic: %v", r)
+				os.Exit(1)
+			}
+		}()
+
 		// start export
 		allArgs := GetArgs(cmd, productName)
 		internal.RunExport(allArgs)
