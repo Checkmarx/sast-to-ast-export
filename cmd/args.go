@@ -13,27 +13,27 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	args.ProductName = productName
 	var err error
 	// process input
-	args.URL, err = cmd.Flags().GetString("url")
+	args.URL, err = cmd.Flags().GetString(urlArg)
 	if err != nil {
 		panic(err)
 	}
-	args.Username, err = cmd.Flags().GetString("user")
+	args.Username, err = cmd.Flags().GetString(userArg)
 	if err != nil {
 		panic(err)
 	}
-	args.Password, err = cmd.Flags().GetString("pass")
+	args.Password, err = cmd.Flags().GetString(passArg)
 	if err != nil {
 		panic(err)
 	}
-	args.Export, err = cmd.Flags().GetString("export")
+	args.Export, err = cmd.Flags().GetString(exportArg)
 	if err != nil {
 		panic(err)
 	}
-	args.Debug, err = cmd.Flags().GetBool("debug")
+	args.Debug, err = cmd.Flags().GetBool(debugArg)
 	if err != nil {
 		panic(err)
 	}
-	args.ResultsProjectActiveSince, err = cmd.Flags().GetInt("results-project-active-since")
+	args.ResultsProjectActiveSince, err = cmd.Flags().GetInt(resultsProjectActiveSinceArg)
 	if err != nil {
 		panic(err)
 	}
