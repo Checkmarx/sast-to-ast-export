@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"os"
-	"sast-export/internal"
+
+	"github.com/checkmarxDev/ast-sast-export/internal"
 
 	"github.com/spf13/cobra"
 )

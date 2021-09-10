@@ -1,8 +1,14 @@
 package cmd
 
 import (
+	"os"
+
+	"github.com/checkmarxDev/ast-sast-export/internal"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"sast-export/internal"
+
+	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 )
 
 // productName is defined in Makefile and initialized during build
@@ -59,4 +65,22 @@ func init() {
 	if err := rootCmd.MarkFlagCustom("results-project-active-since", "SAST custom results project active since (days) 180 if nothing defined"); err != nil {
 		panic(err)
 	}
+
+	aolErr := aol.Init(productName, "", "trace", "")
+	if aolErr != nil {
+		panic(aolErr)
+	}
+
+	logFileWriter, err := os.Create("test.log")
+	if err != nil {
+		panic(err)
+	}
+	defer logFileWriter.Close()
+
+	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+
+	levelWriter := internal.NewMultiLevelWriter(false, zerolog.InfoLevel, consoleWriter, logFileWriter)
+	log.Logger = log.Logger.Output(&levelWriter)
+
+	log.Info().Msg("Inited")
 }

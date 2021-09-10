@@ -3,7 +3,7 @@ PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
 PUBLIC_KEY = $(shell cat public.key)
-LD_FLAGS = -ldflags="-s -w -X sast-export/cmd.productName=$(PRODUCT_NAME) -X sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X sast-export/cmd.productBuild=$(PRODUCT_BUILD) -X sast-export/internal.buildTimeRSAPublicKey=$(PUBLIC_KEY)"
+LD_FLAGS = -ldflags="-s -w -X github.com/checkmarxDev/ast-sast-export/cmd.productName=$(PRODUCT_NAME) -X github.com/checkmarxDev/ast-sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X github.com/checkmarxDev/ast-sast-export/cmd.productBuild=$(PRODUCT_BUILD) -X github.com/checkmarxDev/ast-sast-export/internal.buildTimeRSAPublicKey=$(PUBLIC_KEY)"
 
 SAST_EXPORT_USER = '###########'
 SAST_EXPORT_PASS = '###########'
