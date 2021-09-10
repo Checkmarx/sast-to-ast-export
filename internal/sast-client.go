@@ -6,6 +6,9 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
+
+	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog/log"
 )
@@ -132,7 +135,12 @@ func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*ht
 		Int("statusCode", resp.StatusCode).
 		Msg("request")
 	if resp.StatusCode != expectStatusCode {
-		return nil, fmt.Errorf("invalid response: %v", resp)
+		defer resp.Body.Close()
+		responseContent, dumpErr := httputil.DumpResponse(resp, true)
+		if dumpErr != nil {
+			return nil, errors.Wrap(dumpErr, "dumping unexpected response")
+		}
+		return nil, fmt.Errorf("invalid response: %s", string(responseContent))
 	}
 	return resp, nil
 }
