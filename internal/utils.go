@@ -12,9 +12,6 @@ const (
 )
 
 func convertTriagedScansResponseToLastScansList(triagedScansResponse LastTriagedResponse) []LastTriagedScanProducer {
-	if isDebug {
-		fmt.Printf("convertTriagedScansResponseToLastScansList len: %d\n", len(triagedScansResponse.Value))
-	}
 	var result []LastTriagedScanProducer
 	for _, v := range triagedScansResponse.Value {
 		result = append(result, LastTriagedScanProducer{
@@ -34,10 +31,6 @@ func getLastScansByProject(scans []LastTriagedScanProducer) []LastTriagedScanPro
 				result = append(result, item)
 			}
 		}
-	}
-	if isDebug {
-		fmt.Printf("result: %v\n", result)
-		fmt.Printf("result len: %d\n", len(result))
 	}
 	return result
 }
@@ -74,9 +67,6 @@ func GetNumCPU() int {
 	// Not allow more than 4 cpu's
 	if numCpu > maxCPUs {
 		numCpu = maxCPUs
-	}
-	if isDebug {
-		fmt.Printf("NumCPU used: %v\n", numCpu)
 	}
 	return numCpu
 }

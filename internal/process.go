@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -24,43 +26,49 @@ func produce(export chan<- string, exportList []string) {
 func (c *SASTClient) consume(worker int, args Args, export <-chan string, finished chan<- bool) {
 	var err error
 	for ch := range export {
-		if isDebug {
-			fmt.Printf("%v is consumed by worker %v.\n", ch, worker)
-		}
+		log.Debug().Msgf("%v is consumed by worker %v.", ch, worker)
 		switch ch {
 		case Users: // fetch users and save to export dir
 			usersData, err = c.GetUsers()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 			rolesData, err = c.GetRoles()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 			ldapRolesData, err = c.GetLdapRoleMappings()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 			samlRolesData, err = c.GetSamlRoleMappings()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 		case Results: // fetch scans and save to export dir
 			errResults := c.GetScanDataResponse(args)
 			if errResults != nil {
+				log.Error().Err(err)
 				panic(errResults)
 			}
 		case Teams: // fetch teams and save to export dir
 			teamsData, err = c.GetTeams()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 			ldapTeamsData, err = c.GetLdapTeamMappings()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 			samlTeamsData, err = c.GetSamlTeamMappings()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 		}
@@ -69,11 +77,13 @@ func (c *SASTClient) consume(worker int, args Args, export <-chan string, finish
 		case Users, Teams: // fetch users | teams and save to export dir
 			ldapServersData, err = c.GetLdapServers()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 
 			samlIDpsData, err = c.GetSamlIdentityProviders()
 			if err != nil {
+				log.Error().Err(err)
 				panic(err)
 			}
 		}
@@ -88,13 +98,25 @@ func RunExport(args Args) {
 	consumerCount := GetNumCPU()
 	exports := make(chan string)
 	finished := make(chan bool, consumerCount)
+
+	log.Debug().
+		Str("url", args.URL).
+		Str("export", args.Export).
+		Int("results-project-active-since", args.ResultsProjectActiveSince).
+		Bool("debug", args.Debug).
+		Int("consumers", consumerCount).
+		Msg("starting export")
 	// create api client and authenticate
 	client, err := NewSASTClient(args.URL, &http.Client{})
 	if err != nil {
+		log.Error().Err(err)
 		panic(err)
 	}
-	if err2 := client.Authenticate(args.Username, args.Password); err2 != nil {
-		panic(err2)
+
+	log.Info().Msg("logging into SAST")
+	if authErr := client.Authenticate(args.Username, args.Password); authErr != nil {
+		log.Error().Err(authErr)
+		panic(authErr)
 	}
 
 	if args.Export != "" {
@@ -104,19 +126,24 @@ func RunExport(args Args) {
 	}
 	args.Export = strings.Join(exportList, ",")
 
+	log.Debug().Msgf("parsed export options: %s", args.Export)
+
 	go produce(exports, exportList)
 
 	// start export
-	exportValues, errCreateExport := CreateExport(args.ProductName)
-	if errCreateExport != nil {
-		panic(errCreateExport)
+	log.Info().Msg("collecting data from SAST")
+
+	exportValues, exportCreateErr := CreateExport(args.ProductName)
+	if exportCreateErr != nil {
+		log.Error().Err(exportCreateErr)
+		panic(exportCreateErr)
 	}
 
 	if !isDebug {
 		defer func(exportValues *Export) {
-			errClean := exportValues.Clean()
-			if errClean != nil {
-				fmt.Printf("Error cleaning export: %v", err)
+			cleanErr := exportValues.Clean()
+			if cleanErr != nil {
+				log.Error().Err(cleanErr).Msg("error cleaning export temporary folder")
 			}
 		}(&exportValues)
 	}
@@ -126,7 +153,7 @@ func RunExport(args Args) {
 		go func() {
 			client.consume(z, args, exports, finished)
 			if err != nil {
-				fmt.Printf("Error consuming: %v", err)
+				log.Error().Err(err).Msg("error consuming export option")
 			}
 		}()
 	}
@@ -134,7 +161,14 @@ func RunExport(args Args) {
 		<-finished
 	}
 
-	ExportResultsToFile(args, &exportValues)
+	log.Info().Msg("exporting collected data")
+
+	exportFileName, exportErr := ExportResultsToFile(args, &exportValues)
+	if exportErr != nil {
+		log.Error().Err(exportErr).Msg("error exporting collected data")
+	}
+
+	log.Info().Str("export file", *exportFileName).Msg("export completed")
 }
 
 func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
@@ -176,9 +210,7 @@ func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, d
 	sleep := 2 * time.Second // default first time waiting, will increase in every loop
 	retryAttempts := 4
 	for rep := range reports {
-		if isDebug {
-			fmt.Printf("ReportId %v is consumed by report worker %v.\n", rep.ReportId, worker)
-		}
+		log.Debug().Msgf("ReportId %v is consumed by report worker %v.", rep.ReportId, worker)
 
 		status, errDoStatusReq := GetReportStatusResponse(c, rep.ReportResponse)
 		if errDoStatusReq != nil {
@@ -208,9 +240,10 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 
 	fromDate := GetDateFromDays(args.ResultsProjectActiveSince)
 
-	if isDebug {
-		fmt.Printf("GetDateFromDays: %s\n", fromDate)
-	}
+	log.Debug().
+		Int("consumers", consumerCount).
+		Str("start date", fromDate).
+		Msg("collecting results")
 
 	var scans LastTriagedResponse
 	dataScansOut, errGetLast := c.GetLastTriagedScanData(fromDate)
@@ -222,12 +255,21 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 		return errScansSheriff
 	}
 
+	log.Debug().
+		Int("count", len(scans.Value)).
+		Msg("triaged scans collected")
+
 	scansList := convertTriagedScansResponseToLastScansList(scans)
+
+	log.Debug().
+		Int("count", len(scansList)).
+		Str("scans", fmt.Sprintf("%v", scansList)).
+		Msg("last scans by project")
 
 	go func() {
 		err = c.produceReports(reports, scansList)
 		if err != nil {
-			fmt.Printf("Error producing reports: %v", err)
+			log.Error().Err(err).Msg("error producing reports")
 		}
 	}()
 
@@ -236,7 +278,7 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 		go func() {
 			err = c.consumeReports(consumerID, reports, done)
 			if err != nil {
-				fmt.Printf("Error consuming reports: %v", err)
+				log.Error().Err(err).Msg("error consuming reports")
 			}
 		}()
 	}
@@ -248,74 +290,78 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 	return nil
 }
 
-func ExportResultsToFile(args Args, exportValues *Export) {
+func ExportResultsToFile(args Args, exportValues *Export) (*string, error) {
 
 	if strings.Contains(args.Export, Users) {
 		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 
 		if exportErr := exportValues.AddFile(RolesFileName, rolesData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 
 		if exportErr := exportValues.AddFile(LdapRoleMappingsFileName, ldapRolesData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 
 		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 	}
 
 	if strings.Contains(args.Export, Results) {
 		for _, res := range exportData {
 			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
-				panic(exportErr)
+				return nil, exportErr
 			}
 		}
 	}
 
 	if strings.Contains(args.Export, Teams) {
 		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 
 		if exportErr := exportValues.AddFile(LdapTeamMappingsFileName, ldapTeamsData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 
 		if exportErr := exportValues.AddFile(SamlTeamMappingsFileName, samlTeamsData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 	}
 
 	if strings.Contains(args.Export, Users) || strings.Contains(args.Export, Teams) {
 		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 		if exportErr := exportValues.AddFile(SamlIdpFileName, samlIDpsData); exportErr != nil {
-			panic(exportErr)
+			return nil, exportErr
 		}
 	}
 
 	// create export package
-	if !isDebug {
-		exportFileName, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
-		if exportErr != nil {
-			panic(exportErr)
-		}
-		fmt.Printf("SAST data exported to %s\n", exportFileName)
-	} else {
-		fmt.Printf("Debug mode: SAST data exported to %s\n", exportValues.TmpDir)
+	if isDebug {
 		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
+		return &exportValues.TmpDir, nil
 	}
+
+	exportFileName, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
+	if exportErr != nil {
+		return nil, exportErr
+	}
+	return &exportFileName, exportErr
 }
 
 func (c *SASTClient) retryGetReport(attempts, reportID, projectID int, sleep time.Duration, response ReportResponse, status *StatusResponse) (err error) {
 	state := true
 	var errDoStatusReq error
 	for state {
+		log.Debug().
+			Int("attempt", attempts).
+			Int("reportID", reportID).
+			Msg("retrying report create")
 		time.Sleep(sleep)
 		sleep *= 2
 		status, errDoStatusReq = GetReportStatusResponse(c, response)
@@ -353,8 +399,9 @@ func (c *SASTClient) GetReportData(reportID, projectID int) error {
 		Data:     finalResultOut,
 	})
 
-	if isDebug {
-		fmt.Printf("End creating final report with ReportId: %d\n", reportID)
-	}
+	log.Debug().
+		Int("reportID", reportID).
+		Msg("report created")
+
 	return nil
 }

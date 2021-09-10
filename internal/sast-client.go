@@ -6,6 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -123,11 +125,11 @@ func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*ht
 	if resp.StatusCode != expectStatusCode {
 		return nil, fmt.Errorf("invalid response: %v", resp)
 	}
-
-	if isDebug {
-		fmt.Printf("doRequest url: %s - method: %s - status response: %d\n", request.URL, request.Method, resp.StatusCode)
-	}
-
+	log.Debug().
+		Str("url", request.URL.String()).
+		Str("method", request.Method).
+		Int("response status code", resp.StatusCode).
+		Msg("request")
 	return resp, nil
 }
 
