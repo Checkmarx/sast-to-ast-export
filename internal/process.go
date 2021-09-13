@@ -359,11 +359,11 @@ func (c *SASTClient) retryGetReport(attempts, reportID, projectID int, sleep tim
 	var errDoStatusReq error
 	for state {
 		log.Debug().
-			Int("attempt", attempts).
+			Int("attempts", attempts).
 			Int("projectID", projectID).
 			Int("reportID", reportID).
 			Str("sleep", sleep.String()).
-			Msg("retrying report create")
+			Msg("checking report create state")
 		time.Sleep(sleep)
 		sleep *= 2
 		status, errDoStatusReq = GetReportStatusResponse(c, response)
