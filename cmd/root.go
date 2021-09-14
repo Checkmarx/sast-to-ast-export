@@ -63,7 +63,7 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 		}
 		defer logFileWriter.Close()
 
-		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, NoColor: true}
 
 		levelWriter := internal.NewMultiLevelWriter(verbose, zerolog.InfoLevel, consoleWriter, logFileWriter)
 		log.Logger = log.Logger.Output(&levelWriter)
