@@ -70,7 +70,7 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 
 		defer func() {
 			if r := recover(); r != nil {
-				log.Error().Msgf("panic: %v", r)
+				log.Error().Msgf("execution failed: %v", r)
 				os.Exit(1)
 			}
 		}()

@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/pkg/errors"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -129,19 +127,33 @@ func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*ht
 			Msg("request")
 		return nil, err
 	}
+	if resp.StatusCode != expectStatusCode {
+		defer resp.Body.Close()
+		responseContent, dumpErr := httputil.DumpResponse(resp, true)
+		if dumpErr != nil {
+			log.Debug().
+				Str("error", dumpErr.Error()).
+				Msg("failed dumping unexpected response")
+			log.Debug().
+				Str("method", request.Method).
+				Str("url", request.URL.String()).
+				Int("statusCode", resp.StatusCode).
+				Msg("request")
+		} else {
+			log.Debug().
+				Str("method", request.Method).
+				Str("url", request.URL.String()).
+				Int("statusCode", resp.StatusCode).
+				Str("content", string(responseContent)).
+				Msg("request")
+		}
+		return nil, fmt.Errorf("request %s %s failed with status code %d", request.Method, request.URL.String(), resp.StatusCode)
+	}
 	log.Debug().
 		Str("method", request.Method).
 		Str("url", request.URL.String()).
 		Int("statusCode", resp.StatusCode).
 		Msg("request")
-	if resp.StatusCode != expectStatusCode {
-		defer resp.Body.Close()
-		responseContent, dumpErr := httputil.DumpResponse(resp, true)
-		if dumpErr != nil {
-			return nil, errors.Wrap(dumpErr, "dumping unexpected response")
-		}
-		return nil, fmt.Errorf("invalid response: %s", string(responseContent))
-	}
 	return resp, nil
 }
 
