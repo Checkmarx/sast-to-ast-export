@@ -152,7 +152,7 @@ func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*ht
 	return resp, nil
 }
 
-func GetReportStatusResponse(c *SASTClient, report ReportResponse) (*StatusResponse, error) {
+func (c *SASTClient) GetReportStatusResponse(report ReportResponse) (*StatusResponse, error) {
 	statusUnm, errGetStatus := c.GetReportIDStatus(report.ReportID)
 	if errGetStatus != nil {
 		return &StatusResponse{}, errGetStatus
