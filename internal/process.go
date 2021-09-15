@@ -9,95 +9,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
+
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	statusCreated = "Created"
+	createdStatus = "Created"
+
+	usersExportOption   = "users"
+	teamsExportOption   = "teams"
+	resultsExportOption = "results"
+
+	reportType    = "XML"
+	scansFileName = "%d.xml"
 )
-
-func produce(export chan<- string, exportList []string) {
-	for _, exp := range exportList {
-		export <- exp
-	}
-	close(export)
-}
-
-func (c *SASTClient) consume(worker int, args Args, export <-chan string, finished chan<- bool) {
-	var err error
-	for ch := range export {
-		log.Debug().Msgf("%v is consumed by worker %v.", ch, worker)
-		switch ch {
-		case Users: // fetch users and save to export dir
-			usersData, err = c.GetUsers()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-			rolesData, err = c.GetRoles()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-			ldapRolesData, err = c.GetLdapRoleMappings()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-			samlRolesData, err = c.GetSamlRoleMappings()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-		case Results: // fetch scans and save to export dir
-			errResults := c.GetScanDataResponse(args)
-			if errResults != nil {
-				log.Error().Err(err)
-				panic(errResults)
-			}
-		case Teams: // fetch teams and save to export dir
-			teamsData, err = c.GetTeams()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-			ldapTeamsData, err = c.GetLdapTeamMappings()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-			samlTeamsData, err = c.GetSamlTeamMappings()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-		}
-
-		switch ch {
-		case Users, Teams: // fetch users | teams and save to export dir
-			ldapServersData, err = c.GetLdapServers()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-
-			samlIDpsData, err = c.GetSamlIdentityProviders()
-			if err != nil {
-				log.Error().Err(err)
-				panic(err)
-			}
-		}
-	}
-
-	finished <- true
-}
 
 func RunExport(args Args) {
 	isDebug = args.Debug
-	var exportList []string
+	var selectedExportOptions []string
 	consumerCount := GetNumCPU()
-	exports := make(chan string)
-	finished := make(chan bool, consumerCount)
 
 	log.Debug().
 		Str("url", args.URL).
@@ -106,6 +37,7 @@ func RunExport(args Args) {
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
+
 	// create api client and authenticate
 	client, err := NewSASTClient(args.URL, &http.Client{})
 	if err != nil {
@@ -120,15 +52,13 @@ func RunExport(args Args) {
 	}
 
 	if args.Export != "" {
-		exportList = strings.Split(args.Export, ",")
+		selectedExportOptions = strings.Split(args.Export, ",")
 	} else {
-		exportList = []string{Users, Results, Teams}
+		selectedExportOptions = []string{usersExportOption, resultsExportOption, teamsExportOption}
 	}
-	args.Export = strings.Join(exportList, ",")
+	args.Export = strings.Join(selectedExportOptions, ",")
 
 	log.Debug().Msgf("parsed export options: %s", args.Export)
-
-	go produce(exports, exportList)
 
 	// start export
 	log.Info().Msg("collecting data from SAST")
@@ -148,17 +78,29 @@ func RunExport(args Args) {
 		}(&exportValues)
 	}
 
-	for i := 1; i <= consumerCount; i++ {
-		z := i
-		go func() {
-			client.consume(z, args, exports, finished)
-			if err != nil {
-				log.Error().Err(err).Msg("error consuming export option")
+	availableExportOptions := []string{usersExportOption, teamsExportOption, resultsExportOption}
+
+	for _, exportOption := range availableExportOptions {
+		if sliceutils.Contains(exportOption, sliceutils.ConvertStringToInterface(selectedExportOptions)) {
+			log.Info().Msgf("collecting %s", exportOption)
+			switch exportOption {
+			case usersExportOption:
+				if err = fetchUsersData(client); err != nil {
+					log.Error().Err(err)
+					panic(err)
+				}
+			case teamsExportOption:
+				if err = fetchTeamsData(client); err != nil {
+					log.Error().Err(err)
+					panic(err)
+				}
+			case resultsExportOption:
+				if err = fetchResultsData(client, args); err != nil {
+					log.Error().Err(err)
+					panic(err)
+				}
 			}
-		}()
-	}
-	for i := 1; i <= consumerCount; i++ {
-		<-finished
+		}
 	}
 
 	log.Info().Msg("exporting collected data")
@@ -174,7 +116,7 @@ func RunExport(args Args) {
 func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
 	for _, scan := range scans {
 		reportBody := &ReportRequest{
-			ReportType: ReportType,
+			ReportType: reportType,
 			ScanID:     scan.ScanID,
 		}
 
@@ -217,7 +159,7 @@ func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, d
 			return errDoStatusReq
 		}
 
-		if status.Status.Value == statusCreated {
+		if status.Status.Value == createdStatus {
 			err = c.GetReportData(rep.ReportId, rep.ProjectId)
 			if err != nil {
 				return err
@@ -292,7 +234,7 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 
 func ExportResultsToFile(args Args, exportValues *Export) (*string, error) {
 
-	if strings.Contains(args.Export, Users) {
+	if strings.Contains(args.Export, usersExportOption) {
 		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -310,7 +252,7 @@ func ExportResultsToFile(args Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, Results) {
+	if strings.Contains(args.Export, resultsExportOption) {
 		for _, res := range exportData {
 			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
 				return nil, exportErr
@@ -318,7 +260,7 @@ func ExportResultsToFile(args Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, Teams) {
+	if strings.Contains(args.Export, teamsExportOption) {
 		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -332,7 +274,7 @@ func ExportResultsToFile(args Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, Users) || strings.Contains(args.Export, Teams) {
+	if strings.Contains(args.Export, usersExportOption) || strings.Contains(args.Export, teamsExportOption) {
 		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -371,10 +313,10 @@ func (c *SASTClient) retryGetReport(attempts, reportID, projectID int, sleep tim
 			return errDoStatusReq
 		}
 
-		state = status.Status.Value != statusCreated
+		state = status.Status.Value != createdStatus
 
 		// Code to repeatedly execute until we have create status
-		if status.Status.Value == statusCreated {
+		if status.Status.Value == createdStatus {
 			state = false
 			errReportData := c.GetReportData(reportID, projectID)
 			if errReportData != nil {
@@ -397,7 +339,7 @@ func (c *SASTClient) GetReportData(reportID, projectID int) error {
 	}
 
 	exportData = append(exportData, ExportData{
-		FileName: fmt.Sprintf(ScansFileName, projectID),
+		FileName: fmt.Sprintf(scansFileName, projectID),
 		Data:     finalResultOut,
 	})
 
@@ -406,4 +348,63 @@ func (c *SASTClient) GetReportData(reportID, projectID int) error {
 		Msg("report created")
 
 	return nil
+}
+
+func fetchUsersData(c *SASTClient) error {
+	var err error
+	usersData, err = c.GetUsers()
+	if err != nil {
+		return err
+	}
+	rolesData, err = c.GetRoles()
+	if err != nil {
+		return err
+	}
+	ldapRolesData, err = c.GetLdapRoleMappings()
+	if err != nil {
+		return err
+	}
+	samlRolesData, err = c.GetSamlRoleMappings()
+	if err != nil {
+		return err
+	}
+	ldapServersData, err = c.GetLdapServers()
+	if err != nil {
+		return err
+	}
+	samlIDpsData, err = c.GetSamlIdentityProviders()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func fetchTeamsData(c *SASTClient) error {
+	var err error
+	teamsData, err = c.GetTeams()
+	if err != nil {
+		return err
+	}
+	ldapTeamsData, err = c.GetLdapTeamMappings()
+	if err != nil {
+		return err
+	}
+	samlTeamsData, err = c.GetSamlTeamMappings()
+	if err != nil {
+		return err
+	}
+	ldapServersData, err = c.GetLdapServers()
+	if err != nil {
+		return err
+	}
+	samlIDpsData, err = c.GetSamlIdentityProviders()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func fetchResultsData(c *SASTClient, args Args) error {
+	err := c.GetScanDataResponse(args)
+	return err
 }

@@ -25,11 +25,6 @@ var (
 )
 
 const (
-	Users         = "users"
-	Results       = "results"
-	Teams         = "teams"
-	ReportType    = "XML"
-	ScansFileName = "%d.xml"
 	UsersEndpoint = "/CxRestAPI/auth/Users"
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"
 	RolesEndpoint = "/CxRestAPI/auth/Roles"
