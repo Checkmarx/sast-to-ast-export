@@ -370,6 +370,7 @@ func fetchReportData(client *SASTClient, reportID, projectID int) error {
 
 	log.Debug().
 		Int("reportID", reportID).
+		Int("projectID", projectID).
 		Msg("report created")
 
 	return nil
