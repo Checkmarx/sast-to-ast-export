@@ -333,7 +333,7 @@ func consumeReports(client *SASTClient, worker int, reports <-chan ReportConsume
 	sleep := 2 * time.Second // default first time waiting, will increase in every loop
 	retryAttempts := 4
 	for rep := range reports {
-		log.Debug().Msgf("reportID %v is consumed by report worker %v.", rep.ReportId, worker)
+		log.Debug().Msgf("reportID %v is consumed by report worker %v", rep.ReportId, worker)
 
 		status, errDoStatusReq := client.GetReportStatusResponse(rep.ReportResponse)
 		if errDoStatusReq != nil {
