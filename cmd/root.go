@@ -77,7 +77,7 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 
 		// start export
 		allArgs := GetArgs(cmd, productName)
-		internal.RunExport(allArgs)
+		internal.RunExport(&allArgs)
 	},
 }
 

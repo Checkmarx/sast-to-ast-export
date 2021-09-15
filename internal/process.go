@@ -25,7 +25,7 @@ const (
 	scansFileName = "%d.xml"
 )
 
-func RunExport(args Args) {
+func RunExport(args *Args) {
 	isDebug = args.Debug
 	var selectedExportOptions []string
 	consumerCount := GetNumCPU()
@@ -115,7 +115,7 @@ func RunExport(args Args) {
 	log.Info().Msgf("export completed to %s", *exportFileName)
 }
 
-func ExportResultsToFile(args Args, exportValues *Export) (*string, error) {
+func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 
 	if strings.Contains(args.Export, usersExportOption) {
 		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
@@ -233,7 +233,7 @@ func fetchTeamsData(client *SASTClient) error {
 	return nil
 }
 
-func fetchResultsData(client *SASTClient, args Args) (err error) {
+func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	consumerCount := GetNumCPU()
 	reports := make(chan ReportConsumer)
 
@@ -376,7 +376,6 @@ func fetchReportData(client *SASTClient, reportID, projectID int) error {
 }
 
 func retryGetReport(client *SASTClient, attempts, reportID, projectID int, sleep time.Duration, response ReportResponse) (err error) {
-
 	state := true
 	var status *StatusResponse
 	var errDoStatusReq error
