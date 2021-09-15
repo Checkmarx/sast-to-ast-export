@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
+	"github.com/checkmarxDev/ast-sast-export/internal/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -55,17 +55,15 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 			panic(aolErr)
 		}
 
-		now := time.Now()
-		logFileName := fmt.Sprintf("%s-%s.log", productName, now.Format(internal.DateTimeFormat))
-		logFileWriter, err := os.Create(logFileName)
+		logFileWriter, err := logging.NewFileWriter(productName)
 		if err != nil {
 			panic(err)
 		}
 		defer logFileWriter.Close()
 
-		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, NoColor: true}
+		consoleWriter := logging.NewConsoleWriter()
 
-		levelWriter := internal.NewMultiLevelWriter(verbose, zerolog.InfoLevel, consoleWriter, logFileWriter)
+		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, consoleWriter, logFileWriter)
 		log.Logger = log.Logger.Output(&levelWriter)
 
 		defer func() {
