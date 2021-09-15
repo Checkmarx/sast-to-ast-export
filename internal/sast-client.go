@@ -101,12 +101,12 @@ func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, error) {
 	req, err := CreateRequest(http.MethodPost, c.BaseURL+endpoint, body, c.Token)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 
 	resp, err := c.doRequest(req, http.StatusAccepted)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 	defer resp.Body.Close()
 
