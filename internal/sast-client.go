@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 
 	"github.com/rs/zerolog/log"
 )
@@ -113,40 +112,21 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
-	resp, err := c.Adapter.Do(request)
+func (c *SASTClient) doRequest(req *http.Request, expectStatusCode int) (*http.Response, error) {
+	resp, err := c.Adapter.Do(req)
+	log.Debug().
+		Err(err).
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Int("statusCode", resp.StatusCode).
+		Msg("request")
 	if err != nil {
-		log.Debug().
-			Str("method", request.Method).
-			Str("url", request.URL.String()).
-			Msg("request")
 		return nil, err
 	}
 	if resp.StatusCode != expectStatusCode {
 		defer resp.Body.Close()
-		responseContent, dumpErr := httputil.DumpResponse(resp, true)
-		if dumpErr != nil {
-			log.Debug().
-				Err(dumpErr).
-				Str("method", request.Method).
-				Str("url", request.URL.String()).
-				Int("statusCode", resp.StatusCode).
-				Msg("failed dumping unexpected response")
-		} else {
-			log.Debug().
-				Str("method", request.Method).
-				Str("url", request.URL.String()).
-				Int("statusCode", resp.StatusCode).
-				Str("content", string(responseContent)).
-				Msg("request")
-		}
-		return nil, fmt.Errorf("request %s %s failed with status code %d", request.Method, request.URL.String(), resp.StatusCode)
+		return nil, fmt.Errorf("request %s %s failed with status code %d", req.Method, req.URL.String(), resp.StatusCode)
 	}
-	log.Debug().
-		Str("method", request.Method).
-		Str("url", request.URL.String()).
-		Int("statusCode", resp.StatusCode).
-		Msg("request")
 	return resp, nil
 }
 
