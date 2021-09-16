@@ -376,13 +376,15 @@ func fetchReportData(client *SASTClient, reportID, projectID int) error {
 	return nil
 }
 
-func retryGetReport(client *SASTClient, attempts, reportID, projectID int, sleep time.Duration, response ReportResponse) (err error) {
+func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, sleep time.Duration, response ReportResponse) error {
 	state := true
+	attempt := 1
 	var status *StatusResponse
 	var errDoStatusReq error
 	for state {
 		log.Debug().
-			Int("attempts", attempts).
+			Int("attempt", attempt).
+			Int("totalAttempts", totalAttempts).
 			Int("projectID", projectID).
 			Int("reportID", reportID).
 			Str("sleep", sleep.String()).
@@ -405,9 +407,9 @@ func retryGetReport(client *SASTClient, attempts, reportID, projectID int, sleep
 			}
 		}
 
-		attempts--
-		if attempts == 0 {
-			return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
+		attempt++
+		if attempt >= totalAttempts {
+			return fmt.Errorf("project %d report %d not ready after %d attempts", projectID, reportID, totalAttempts)
 		}
 	}
 	return nil
