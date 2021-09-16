@@ -273,7 +273,7 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	}()
 
 	resultsCount := len(scansList)
-	done := make(chan bool, resultsCount)
+	done := make(chan error, resultsCount)
 
 	for i := 1; i <= consumerCount; i++ {
 		consumerID := i
@@ -286,9 +286,13 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	}
 
 	for i := 0; i < resultsCount; i++ {
-		<-done
+		consumeErr := <-done
 		resultIndex := i + 1
-		log.Info().Msgf("collected result %d/%d", resultIndex, resultsCount)
+		if consumeErr == nil {
+			log.Info().Msgf("collected result %d/%d", resultIndex, resultsCount)
+		} else {
+			log.Error().Err(consumeErr).Msgf("failed collecting result %d/%d", resultIndex, resultsCount)
+		}
 	}
 
 	return nil
@@ -329,7 +333,7 @@ func produceReports(c *SASTClient, reports chan<- ReportConsumer, scans []LastTr
 	return nil
 }
 
-func consumeReports(client *SASTClient, worker int, reports <-chan ReportConsumer, done chan<- bool) (err error) {
+func consumeReports(client *SASTClient, worker int, reports <-chan ReportConsumer, done chan<- error) (err error) {
 	sleep := 2 * time.Second // default first time waiting, will increase in every loop
 	retryAttempts := 4
 	for rep := range reports {
@@ -337,22 +341,23 @@ func consumeReports(client *SASTClient, worker int, reports <-chan ReportConsume
 
 		status, errDoStatusReq := client.GetReportStatusResponse(rep.ReportResponse)
 		if errDoStatusReq != nil {
-			return errDoStatusReq
+			done <- errDoStatusReq
+			continue
 		}
-
 		if status.Status.Value == createdStatus {
 			err = fetchReportData(client, rep.ReportId, rep.ProjectId)
 			if err != nil {
-				return err
+				done <- err
+				continue
 			}
-			done <- true
 		} else {
 			err = retryGetReport(client, retryAttempts, rep.ReportId, rep.ProjectId, sleep, rep.ReportResponse)
 			if err != nil {
-				return err
+				done <- err
+				continue
 			}
-			done <- true
 		}
+		done <- nil
 	}
 	return nil
 }
@@ -378,7 +383,7 @@ func fetchReportData(client *SASTClient, reportID, projectID int) error {
 
 func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, sleep time.Duration, response ReportResponse) error {
 	state := true
-	attempt := 1
+	attempt := 2
 	var status *StatusResponse
 	var errDoStatusReq error
 	for state {
@@ -408,7 +413,7 @@ func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, 
 		}
 
 		attempt++
-		if attempt >= totalAttempts {
+		if attempt > totalAttempts {
 			return fmt.Errorf("project %d report %d not ready after %d attempts", projectID, reportID, totalAttempts)
 		}
 	}
