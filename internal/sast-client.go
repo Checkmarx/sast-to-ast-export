@@ -53,6 +53,11 @@ type SASTClient struct {
 	Token   *AccessToken
 }
 
+type SASTError struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
 func NewSASTClient(baseURL string, adapter HTTPAdapter) (*SASTClient, error) {
 	client := SASTClient{
 		BaseURL: baseURL,
@@ -67,19 +72,54 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		return err
 	}
 
-	resp, err := c.doRequest(req, http.StatusOK)
+	resp, err := c.Adapter.Do(req)
+	log.Debug().
+		Err(err).
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Int("statusCode", resp.StatusCode).
+		Msg("request")
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+		log.Debug().Err(err).Msgf("error authenticating")
+		return fmt.Errorf("authentication error")
 	}
 
-	c.Token = &AccessToken{}
-	return json.Unmarshal(responseBody, c.Token)
+	if resp.StatusCode == http.StatusOK {
+		defer resp.Body.Close()
+		responseBody, ioErr := ioutil.ReadAll(resp.Body)
+		if ioErr != nil {
+			return ioErr
+		}
+		c.Token = &AccessToken{}
+		return json.Unmarshal(responseBody, c.Token)
+	} else if resp.StatusCode == http.StatusBadRequest {
+		defer resp.Body.Close()
+		body, ioErr := ioutil.ReadAll(resp.Body)
+		if ioErr != nil {
+			log.Debug().
+				Err(ioErr).
+				Str("method", req.Method).
+				Str("url", req.URL.String()).
+				Int("statusCode", resp.StatusCode).
+				Msg("request")
+			return fmt.Errorf("error while trying to authenticate: could not read response")
+		}
+		var response SASTError
+		unmarshalErr := json.Unmarshal(body, &response)
+		if unmarshalErr != nil {
+			log.Debug().
+				Err(unmarshalErr).
+				Str("method", req.Method).
+				Str("url", req.URL.String()).
+				Int("statusCode", resp.StatusCode).
+				Msg("request")
+			return fmt.Errorf("error while trying to authenticate: could not decode response")
+		}
+		if response.ErrorDescription == "invalid_username_or_password" {
+			return fmt.Errorf("error while trying to authenticate: invalid user name or password")
+		}
+	}
+	return fmt.Errorf("error while trying to authenticate")
 }
 
 func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
