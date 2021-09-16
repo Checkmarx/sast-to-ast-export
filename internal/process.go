@@ -235,7 +235,7 @@ func fetchTeamsData(client *SASTClient) error {
 
 func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	consumerCount := GetNumCPU()
-	reports := make(chan ReportConsumer)
+	reportJobs := make(chan ReportJob)
 
 	fromDate := GetDateFromDays(args.ResultsProjectActiveSince)
 
@@ -265,28 +265,17 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 		Str("scans", fmt.Sprintf("%v", scansList)).
 		Msg("last scans by project")
 
-	go func() {
-		err = produceReports(client, reports, scansList)
-		if err != nil {
-			log.Error().Err(err).Msg("error producing reports")
-		}
-	}()
+	go produceReports(reportJobs, scansList)
 
 	resultsCount := len(scansList)
-	done := make(chan error, resultsCount)
+	consumeErrors := make(chan error, resultsCount)
 
-	for i := 1; i <= consumerCount; i++ {
-		consumerID := i
-		go func() {
-			err = consumeReports(client, consumerID, reports, done)
-			if err != nil {
-				log.Error().Err(err).Msg("error consuming reports")
-			}
-		}()
+	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
+		go consumeReports(client, consumerID, reportJobs, consumeErrors)
 	}
 
 	for i := 0; i < resultsCount; i++ {
-		consumeErr := <-done
+		consumeErr := <-consumeErrors
 		resultIndex := i + 1
 		if consumeErr == nil {
 			log.Info().Msgf("collected result %d/%d", resultIndex, resultsCount)
@@ -298,68 +287,93 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	return nil
 }
 
-func produceReports(c *SASTClient, reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
+func produceReports(reportJobs chan<- ReportJob, scans []LastTriagedScanProducer) {
 	for _, scan := range scans {
-		reportBody := &ReportRequest{
-			ReportType: reportType,
+		reportJobs <- ReportJob{
+			ProjectID:  scan.ProjectID,
 			ScanID:     scan.ScanID,
+			ReportType: reportType,
+		}
+	}
+	close(reportJobs)
+}
+
+func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob, done chan<- error) {
+	sleep := 2 * time.Second // default first time waiting, will increase in every loop
+	retryAttempts := 4
+	for reportJob := range reportJobs {
+		logger := log.With().
+			Int("projectID", reportJob.ProjectID).
+			Int("scanID", reportJob.ScanID).
+			Int("worker", worker).
+			Logger()
+
+		logger.Debug().Msg("consuming report job")
+
+		// create the report
+		reportBody := &ReportRequest{
+			ReportType: reportJob.ReportType,
+			ScanID:     reportJob.ScanID,
 		}
 
 		reportJSON, marshalErr := json.Marshal(reportBody)
 		if marshalErr != nil {
-			return marshalErr
+			logger.Debug().
+				Err(marshalErr).
+				Str("reportBody", fmt.Sprintf("%v", reportBody)).
+				Msg("failed marshalling report body")
+			done <- marshalErr
+			continue
 		}
 		body := bytes.NewBuffer(reportJSON)
 
-		dataReportOut, errCreate := c.PostReportID(body)
+		dataReportOut, errCreate := client.PostReportID(body)
 		if errCreate != nil {
-			return errCreate
+			logger.Debug().
+				Err(errCreate).
+				Str("reportBody", fmt.Sprintf("%v", reportBody)).
+				Msg("failed creating report")
+			done <- errCreate
+			continue
 		}
 
 		var report ReportResponse
 		errReportsSheriff := json.Unmarshal(dataReportOut, &report)
 		if errReportsSheriff != nil {
-			return errReportsSheriff
+			logger.Debug().
+				Err(errReportsSheriff).
+				Str("response", fmt.Sprintf("%v", string(dataReportOut))).
+				Msg("failed unmarshalling report response")
+			done <- errReportsSheriff
+			continue
 		}
 
-		// add project and report id to producer list call
-		reports <- ReportConsumer{
-			ProjectId:      scan.ProjectID,
-			ReportId:       report.ReportID,
-			ReportResponse: report,
-		}
-	}
-	close(reports)
-	return nil
-}
-
-func consumeReports(client *SASTClient, worker int, reports <-chan ReportConsumer, done chan<- error) (err error) {
-	sleep := 2 * time.Second // default first time waiting, will increase in every loop
-	retryAttempts := 4
-	for rep := range reports {
-		log.Debug().Msgf("reportID %v is consumed by report worker %v", rep.ReportId, worker)
-
-		status, errDoStatusReq := client.GetReportStatusResponse(rep.ReportResponse)
+		// monitor status and fetch
+		status, errDoStatusReq := client.GetReportStatusResponse(report)
 		if errDoStatusReq != nil {
+			logger.Debug().Err(errDoStatusReq).Msg("failed getting report status")
 			done <- errDoStatusReq
 			continue
 		}
 		if status.Status.Value == createdStatus {
-			err = fetchReportData(client, rep.ReportId, rep.ProjectId)
-			if err != nil {
+			err := fetchReportData(client, report.ReportID, reportJob.ProjectID)
+			if err == nil {
+				logger.Debug().Msg("report created")
+			} else {
+				logger.Debug().Err(err).Msg("failed getting report")
 				done <- err
 				continue
 			}
 		} else {
-			err = retryGetReport(client, retryAttempts, rep.ReportId, rep.ProjectId, sleep, rep.ReportResponse)
+			err := retryGetReport(client, retryAttempts, report.ReportID, reportJob.ProjectID, sleep, report)
 			if err != nil {
+				logger.Debug().Err(err).Msg("failed report fetch retry")
 				done <- err
 				continue
 			}
 		}
 		done <- nil
 	}
-	return nil
 }
 
 func fetchReportData(client *SASTClient, reportID, projectID int) error {
@@ -372,11 +386,6 @@ func fetchReportData(client *SASTClient, reportID, projectID int) error {
 		FileName: fmt.Sprintf(scansFileName, projectID),
 		Data:     finalResultOut,
 	})
-
-	log.Debug().
-		Int("reportID", reportID).
-		Int("projectID", projectID).
-		Msg("report created")
 
 	return nil
 }

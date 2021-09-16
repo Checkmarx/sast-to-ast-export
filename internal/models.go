@@ -84,10 +84,10 @@ type LastTriagedResponse struct {
 	Value        []ValueOdata `json:"value"`
 }
 
-type ReportConsumer struct {
-	ProjectId      int
-	ReportId       int
-	ReportResponse ReportResponse
+type ReportJob struct {
+	ProjectID  int
+	ScanID     int
+	ReportType string
 }
 
 type ReportRequest struct {

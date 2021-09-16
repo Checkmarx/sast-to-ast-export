@@ -127,13 +127,11 @@ func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*ht
 		responseContent, dumpErr := httputil.DumpResponse(resp, true)
 		if dumpErr != nil {
 			log.Debug().
-				Str("error", dumpErr.Error()).
-				Msg("failed dumping unexpected response")
-			log.Debug().
+				Err(dumpErr).
 				Str("method", request.Method).
 				Str("url", request.URL.String()).
 				Int("statusCode", resp.StatusCode).
-				Msg("request")
+				Msg("failed dumping unexpected response")
 		} else {
 			log.Debug().
 				Str("method", request.Method).
