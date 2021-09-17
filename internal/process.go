@@ -274,14 +274,21 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 		go consumeReports(client, consumerID, reportJobs, consumeErrors)
 	}
 
+	errorCount := 0
 	for i := 0; i < resultsCount; i++ {
 		consumeErr := <-consumeErrors
 		resultIndex := i + 1
 		if consumeErr == nil {
 			log.Info().Msgf("collected result %d/%d", resultIndex, resultsCount)
 		} else {
-			log.Error().Err(consumeErr).Msgf("failed collecting result %d/%d", resultIndex, resultsCount)
+			errorCount++
+			log.Debug().Err(consumeErr).Msg("failed collecting result")
+			log.Warn().Msgf("failed collecting result %d/%d", resultIndex, resultsCount)
 		}
+	}
+
+	if errorCount > 0 {
+		log.Warn().Msgf("failed collecting %d/%d results", errorCount, resultsCount)
 	}
 
 	return nil
