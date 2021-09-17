@@ -245,38 +245,38 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	var lastTriagedScansByProject []TriagedScan
 	triagedScansOffset := 0
 	triagedScansLimit := triagedScansPageLimit
-	triageScanLogger := log.With().
+	triagedScansLogger := log.With().
 		Str("fromDate", fromDate).
 		Int("offset", triagedScansOffset).
 		Int("limit", triagedScansLimit).
 		Logger()
 
 	for {
-		var triagedScanPage LastTriagedScansResponse
+		var triagedScansPage TriagedScansResponse
 
-		triageScanLogger.Debug().Msg("fetching triaged scans")
+		triagedScansLogger.Debug().Msg("fetching triaged scans")
 
-		lastTriagedScansResponse, errFetch := client.GetLastTriagedScans(fromDate, triagedScansOffset, triagedScansLimit)
+		triagedScansResponse, errFetch := client.GetTriagedScansFromDate(fromDate, triagedScansOffset, triagedScansLimit)
 		if errFetch != nil {
 			return errFetch
 		}
 
-		if errUnmarshal := json.Unmarshal(lastTriagedScansResponse, &triagedScanPage); errUnmarshal != nil {
+		if errUnmarshal := json.Unmarshal(triagedScansResponse, &triagedScansPage); errUnmarshal != nil {
 			return errUnmarshal
 		}
 
-		if len(triagedScanPage.Value) == 0 {
-			triageScanLogger.Debug().Msg("finished fetching triaged scans")
+		if len(triagedScansPage.Value) == 0 {
+			triagedScansLogger.Debug().Msg("finished fetching triaged scans")
 			break
 		}
 
-		triageScanLogger.Debug().
-			Int("count", len(triagedScanPage.Value)).
-			Int("responseSize", len(lastTriagedScansResponse)).
+		triagedScansLogger.Debug().
+			Int("count", len(triagedScansPage.Value)).
+			Int("responseSize", len(triagedScansResponse)).
 			Msg("triaged scans fetched")
 
-		scansPage := convertTriagedScansResponseToScansList(triagedScanPage)
-		lastTriagedScansByProject = append(lastTriagedScansByProject, scansPage...)
+		scans := convertTriagedScansResponseToScansList(triagedScansPage)
+		lastTriagedScansByProject = append(lastTriagedScansByProject, scans...)
 		lastTriagedScansByProject = getLastScansByProject(lastTriagedScansByProject)
 
 		triagedScansOffset += triagedScansLimit

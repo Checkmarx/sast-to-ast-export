@@ -221,7 +221,7 @@ func (c *SASTClient) GetSamlTeamMappings() ([]byte, error) {
 	return c.GetResponseBody(TeamMappingsEndpoint)
 }
 
-func (c *SASTClient) GetLastTriagedScans(fromDate string, offset, limit int) ([]byte, error) {
+func (c *SASTClient) GetTriagedScansFromDate(fromDate string, offset, limit int) ([]byte, error) {
 	url := ReportsLastTriagedScanEndpoint
 	url += GetEncodingURL(LastTriagedFilters, fromDate)
 	url += fmt.Sprintf("&$skip=%d&$top=%d", offset, limit)

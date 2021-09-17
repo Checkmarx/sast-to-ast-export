@@ -81,7 +81,7 @@ type ValueOdataScan struct {
 	ProjectID int `json:"ProjectId"`
 }
 
-type LastTriagedScansResponse struct {
+type TriagedScansResponse struct {
 	OdataContext string       `json:"@odata.context"`
 	Value        []ValueOdata `json:"value"`
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func TestConvertTriagedScansResponseToScansList(t *testing.T) {
-	triagedScansResponse := LastTriagedScansResponse{
+	triagedScansResponse := TriagedScansResponse{
 		OdataContext: "http://localhost/CxWebInterface/odata/...",
 		Value: []ValueOdata{
 			{ID: 1, ScanID: 10001, Date: time.Now(), Scan: ValueOdataScan{1}},

@@ -11,7 +11,7 @@ const (
 	maxCPUs = 4
 )
 
-func convertTriagedScansResponseToScansList(triagedScansResponse LastTriagedScansResponse) []TriagedScan {
+func convertTriagedScansResponseToScansList(triagedScansResponse TriagedScansResponse) []TriagedScan {
 	var result []TriagedScan
 	for _, v := range triagedScansResponse.Value {
 		result = append(result, TriagedScan{
