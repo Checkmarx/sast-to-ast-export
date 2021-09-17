@@ -100,7 +100,7 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		unmarshalErr := json.Unmarshal(responseBody, c.Token)
 		if unmarshalErr != nil {
 			logger.Debug().
-				Err(ioErr).
+				Err(unmarshalErr).
 				Str("responseBody", string(responseBody)).
 				Msg("authenticate ok failed to unmarshal response")
 			return fmt.Errorf("authentication error - could not decode response")

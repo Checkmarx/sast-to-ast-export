@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
 
 	"github.com/rs/zerolog/log"
@@ -23,6 +25,11 @@ const (
 
 	reportType    = "XML"
 	scansFileName = "%d.xml"
+
+	useOdataPermission           = "use-odata"
+	generateScanReportPermission = "generate-scan-report"
+	manageAuthProviderPermission = "manage-authentication-providers"
+	manageRolesPermission        = "manage-roles"
 )
 
 type ReportConsumeOutput struct {
@@ -67,6 +74,28 @@ func RunExport(args *Args) {
 	log.Debug().
 		Str("exportOptions", args.Export).
 		Msgf("parsed export options")
+
+	// validate permissions
+	jwtClaims := jwt.MapClaims{}
+	_, _, jwtErr := new(jwt.Parser).ParseUnverified(client.Token.AccessToken, jwtClaims)
+	if jwtErr != nil {
+		log.Debug().
+			Err(jwtErr).
+			Msg("permissions validation failed to parse jwt token")
+		panic(fmt.Errorf("permissions error - could not decode access token"))
+	}
+	availablePermissions := jwtClaims["sast-permissions"].([]interface{})
+	requiredPermissions := sliceutils.ConvertStringToInterface(getPermissionsFromExportOptions(selectedExportOptions))
+	missingPermissionsCount := 0
+	for _, requiredPermission := range requiredPermissions {
+		if !sliceutils.Contains(requiredPermission, availablePermissions) {
+			missingPermissionsCount++
+			log.Error().Msgf("missing permission: %s", requiredPermission)
+		}
+	}
+	if missingPermissionsCount > 0 {
+		panic(fmt.Errorf("please add missing permissions to your SAST user"))
+	}
 
 	// start export
 	log.Info().Msg("collecting data from SAST")
@@ -450,4 +479,23 @@ func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, 
 		}
 	}
 	return nil
+}
+
+func getPermissionsFromExportOptions(exportOptions []string) []string {
+	var output []string
+
+	usersPermissions := []string{manageAuthProviderPermission, manageRolesPermission}
+	teamsPermissions := []string{manageAuthProviderPermission}
+	resultsPermissions := []string{useOdataPermission, generateScanReportPermission}
+
+	for _, exportOption := range exportOptions {
+		if exportOption == usersExportOption {
+			output = append(output, usersPermissions...)
+		} else if exportOption == teamsExportOption {
+			output = append(output, teamsPermissions...)
+		} else if exportOption == resultsExportOption {
+			output = append(output, resultsPermissions...)
+		}
+	}
+	return sliceutils.ConvertInterfaceToString(sliceutils.Unique(sliceutils.ConvertStringToInterface(output)))
 }
