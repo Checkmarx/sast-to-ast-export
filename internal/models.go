@@ -71,15 +71,17 @@ type ReportResponse struct {
 }
 
 type ValueOdata struct {
-	ID     int       `json:"Id"`
-	ScanID int       `json:"ScanId"`
-	Date   time.Time `json:"Date"`
-	Scan   struct {
-		ProjectID int `json:"ProjectId"`
-	} `json:"Scan"`
+	ID     int            `json:"Id"`
+	ScanID int            `json:"ScanId"`
+	Date   time.Time      `json:"Date"`
+	Scan   ValueOdataScan `json:"Scan"`
 }
 
-type LastTriagedResponse struct {
+type ValueOdataScan struct {
+	ProjectID int `json:"ProjectId"`
+}
+
+type LastTriagedScansResponse struct {
 	OdataContext string       `json:"@odata.context"`
 	Value        []ValueOdata `json:"value"`
 }
@@ -95,7 +97,7 @@ type ReportRequest struct {
 	ScanID     int    `json:"scanId"`
 }
 
-type LastTriagedScanProducer struct {
+type TriagedScan struct {
 	ProjectID int
 	ScanID    int
 }

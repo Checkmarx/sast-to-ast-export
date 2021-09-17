@@ -23,6 +23,8 @@ const (
 
 	reportType    = "XML"
 	scansFileName = "%d.xml"
+
+	triagedScansPageLimit = 1000
 )
 
 func RunExport(args *Args) {
@@ -237,37 +239,58 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
-	fromDate := GetDateFromDays(args.ResultsProjectActiveSince)
+	fromDate := GetDateFromDays(args.ResultsProjectActiveSince, time.Now())
 
-	log.Debug().
-		Int("consumers", consumerCount).
-		Str("startDate", fromDate).
-		Msg("collecting results")
+	// collect last triaged scan by project
+	var lastTriagedScansByProject []TriagedScan
+	triagedScansOffset := 0
+	triagedScansLimit := triagedScansPageLimit
+	triageScanLogger := log.With().
+		Str("fromDate", fromDate).
+		Int("offset", triagedScansOffset).
+		Int("limit", triagedScansLimit).
+		Logger()
 
-	var scans LastTriagedResponse
-	dataScansOut, errGetLast := client.GetLastTriagedScanData(fromDate)
-	if errGetLast != nil {
-		return errGetLast
+	for {
+		var triagedScanPage LastTriagedScansResponse
+
+		triageScanLogger.Debug().Msg("fetching triaged scans")
+
+		lastTriagedScansResponse, errFetch := client.GetLastTriagedScans(fromDate, triagedScansOffset, triagedScansLimit)
+		if errFetch != nil {
+			return errFetch
+		}
+
+		if errUnmarshal := json.Unmarshal(lastTriagedScansResponse, &triagedScanPage); errUnmarshal != nil {
+			return errUnmarshal
+		}
+
+		if len(triagedScanPage.Value) == 0 {
+			triageScanLogger.Debug().Msg("finished fetching triaged scans")
+			break
+		}
+
+		triageScanLogger.Debug().
+			Int("count", len(triagedScanPage.Value)).
+			Int("responseSize", len(lastTriagedScansResponse)).
+			Msg("triaged scans fetched")
+
+		scansPage := convertTriagedScansResponseToScansList(triagedScanPage)
+		lastTriagedScansByProject = append(lastTriagedScansByProject, scansPage...)
+		lastTriagedScansByProject = getLastScansByProject(lastTriagedScansByProject)
+
+		triagedScansOffset += triagedScansLimit
 	}
 
-	if errScansSheriff := json.Unmarshal(dataScansOut, &scans); errScansSheriff != nil {
-		return errScansSheriff
-	}
-
 	log.Debug().
-		Int("count", len(scans.Value)).
-		Msg("triaged scans collected")
-
-	scansList := convertTriagedScansResponseToLastScansList(scans)
-
-	log.Debug().
-		Int("count", len(scansList)).
-		Str("scans", fmt.Sprintf("%v", scansList)).
+		Int("count", len(lastTriagedScansByProject)).
+		Str("scans", fmt.Sprintf("%v", lastTriagedScansByProject)).
 		Msg("last scans by project")
 
-	go produceReports(reportJobs, scansList)
+	// create and fetch report for each scan
+	go produceReports(reportJobs, lastTriagedScansByProject)
 
-	resultsCount := len(scansList)
+	resultsCount := len(lastTriagedScansByProject)
 	consumeErrors := make(chan error, resultsCount)
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
@@ -287,7 +310,7 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	return nil
 }
 
-func produceReports(reportJobs chan<- ReportJob, scans []LastTriagedScanProducer) {
+func produceReports(reportJobs chan<- ReportJob, scans []TriagedScan) {
 	for _, scan := range scans {
 		reportJobs <- ReportJob{
 			ProjectID:  scan.ProjectID,
