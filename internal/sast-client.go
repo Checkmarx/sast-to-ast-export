@@ -127,7 +127,7 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		}
 	}
 
-	logger.Debug().Msg("authentication unexpected response")
+	logger.Debug().Msg("authenticate unexpected response")
 	return fmt.Errorf("authentication error - please try again later or contact support")
 }
 
