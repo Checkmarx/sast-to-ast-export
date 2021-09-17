@@ -1,6 +1,6 @@
 package main
 
-import "sast-export/cmd"
+import "github.com/checkmarxDev/ast-sast-export/cmd"
 
 func main() {
 	cmd.Execute()

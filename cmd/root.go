@@ -1,8 +1,27 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
+	"github.com/checkmarxDev/ast-sast-export/internal"
+	"github.com/checkmarxDev/ast-sast-export/internal/logging"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"sast-export/internal"
+)
+
+const (
+	userArg                      = "user"
+	passArg                      = "pass"
+	urlArg                       = "url"
+	exportArg                    = "export"
+	resultsProjectActiveSinceArg = "results-project-active-since"
+	debugArg                     = "debug"
+	verboseArg                   = "verbose"
+
+	resultsProjectActiveSinceDefaultValue = 180
 )
 
 // productName is defined in Makefile and initialized during build
@@ -17,16 +36,46 @@ var productBuild string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   productName,
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "Exports SAST data for importing in AST",
+	Long: `Exports encrypted SAST data for importing in AST. Example usage:
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+cxsast_exporter --user username --pass password --url http://localhost
+
+Produces a zip file containing the encrypted SAST data, e.g. cxsast_exporter-2021-09-10-15-42-35.zip
+Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-09-10-15-42-35.log`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// setup logging
+		verbose, flagErr := cmd.Flags().GetBool(verboseArg)
+		if flagErr != nil {
+			panic(flagErr)
+		}
+
+		aolErr := aol.Init(productName, "", "trace", "")
+		if aolErr != nil {
+			panic(aolErr)
+		}
+
+		logFileWriter, err := logging.NewFileWriter(productName)
+		if err != nil {
+			panic(err)
+		}
+		defer logFileWriter.Close()
+
+		consoleWriter := logging.NewConsoleWriter()
+
+		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, consoleWriter, logFileWriter)
+		log.Logger = log.Logger.Output(&levelWriter)
+
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error().Msgf("execution failed: %v", r)
+				os.Exit(1)
+			}
+		}()
+
+		// start export
 		allArgs := GetArgs(cmd, productName)
-		internal.RunExport(allArgs)
+		internal.RunExport(&allArgs)
 	},
 }
 
@@ -38,25 +87,30 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	rootCmd.Flags().StringP("user", "", "", "SAST admin username")
-	rootCmd.Flags().StringP("pass", "", "", "SAST admin password")
-	rootCmd.Flags().StringP("url", "", "", "SAST url")
-	rootCmd.Flags().StringP("export", "", "", "SAST [optional] export options --export users,results,teams, all if nothing defined")
-	rootCmd.Flags().IntP("results-project-active-since", "", 180, "SAST [optional] custom results project active since (days) - 180 if nothing defined")
-	rootCmd.Flags().Bool("debug", false, "Activate debug mode")
-	if err := rootCmd.MarkFlagRequired("user"); err != nil {
+	resultsProjectActiveSinceUsage := fmt.Sprintf(
+		"SAST [optional] custom results project active since (days) - %d if nothing defined", resultsProjectActiveSinceDefaultValue)
+
+	rootCmd.Flags().StringP(userArg, "", "", "SAST admin username")
+	rootCmd.Flags().StringP(passArg, "", "", "SAST admin password")
+	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
+	rootCmd.Flags().StringP(exportArg, "", "", "SAST [optional] export options --export users,results,teams, all if nothing defined")
+	rootCmd.Flags().IntP(resultsProjectActiveSinceArg, "", resultsProjectActiveSinceDefaultValue, resultsProjectActiveSinceUsage)
+	rootCmd.Flags().Bool(debugArg, false, "Activate debug mode")
+	rootCmd.Flags().BoolP(verboseArg, "v", false, "Enable verbose logging to console")
+
+	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
 	}
-	if err := rootCmd.MarkFlagRequired("pass"); err != nil {
+	if err := rootCmd.MarkFlagRequired(passArg); err != nil {
 		panic(err)
 	}
-	if err := rootCmd.MarkFlagRequired("url"); err != nil {
+	if err := rootCmd.MarkFlagRequired(urlArg); err != nil {
 		panic(err)
 	}
-	if err := rootCmd.MarkFlagCustom("export", "users,results,teams"); err != nil {
+	if err := rootCmd.MarkFlagCustom(exportArg, "users,results,teams"); err != nil {
 		panic(err)
 	}
-	if err := rootCmd.MarkFlagCustom("results-project-active-since", "SAST custom results project active since (days) 180 if nothing defined"); err != nil {
+	if err := rootCmd.MarkFlagCustom(resultsProjectActiveSinceArg, resultsProjectActiveSinceUsage); err != nil {
 		panic(err)
 	}
 }

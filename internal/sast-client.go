@@ -6,6 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -22,11 +24,6 @@ var (
 )
 
 const (
-	Users         = "users"
-	Results       = "results"
-	Teams         = "teams"
-	ReportType    = "XML"
-	ScansFileName = "%d.xml"
 	UsersEndpoint = "/CxRestAPI/auth/Users"
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"
 	RolesEndpoint = "/CxRestAPI/auth/Roles"
@@ -56,6 +53,11 @@ type SASTClient struct {
 	Token   *AccessToken
 }
 
+type SASTError struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
 func NewSASTClient(baseURL string, adapter HTTPAdapter) (*SASTClient, error) {
 	client := SASTClient{
 		BaseURL: baseURL,
@@ -70,19 +72,63 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		return err
 	}
 
-	resp, err := c.doRequest(req, http.StatusOK)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+	resp, err := c.Adapter.Do(req)
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		log.Debug().
+			Err(err).
+			Str("method", req.Method).
+			Str("url", req.URL.String()).
+			Msgf("authenticate failed request")
+		return fmt.Errorf("authentication error - request failed")
 	}
 
-	c.Token = &AccessToken{}
-	return json.Unmarshal(responseBody, c.Token)
+	logger := log.With().
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Int("statusCode", resp.StatusCode).
+		Logger()
+
+	if resp.StatusCode == http.StatusOK {
+		defer resp.Body.Close()
+		responseBody, ioErr := ioutil.ReadAll(resp.Body)
+		if ioErr != nil {
+			logger.Debug().Err(ioErr).Msg("authenticate ok failed read response")
+			return fmt.Errorf("authentication error - could not read response")
+		}
+		c.Token = &AccessToken{}
+		unmarshalErr := json.Unmarshal(responseBody, c.Token)
+		if unmarshalErr != nil {
+			logger.Debug().
+				Err(ioErr).
+				Str("responseBody", string(responseBody)).
+				Msg("authenticate ok failed to unmarshal response")
+			return fmt.Errorf("authentication error - could not decode response")
+		}
+		return nil
+	} else if resp.StatusCode == http.StatusBadRequest {
+		defer resp.Body.Close()
+		responseBody, ioErr := ioutil.ReadAll(resp.Body)
+		if ioErr != nil {
+			logger.Debug().Err(ioErr).Msg("authenticate bad request failed to read response")
+			return fmt.Errorf("authentication error - could not read response")
+		}
+		var response SASTError
+		unmarshalErr := json.Unmarshal(responseBody, &response)
+		if unmarshalErr != nil {
+			logger.Debug().
+				Err(unmarshalErr).
+				Str("responseBody", string(responseBody)).
+				Msg("authenticate bad request failed to unmarshal response")
+			return fmt.Errorf("authentication error - could not decode response")
+		}
+		if response.ErrorDescription == "invalid_username_or_password" {
+			return fmt.Errorf("authentication error - please confirm your user name and password")
+		}
+	}
+
+	logger.Debug().Msg("authenticate unexpected response")
+	return fmt.Errorf("authentication error - please try again later or contact support")
 }
 
 func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
@@ -103,35 +149,37 @@ func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, error) {
 	req, err := CreateRequest(http.MethodPost, c.BaseURL+endpoint, body, c.Token)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 
 	resp, err := c.doRequest(req, http.StatusAccepted)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (c *SASTClient) doRequest(request *http.Request, expectStatusCode int) (*http.Response, error) {
-	resp, err := c.Adapter.Do(request)
+func (c *SASTClient) doRequest(req *http.Request, expectStatusCode int) (*http.Response, error) {
+	resp, err := c.Adapter.Do(req)
+	log.Debug().
+		Err(err).
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Int("statusCode", resp.StatusCode).
+		Msg("request")
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != expectStatusCode {
-		return nil, fmt.Errorf("invalid response: %v", resp)
+		defer resp.Body.Close()
+		return nil, fmt.Errorf("request %s %s failed with status code %d", req.Method, req.URL.String(), resp.StatusCode)
 	}
-
-	if isDebug {
-		fmt.Printf("doRequest url: %s - method: %s - status response: %d\n", request.URL, request.Method, resp.StatusCode)
-	}
-
 	return resp, nil
 }
 
-func GetReportStatusResponse(c *SASTClient, report ReportResponse) (*StatusResponse, error) {
+func (c *SASTClient) GetReportStatusResponse(report ReportResponse) (*StatusResponse, error) {
 	statusUnm, errGetStatus := c.GetReportIDStatus(report.ReportID)
 	if errGetStatus != nil {
 		return &StatusResponse{}, errGetStatus
@@ -186,12 +234,12 @@ func (c *SASTClient) GetLastTriagedScanData(fromDate string) ([]byte, error) {
 	return c.GetResponseBody(ReportsLastTriagedScanEndpoint + GetEncodingURL(LastTriagedFilters, fromDate))
 }
 
-func (c *SASTClient) GetReportIDStatus(reportId int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsCheckStatusEndpoint, reportId))
+func (c *SASTClient) GetReportIDStatus(reportID int) ([]byte, error) {
+	return c.GetResponseBody(fmt.Sprintf(ReportsCheckStatusEndpoint, reportID))
 }
 
-func (c *SASTClient) GetReportResult(reportId int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsResultEndpoint, reportId))
+func (c *SASTClient) GetReportResult(reportID int) ([]byte, error) {
+	return c.GetResponseBody(fmt.Sprintf(ReportsResultEndpoint, reportID))
 }
 
 func (c *SASTClient) PostReportID(body io.Reader) ([]byte, error) {

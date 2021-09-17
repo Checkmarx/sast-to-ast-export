@@ -8,212 +8,250 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
-	statusCreated = "Created"
+	createdStatus = "Created"
+
+	usersExportOption   = "users"
+	teamsExportOption   = "teams"
+	resultsExportOption = "results"
+
+	reportType    = "XML"
+	scansFileName = "%d.xml"
 )
 
-func produce(export chan<- string, exportList []string) {
-	for _, exp := range exportList {
-		export <- exp
-	}
-	close(export)
+type ReportConsumeOutput struct {
+	Err       error
+	ProjectID int
+	ScanID    int
 }
 
-func (c *SASTClient) consume(worker int, args Args, export <-chan string, finished chan<- bool) {
-	var err error
-	for ch := range export {
-		if isDebug {
-			fmt.Printf("%v is consumed by worker %v.\n", ch, worker)
-		}
-		switch ch {
-		case Users: // fetch users and save to export dir
-			usersData, err = c.GetUsers()
-			if err != nil {
-				panic(err)
-			}
-			rolesData, err = c.GetRoles()
-			if err != nil {
-				panic(err)
-			}
-			ldapRolesData, err = c.GetLdapRoleMappings()
-			if err != nil {
-				panic(err)
-			}
-			samlRolesData, err = c.GetSamlRoleMappings()
-			if err != nil {
-				panic(err)
-			}
-		case Results: // fetch scans and save to export dir
-			errResults := c.GetScanDataResponse(args)
-			if errResults != nil {
-				panic(errResults)
-			}
-		case Teams: // fetch teams and save to export dir
-			teamsData, err = c.GetTeams()
-			if err != nil {
-				panic(err)
-			}
-			ldapTeamsData, err = c.GetLdapTeamMappings()
-			if err != nil {
-				panic(err)
-			}
-			samlTeamsData, err = c.GetSamlTeamMappings()
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		switch ch {
-		case Users, Teams: // fetch users | teams and save to export dir
-			ldapServersData, err = c.GetLdapServers()
-			if err != nil {
-				panic(err)
-			}
-
-			samlIDpsData, err = c.GetSamlIdentityProviders()
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	finished <- true
-}
-
-func RunExport(args Args) {
+func RunExport(args *Args) {
 	isDebug = args.Debug
-	var exportList []string
+	var selectedExportOptions []string
 	consumerCount := GetNumCPU()
-	exports := make(chan string)
-	finished := make(chan bool, consumerCount)
+
+	log.Debug().
+		Str("url", args.URL).
+		Str("export", args.Export).
+		Int("resultsProjectActiveSince", args.ResultsProjectActiveSince).
+		Bool("debug", args.Debug).
+		Int("consumers", consumerCount).
+		Msg("starting export")
+
 	// create api client and authenticate
 	client, err := NewSASTClient(args.URL, &http.Client{})
 	if err != nil {
+		log.Error().Err(err)
 		panic(err)
 	}
-	if err2 := client.Authenticate(args.Username, args.Password); err2 != nil {
-		panic(err2)
+
+	log.Info().Msg("connecting to SAST")
+	if authErr := client.Authenticate(args.Username, args.Password); authErr != nil {
+		log.Error().Err(authErr)
+		panic(authErr)
 	}
 
 	if args.Export != "" {
-		exportList = strings.Split(args.Export, ",")
+		selectedExportOptions = strings.Split(args.Export, ",")
 	} else {
-		exportList = []string{Users, Results, Teams}
+		selectedExportOptions = []string{usersExportOption, resultsExportOption, teamsExportOption}
 	}
-	args.Export = strings.Join(exportList, ",")
+	args.Export = strings.Join(selectedExportOptions, ",")
 
-	go produce(exports, exportList)
+	log.Debug().
+		Str("exportOptions", args.Export).
+		Msgf("parsed export options")
 
 	// start export
-	exportValues, errCreateExport := CreateExport(args.ProductName)
-	if errCreateExport != nil {
-		panic(errCreateExport)
+	log.Info().Msg("collecting data from SAST")
+
+	exportValues, exportCreateErr := CreateExport(args.ProductName)
+	if exportCreateErr != nil {
+		log.Error().Err(exportCreateErr)
+		panic(exportCreateErr)
 	}
 
 	if !isDebug {
 		defer func(exportValues *Export) {
-			errClean := exportValues.Clean()
-			if errClean != nil {
-				fmt.Printf("Error cleaning export: %v", err)
+			cleanErr := exportValues.Clean()
+			if cleanErr != nil {
+				log.Error().Err(cleanErr).Msg("error cleaning export temporary folder")
 			}
 		}(&exportValues)
 	}
 
-	for i := 1; i <= consumerCount; i++ {
-		z := i
-		go func() {
-			client.consume(z, args, exports, finished)
-			if err != nil {
-				fmt.Printf("Error consuming: %v", err)
+	availableExportOptions := []string{usersExportOption, teamsExportOption, resultsExportOption}
+
+	for _, exportOption := range availableExportOptions {
+		if sliceutils.Contains(exportOption, sliceutils.ConvertStringToInterface(selectedExportOptions)) {
+			log.Info().Msgf("collecting %s", exportOption)
+			switch exportOption {
+			case usersExportOption:
+				if err = fetchUsersData(client); err != nil {
+					log.Error().Err(err)
+					panic(err)
+				}
+			case teamsExportOption:
+				if err = fetchTeamsData(client); err != nil {
+					log.Error().Err(err)
+					panic(err)
+				}
+			case resultsExportOption:
+				if err = fetchResultsData(client, args); err != nil {
+					log.Error().Err(err)
+					panic(err)
+				}
 			}
-		}()
-	}
-	for i := 1; i <= consumerCount; i++ {
-		<-finished
+		}
 	}
 
-	ExportResultsToFile(args, &exportValues)
+	log.Info().Msg("exporting collected data")
+
+	exportFileName, exportErr := ExportResultsToFile(args, &exportValues)
+	if exportErr != nil {
+		log.Error().Err(exportErr).Msg("error exporting collected data")
+	}
+
+	log.Info().Msgf("export completed to %s", *exportFileName)
 }
 
-func (c *SASTClient) produceReports(reports chan<- ReportConsumer, scans []LastTriagedScanProducer) error {
-	for _, scan := range scans {
-		reportBody := &ReportRequest{
-			ReportType: ReportType,
-			ScanID:     scan.ScanID,
+func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
+
+	if strings.Contains(args.Export, usersExportOption) {
+		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
+			return nil, exportErr
 		}
 
-		reportJSON, marshalErr := json.Marshal(reportBody)
-		if marshalErr != nil {
-			return marshalErr
-		}
-		body := bytes.NewBuffer(reportJSON)
-
-		dataReportOut, errCreate := c.PostReportID(body)
-		if errCreate != nil {
-			return errCreate
+		if exportErr := exportValues.AddFile(RolesFileName, rolesData); exportErr != nil {
+			return nil, exportErr
 		}
 
-		var report ReportResponse
-		errReportsSheriff := json.Unmarshal(dataReportOut, &report)
-		if errReportsSheriff != nil {
-			return errReportsSheriff
+		if exportErr := exportValues.AddFile(LdapRoleMappingsFileName, ldapRolesData); exportErr != nil {
+			return nil, exportErr
 		}
 
-		// add project and report id to producer list call
-		reports <- ReportConsumer{
-			ProjectId:      scan.ProjectID,
-			ReportId:       report.ReportID,
-			ReportResponse: report,
+		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
+			return nil, exportErr
 		}
 	}
-	close(reports)
+
+	if strings.Contains(args.Export, resultsExportOption) {
+		for _, res := range exportData {
+			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
+				return nil, exportErr
+			}
+		}
+	}
+
+	if strings.Contains(args.Export, teamsExportOption) {
+		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
+			return nil, exportErr
+		}
+
+		if exportErr := exportValues.AddFile(LdapTeamMappingsFileName, ldapTeamsData); exportErr != nil {
+			return nil, exportErr
+		}
+
+		if exportErr := exportValues.AddFile(SamlTeamMappingsFileName, samlTeamsData); exportErr != nil {
+			return nil, exportErr
+		}
+	}
+
+	if strings.Contains(args.Export, usersExportOption) || strings.Contains(args.Export, teamsExportOption) {
+		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
+			return nil, exportErr
+		}
+		if exportErr := exportValues.AddFile(SamlIdpFileName, samlIDpsData); exportErr != nil {
+			return nil, exportErr
+		}
+	}
+
+	// create export package
+	if isDebug {
+		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
+		return &exportValues.TmpDir, nil
+	}
+
+	exportFileName, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
+	if exportErr != nil {
+		return nil, exportErr
+	}
+	return &exportFileName, exportErr
+}
+
+func fetchUsersData(c *SASTClient) error {
+	var err error
+	usersData, err = c.GetUsers()
+	if err != nil {
+		return err
+	}
+	rolesData, err = c.GetRoles()
+	if err != nil {
+		return err
+	}
+	ldapRolesData, err = c.GetLdapRoleMappings()
+	if err != nil {
+		return err
+	}
+	samlRolesData, err = c.GetSamlRoleMappings()
+	if err != nil {
+		return err
+	}
+	ldapServersData, err = c.GetLdapServers()
+	if err != nil {
+		return err
+	}
+	samlIDpsData, err = c.GetSamlIdentityProviders()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (c *SASTClient) consumeReports(worker int, reports <-chan ReportConsumer, done chan<- bool) (err error) {
-	sleep := 2 * time.Second // default first time waiting, will increase in every loop
-	retryAttempts := 4
-	for rep := range reports {
-		if isDebug {
-			fmt.Printf("ReportId %v is consumed by report worker %v.\n", rep.ReportId, worker)
-		}
-
-		status, errDoStatusReq := GetReportStatusResponse(c, rep.ReportResponse)
-		if errDoStatusReq != nil {
-			return errDoStatusReq
-		}
-
-		if status.Status.Value == statusCreated {
-			err = c.GetReportData(rep.ReportId, rep.ProjectId)
-			if err != nil {
-				return err
-			}
-		} else {
-			err = c.retryGetReport(retryAttempts, rep.ReportId, rep.ProjectId, sleep, rep.ReportResponse, status)
-			if err != nil {
-				return err
-			}
-		}
+func fetchTeamsData(client *SASTClient) error {
+	var err error
+	teamsData, err = client.GetTeams()
+	if err != nil {
+		return err
 	}
-	done <- true
+	ldapTeamsData, err = client.GetLdapTeamMappings()
+	if err != nil {
+		return err
+	}
+	samlTeamsData, err = client.GetSamlTeamMappings()
+	if err != nil {
+		return err
+	}
+	ldapServersData, err = client.GetLdapServers()
+	if err != nil {
+		return err
+	}
+	samlIDpsData, err = client.GetSamlIdentityProviders()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
+func fetchResultsData(client *SASTClient, args *Args) (err error) {
 	consumerCount := GetNumCPU()
-	reports := make(chan ReportConsumer)
-	done := make(chan bool, consumerCount)
+	reportJobs := make(chan ReportJob)
 
 	fromDate := GetDateFromDays(args.ResultsProjectActiveSince)
 
-	if isDebug {
-		fmt.Printf("GetDateFromDays: %s\n", fromDate)
-	}
+	log.Debug().
+		Int("consumers", consumerCount).
+		Str("startDate", fromDate).
+		Msg("collecting results")
 
 	var scans LastTriagedResponse
-	dataScansOut, errGetLast := c.GetLastTriagedScanData(fromDate)
+	dataScansOut, errGetLast := client.GetLastTriagedScanData(fromDate)
 	if errGetLast != nil {
 		return errGetLast
 	}
@@ -222,139 +260,194 @@ func (c *SASTClient) GetScanDataResponse(args Args) (err error) {
 		return errScansSheriff
 	}
 
+	log.Debug().
+		Int("count", len(scans.Value)).
+		Msg("triaged scans collected")
+
 	scansList := convertTriagedScansResponseToLastScansList(scans)
 
-	go func() {
-		err = c.produceReports(reports, scansList)
-		if err != nil {
-			fmt.Printf("Error producing reports: %v", err)
-		}
-	}()
+	log.Debug().
+		Int("count", len(scansList)).
+		Str("scans", fmt.Sprintf("%v", scansList)).
+		Msg("last scans by project")
 
-	for i := 1; i <= consumerCount; i++ {
-		consumerID := i
-		go func() {
-			err = c.consumeReports(consumerID, reports, done)
-			if err != nil {
-				fmt.Printf("Error consuming reports: %v", err)
-			}
-		}()
+	go produceReports(reportJobs, scansList)
+
+	reportCount := len(scansList)
+	reportConsumeOutputs := make(chan ReportConsumeOutput, reportCount)
+
+	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
+		go consumeReports(client, consumerID, reportJobs, reportConsumeOutputs)
 	}
 
-	for i := 1; i <= consumerCount; i++ {
-		<-done
+	reportConsumeErrorCount := 0
+	for i := 0; i < reportCount; i++ {
+		consumeOutput := <-reportConsumeOutputs
+		reportIndex := i + 1
+		if consumeOutput.Err == nil {
+			log.Info().
+				Int("projectID", consumeOutput.ProjectID).
+				Int("scanID", consumeOutput.ScanID).
+				Msgf("collected result %d/%d", reportIndex, reportCount)
+		} else {
+			reportConsumeErrorCount++
+			log.Debug().
+				Err(consumeOutput.Err).
+				Int("projectID", consumeOutput.ProjectID).
+				Int("scanID", consumeOutput.ScanID).
+				Msg("failed collecting result")
+			log.Warn().
+				Int("projectID", consumeOutput.ProjectID).
+				Int("scanID", consumeOutput.ScanID).
+				Msgf("failed collecting result %d/%d", reportIndex, reportCount)
+		}
+	}
+
+	if reportConsumeErrorCount > 0 {
+		log.Warn().Msgf("failed collecting %d/%d results", reportConsumeErrorCount, reportCount)
 	}
 
 	return nil
 }
 
-func ExportResultsToFile(args Args, exportValues *Export) {
-
-	if strings.Contains(args.Export, Users) {
-		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
-			panic(exportErr)
-		}
-
-		if exportErr := exportValues.AddFile(RolesFileName, rolesData); exportErr != nil {
-			panic(exportErr)
-		}
-
-		if exportErr := exportValues.AddFile(LdapRoleMappingsFileName, ldapRolesData); exportErr != nil {
-			panic(exportErr)
-		}
-
-		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
-			panic(exportErr)
+func produceReports(reportJobs chan<- ReportJob, scans []LastTriagedScanProducer) {
+	for _, scan := range scans {
+		reportJobs <- ReportJob{
+			ProjectID:  scan.ProjectID,
+			ScanID:     scan.ScanID,
+			ReportType: reportType,
 		}
 	}
-
-	if strings.Contains(args.Export, Results) {
-		for _, res := range exportData {
-			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
-				panic(exportErr)
-			}
-		}
-	}
-
-	if strings.Contains(args.Export, Teams) {
-		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
-			panic(exportErr)
-		}
-
-		if exportErr := exportValues.AddFile(LdapTeamMappingsFileName, ldapTeamsData); exportErr != nil {
-			panic(exportErr)
-		}
-
-		if exportErr := exportValues.AddFile(SamlTeamMappingsFileName, samlTeamsData); exportErr != nil {
-			panic(exportErr)
-		}
-	}
-
-	if strings.Contains(args.Export, Users) || strings.Contains(args.Export, Teams) {
-		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
-			panic(exportErr)
-		}
-		if exportErr := exportValues.AddFile(SamlIdpFileName, samlIDpsData); exportErr != nil {
-			panic(exportErr)
-		}
-	}
-
-	// create export package
-	if !isDebug {
-		exportFileName, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
-		if exportErr != nil {
-			panic(exportErr)
-		}
-		fmt.Printf("SAST data exported to %s\n", exportFileName)
-	} else {
-		fmt.Printf("Debug mode: SAST data exported to %s\n", exportValues.TmpDir)
-		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
-	}
+	close(reportJobs)
 }
 
-func (c *SASTClient) retryGetReport(attempts, reportID, projectID int, sleep time.Duration, response ReportResponse, status *StatusResponse) (err error) {
-	state := true
-	var errDoStatusReq error
-	for state {
-		time.Sleep(sleep)
-		sleep *= 2
-		status, errDoStatusReq = GetReportStatusResponse(c, response)
+func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
+	sleep := 2 * time.Second // default first time waiting, will increase in every loop
+	retryAttempts := 4
+	for reportJob := range reportJobs {
+		logger := log.With().
+			Int("projectID", reportJob.ProjectID).
+			Int("scanID", reportJob.ScanID).
+			Int("worker", worker).
+			Logger()
+
+		logger.Debug().Msg("consuming report job")
+
+		// create the report
+		reportBody := &ReportRequest{
+			ReportType: reportJob.ReportType,
+			ScanID:     reportJob.ScanID,
+		}
+
+		reportJSON, marshalErr := json.Marshal(reportBody)
+		if marshalErr != nil {
+			logger.Debug().
+				Err(marshalErr).
+				Str("reportBody", fmt.Sprintf("%v", reportBody)).
+				Msg("failed marshalling report body")
+			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		body := bytes.NewBuffer(reportJSON)
+
+		dataReportOut, errCreate := client.PostReportID(body)
+		if errCreate != nil {
+			logger.Debug().
+				Err(errCreate).
+				Str("reportBody", fmt.Sprintf("%v", reportBody)).
+				Msg("failed creating report")
+			done <- ReportConsumeOutput{Err: errCreate, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+
+		var report ReportResponse
+		errReportsSheriff := json.Unmarshal(dataReportOut, &report)
+		if errReportsSheriff != nil {
+			logger.Debug().
+				Err(errReportsSheriff).
+				Str("response", fmt.Sprintf("%v", string(dataReportOut))).
+				Msg("failed unmarshalling report response")
+			done <- ReportConsumeOutput{Err: errReportsSheriff, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+
+		// monitor status and fetch
+		status, errDoStatusReq := client.GetReportStatusResponse(report)
 		if errDoStatusReq != nil {
-			return errDoStatusReq
+			logger.Debug().Err(errDoStatusReq).Msg("failed getting report status")
+			done <- ReportConsumeOutput{Err: errDoStatusReq, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
 		}
-
-		state = status.Status.Value != statusCreated
-
-		// Code to repeatedly execute until we have create status
-		if status.Status.Value == statusCreated {
-			state = false
-			errReportData := c.GetReportData(reportID, projectID)
-			if errReportData != nil {
-				return errReportData
+		if status.Status.Value == createdStatus {
+			err := fetchReportData(client, report.ReportID, reportJob.ProjectID)
+			if err == nil {
+				logger.Debug().Msg("report created")
+			} else {
+				logger.Debug().Err(err).Msg("failed getting report")
+				done <- ReportConsumeOutput{Err: err, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+		} else {
+			err := retryGetReport(client, retryAttempts, report.ReportID, reportJob.ProjectID, sleep, report)
+			if err != nil {
+				logger.Debug().Err(err).Msg("failed report fetch retry")
+				done <- ReportConsumeOutput{Err: err, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
 			}
 		}
-
-		attempts--
-		if attempts == 0 {
-			return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
-		}
+		done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 	}
-	return nil
 }
 
-func (c *SASTClient) GetReportData(reportID, projectID int) error {
-	finalResultOut, errGetResult := c.GetReportResult(reportID)
+func fetchReportData(client *SASTClient, reportID, projectID int) error {
+	finalResultOut, errGetResult := client.GetReportResult(reportID)
 	if errGetResult != nil {
 		return errGetResult
 	}
 
 	exportData = append(exportData, ExportData{
-		FileName: fmt.Sprintf(ScansFileName, projectID),
+		FileName: fmt.Sprintf(scansFileName, projectID),
 		Data:     finalResultOut,
 	})
 
-	if isDebug {
-		fmt.Printf("End creating final report with ReportId: %d\n", reportID)
+	return nil
+}
+
+func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, sleep time.Duration, response ReportResponse) error {
+	state := true
+	attempt := 2
+	var status *StatusResponse
+	var errDoStatusReq error
+	for state {
+		log.Debug().
+			Int("attempt", attempt).
+			Int("totalAttempts", totalAttempts).
+			Int("projectID", projectID).
+			Int("reportID", reportID).
+			Str("sleep", sleep.String()).
+			Msg("checking report create state")
+		time.Sleep(sleep)
+		sleep *= 2
+		status, errDoStatusReq = client.GetReportStatusResponse(response)
+		if errDoStatusReq != nil {
+			return errDoStatusReq
+		}
+
+		state = status.Status.Value != createdStatus
+
+		// Code to repeatedly execute until we have create status
+		if status.Status.Value == createdStatus {
+			state = false
+			errReportData := fetchReportData(client, reportID, projectID)
+			if errReportData != nil {
+				return errReportData
+			}
+		}
+
+		attempt++
+		if attempt > totalAttempts {
+			return fmt.Errorf("project %d report %d not ready after %d attempts", projectID, reportID, totalAttempts)
+		}
 	}
 	return nil
 }
