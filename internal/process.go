@@ -25,6 +25,12 @@ const (
 	scansFileName = "%d.xml"
 )
 
+type ReportConsumeOutput struct {
+	Err       error
+	ProjectID int
+	ScanID    int
+}
+
 func RunExport(args *Args) {
 	isDebug = args.Debug
 	var selectedExportOptions []string
@@ -267,28 +273,38 @@ func fetchResultsData(client *SASTClient, args *Args) (err error) {
 
 	go produceReports(reportJobs, scansList)
 
-	resultsCount := len(scansList)
-	consumeErrors := make(chan error, resultsCount)
+	reportCount := len(scansList)
+	reportConsumeOutputs := make(chan ReportConsumeOutput, reportCount)
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
-		go consumeReports(client, consumerID, reportJobs, consumeErrors)
+		go consumeReports(client, consumerID, reportJobs, reportConsumeOutputs)
 	}
 
-	errorCount := 0
-	for i := 0; i < resultsCount; i++ {
-		consumeErr := <-consumeErrors
-		resultIndex := i + 1
-		if consumeErr == nil {
-			log.Info().Msgf("collected result %d/%d", resultIndex, resultsCount)
+	reportConsumeErrorCount := 0
+	for i := 0; i < reportCount; i++ {
+		consumeOutput := <-reportConsumeOutputs
+		reportIndex := i + 1
+		if consumeOutput.Err == nil {
+			log.Info().
+				Int("projectID", consumeOutput.ProjectID).
+				Int("scanID", consumeOutput.ScanID).
+				Msgf("collected result %d/%d", reportIndex, reportCount)
 		} else {
-			errorCount++
-			log.Debug().Err(consumeErr).Msg("failed collecting result")
-			log.Warn().Msgf("failed collecting result %d/%d", resultIndex, resultsCount)
+			reportConsumeErrorCount++
+			log.Debug().
+				Err(consumeOutput.Err).
+				Int("projectID", consumeOutput.ProjectID).
+				Int("scanID", consumeOutput.ScanID).
+				Msg("failed collecting result")
+			log.Warn().
+				Int("projectID", consumeOutput.ProjectID).
+				Int("scanID", consumeOutput.ScanID).
+				Msgf("failed collecting result %d/%d", reportIndex, reportCount)
 		}
 	}
 
-	if errorCount > 0 {
-		log.Warn().Msgf("failed collecting %d/%d results", errorCount, resultsCount)
+	if reportConsumeErrorCount > 0 {
+		log.Warn().Msgf("failed collecting %d/%d results", reportConsumeErrorCount, reportCount)
 	}
 
 	return nil
@@ -305,7 +321,7 @@ func produceReports(reportJobs chan<- ReportJob, scans []LastTriagedScanProducer
 	close(reportJobs)
 }
 
-func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob, done chan<- error) {
+func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
 	sleep := 2 * time.Second // default first time waiting, will increase in every loop
 	retryAttempts := 4
 	for reportJob := range reportJobs {
@@ -329,7 +345,7 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 				Err(marshalErr).
 				Str("reportBody", fmt.Sprintf("%v", reportBody)).
 				Msg("failed marshalling report body")
-			done <- marshalErr
+			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
 		body := bytes.NewBuffer(reportJSON)
@@ -340,7 +356,7 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 				Err(errCreate).
 				Str("reportBody", fmt.Sprintf("%v", reportBody)).
 				Msg("failed creating report")
-			done <- errCreate
+			done <- ReportConsumeOutput{Err: errCreate, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
 
@@ -351,7 +367,7 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 				Err(errReportsSheriff).
 				Str("response", fmt.Sprintf("%v", string(dataReportOut))).
 				Msg("failed unmarshalling report response")
-			done <- errReportsSheriff
+			done <- ReportConsumeOutput{Err: errReportsSheriff, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
 
@@ -359,7 +375,7 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 		status, errDoStatusReq := client.GetReportStatusResponse(report)
 		if errDoStatusReq != nil {
 			logger.Debug().Err(errDoStatusReq).Msg("failed getting report status")
-			done <- errDoStatusReq
+			done <- ReportConsumeOutput{Err: errDoStatusReq, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
 		if status.Status.Value == createdStatus {
@@ -368,18 +384,18 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 				logger.Debug().Msg("report created")
 			} else {
 				logger.Debug().Err(err).Msg("failed getting report")
-				done <- err
+				done <- ReportConsumeOutput{Err: err, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 				continue
 			}
 		} else {
 			err := retryGetReport(client, retryAttempts, report.ReportID, reportJob.ProjectID, sleep, report)
 			if err != nil {
 				logger.Debug().Err(err).Msg("failed report fetch retry")
-				done <- err
+				done <- ReportConsumeOutput{Err: err, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 				continue
 			}
 		}
-		done <- nil
+		done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 	}
 }
 
