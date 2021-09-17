@@ -73,53 +73,62 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	}
 
 	resp, err := c.Adapter.Do(req)
-	log.Debug().
-		Err(err).
+
+	if err != nil {
+		log.Debug().
+			Err(err).
+			Str("method", req.Method).
+			Str("url", req.URL.String()).
+			Msgf("authenticate failed request")
+		return fmt.Errorf("authentication error - request failed")
+	}
+
+	logger := log.With().
 		Str("method", req.Method).
 		Str("url", req.URL.String()).
 		Int("statusCode", resp.StatusCode).
-		Msg("request")
-	if err != nil {
-		log.Debug().Err(err).Msgf("error authenticating")
-		return fmt.Errorf("authentication error")
-	}
+		Logger()
 
 	if resp.StatusCode == http.StatusOK {
 		defer resp.Body.Close()
 		responseBody, ioErr := ioutil.ReadAll(resp.Body)
 		if ioErr != nil {
-			return ioErr
+			logger.Debug().Err(ioErr).Msg("authenticate ok failed read response")
+			return fmt.Errorf("authentication error - could not read response")
 		}
 		c.Token = &AccessToken{}
-		return json.Unmarshal(responseBody, c.Token)
+		unmarshalErr := json.Unmarshal(responseBody, c.Token)
+		if unmarshalErr != nil {
+			logger.Debug().
+				Err(ioErr).
+				Str("responseBody", string(responseBody)).
+				Msg("authenticate ok failed to unmarshal response")
+			return fmt.Errorf("authentication error - could not decode response")
+		}
+		return nil
 	} else if resp.StatusCode == http.StatusBadRequest {
 		defer resp.Body.Close()
-		body, ioErr := ioutil.ReadAll(resp.Body)
+		responseBody, ioErr := ioutil.ReadAll(resp.Body)
 		if ioErr != nil {
-			log.Debug().
-				Err(ioErr).
-				Str("method", req.Method).
-				Str("url", req.URL.String()).
-				Int("statusCode", resp.StatusCode).
-				Msg("request")
-			return fmt.Errorf("error while trying to authenticate: could not read response")
+			logger.Debug().Err(ioErr).Msg("authenticate bad request failed to read response")
+			return fmt.Errorf("authentication error - could not read response")
 		}
 		var response SASTError
-		unmarshalErr := json.Unmarshal(body, &response)
+		unmarshalErr := json.Unmarshal(responseBody, &response)
 		if unmarshalErr != nil {
-			log.Debug().
+			logger.Debug().
 				Err(unmarshalErr).
-				Str("method", req.Method).
-				Str("url", req.URL.String()).
-				Int("statusCode", resp.StatusCode).
-				Msg("request")
-			return fmt.Errorf("error while trying to authenticate: could not decode response")
+				Str("responseBody", string(responseBody)).
+				Msg("authenticate bad request failed to unmarshal response")
+			return fmt.Errorf("authentication error - could not decode response")
 		}
 		if response.ErrorDescription == "invalid_username_or_password" {
-			return fmt.Errorf("error while trying to authenticate: invalid user name or password")
+			return fmt.Errorf("authentication error - please confirm your user name and password")
 		}
 	}
-	return fmt.Errorf("error while trying to authenticate")
+
+	logger.Debug().Msg("authenticate unexpected response")
+	return fmt.Errorf("authentication error - please try again later or contact support")
 }
 
 func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
