@@ -10,19 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	exportData []ExportData
-	usersData,
-	rolesData,
-	ldapRolesData,
-	samlRolesData,
-	teamsData,
-	samlTeamsData,
-	ldapTeamsData,
-	samlIDpsData,
-	ldapServersData []byte
-)
-
 const (
 	UsersEndpoint = "/CxRestAPI/auth/Users"
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"

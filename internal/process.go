@@ -24,6 +24,19 @@ const (
 	triagedScansPageLimit = 1000
 )
 
+var (
+	exportData []ExportData
+	usersData,
+	rolesData,
+	ldapRolesData,
+	samlRolesData,
+	teamsData,
+	samlTeamsData,
+	ldapTeamsData,
+	samlIDpsData,
+	ldapServersData []byte
+)
+
 type ReportConsumeOutput struct {
 	Err       error
 	ProjectID int
