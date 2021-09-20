@@ -50,21 +50,24 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 			panic(flagErr)
 		}
 
-		aolErr := aol.Init(productName, "", "trace", "")
-		if aolErr != nil {
-			panic(aolErr)
-		}
-
 		logFileWriter, err := logging.NewFileWriter(productName)
 		if err != nil {
 			panic(err)
 		}
 		defer logFileWriter.Close()
 
-		consoleWriter := logging.NewConsoleWriter()
+		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, aol.GetNewConsoleWriter(), logFileWriter)
 
-		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, consoleWriter, logFileWriter)
-		log.Logger = log.Logger.Output(&levelWriter)
+		aolErr := aol.Init(aol.InitOptions{
+			ServiceName:       productName,
+			LogLevel:          zerolog.LevelTraceValue,
+			LogOutputStream:   &levelWriter,
+			Version:           "",
+			TelemetryEndpoint: "",
+		})
+		if aolErr != nil {
+			panic(aolErr)
+		}
 
 		defer func() {
 			if r := recover(); r != nil {

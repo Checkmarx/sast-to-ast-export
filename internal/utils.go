@@ -11,19 +11,19 @@ const (
 	maxCPUs = 4
 )
 
-func convertTriagedScansResponseToLastScansList(triagedScansResponse LastTriagedResponse) []LastTriagedScanProducer {
-	var result []LastTriagedScanProducer
+func convertTriagedScansResponseToScansList(triagedScansResponse TriagedScansResponse) []TriagedScan {
+	var result []TriagedScan
 	for _, v := range triagedScansResponse.Value {
-		result = append(result, LastTriagedScanProducer{
+		result = append(result, TriagedScan{
 			ProjectID: v.Scan.ProjectID,
 			ScanID:    v.ScanID,
 		})
 	}
-	return getLastScansByProject(result)
+	return result
 }
 
-func getLastScansByProject(scans []LastTriagedScanProducer) []LastTriagedScanProducer {
-	var result []LastTriagedScanProducer
+func getLastScansByProject(scans []TriagedScan) []TriagedScan {
+	var result []TriagedScan
 	for _, item := range scans {
 		if !isScanInList(item.ProjectID, item.ScanID, result) {
 			lastScan := getLastScanByProject(scans, item.ProjectID)
@@ -35,7 +35,7 @@ func getLastScansByProject(scans []LastTriagedScanProducer) []LastTriagedScanPro
 	return result
 }
 
-func getLastScanByProject(list []LastTriagedScanProducer, projectID int) int {
+func getLastScanByProject(list []TriagedScan, projectID int) int {
 	lastScan := 0
 	for _, scan := range list {
 		if scan.ScanID > lastScan && scan.ProjectID == projectID {
@@ -45,7 +45,7 @@ func getLastScanByProject(list []LastTriagedScanProducer, projectID int) int {
 	return lastScan
 }
 
-func isScanInList(projectID, scanID int, list []LastTriagedScanProducer) bool {
+func isScanInList(projectID, scanID int, list []TriagedScan) bool {
 	for _, a := range list {
 		if a.ProjectID == projectID && a.ScanID == scanID {
 			return true
@@ -54,9 +54,7 @@ func isScanInList(projectID, scanID int, list []LastTriagedScanProducer) bool {
 	return false
 }
 
-func GetDateFromDays(numDays int) string {
-	now := time.Now()
-
+func GetDateFromDays(numDays int, now time.Time) string {
 	date := now.AddDate(0, 0, -numDays)
 
 	return fmt.Sprintf("%d-%d-%d", date.Year(), date.Month(), date.Day())
