@@ -84,7 +84,10 @@ func RunExport(args *Args) {
 			Msg("permissions validation failed to parse jwt token")
 		panic(fmt.Errorf("permissions error - could not decode access token"))
 	}
-	availablePermissions := jwtClaims["sast-permissions"].([]interface{})
+	availablePermissions, permissionErr := getPermissionsFromJwtClaims(jwtClaims)
+	if permissionErr != nil {
+		panic(fmt.Errorf("permissions error - could not parse available permissions"))
+	}
 	requiredPermissions := sliceutils.ConvertStringToInterface(getPermissionsFromExportOptions(selectedExportOptions))
 	missingPermissionsCount := 0
 	for _, requiredPermission := range requiredPermissions {
@@ -498,4 +501,20 @@ func getPermissionsFromExportOptions(exportOptions []string) []string {
 		}
 	}
 	return sliceutils.ConvertInterfaceToString(sliceutils.Unique(sliceutils.ConvertStringToInterface(output)))
+}
+
+func getPermissionsFromJwtClaims(claims jwt.MapClaims) ([]interface{}, error) {
+	sastPermissions, exists := claims["sast-permissions"]
+	if !exists {
+		return make([]interface{}, 0), nil
+	}
+	multiplePermissions, ok := sastPermissions.([]interface{})
+	if ok {
+		return multiplePermissions, nil
+	}
+	singlePermission, ok := sastPermissions.(interface{})
+	if ok {
+		return []interface{}{singlePermission}, nil
+	}
+	return make([]interface{}, 0), fmt.Errorf("could not parse permissions")
 }
