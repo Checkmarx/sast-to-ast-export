@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"fmt"
+	"os"
+
 	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
@@ -9,7 +10,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 const (
@@ -90,11 +90,10 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	resultsProjectActiveSinceUsage := fmt.Sprintf(
-		"SAST [optional] custom results project active since (days) - %d if nothing defined", resultsProjectActiveSinceDefaultValue)
+	resultsProjectActiveSinceUsage := "Include only results from projects active in the last N days"
 
-	rootCmd.Flags().StringP(userArg, "", "", "SAST admin username")
-	rootCmd.Flags().StringP(passArg, "", "", "SAST admin password")
+	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
+	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(resultsProjectActiveSinceArg, "", resultsProjectActiveSinceDefaultValue, resultsProjectActiveSinceUsage)
