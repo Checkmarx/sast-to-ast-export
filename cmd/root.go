@@ -2,14 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
+	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 const (
@@ -96,7 +96,7 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST admin username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST admin password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
-	rootCmd.Flags().StringP(exportArg, "", "", "SAST [optional] export options --export users,results,teams, all if nothing defined")
+	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(resultsProjectActiveSinceArg, "", resultsProjectActiveSinceDefaultValue, resultsProjectActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "Activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "Enable verbose logging to console")
@@ -108,9 +108,6 @@ func init() {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagRequired(urlArg); err != nil {
-		panic(err)
-	}
-	if err := rootCmd.MarkFlagCustom(exportArg, "users,results,teams"); err != nil {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagCustom(resultsProjectActiveSinceArg, resultsProjectActiveSinceUsage); err != nil {

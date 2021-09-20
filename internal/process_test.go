@@ -71,21 +71,3 @@ func TestGetAvailablePermissions(t *testing.T) {
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, expected, result)
 }
-
-func TestGetSelectedExportOptions(t *testing.T) {
-	defaultOptions := []string{"a", "b", "c"}
-
-	t.Run("empty falls back to default", func(t *testing.T) {
-		result := getSelectedExportOptions("", defaultOptions)
-
-		expected := defaultOptions
-		assert.ElementsMatch(t, expected, result)
-	})
-
-	t.Run("non-empty returns selected", func(t *testing.T) {
-		result := getSelectedExportOptions("a,b", defaultOptions)
-
-		expected := []string{"a", "b"}
-		assert.ElementsMatch(t, expected, result)
-	})
-}

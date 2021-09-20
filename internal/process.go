@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
@@ -37,14 +36,11 @@ func RunExport(args *Args) {
 
 	log.Debug().
 		Str("url", args.URL).
-		Str("export", args.Export).
+		Str("export", fmt.Sprintf("%v", args.Export)).
 		Int("resultsProjectActiveSince", args.ResultsProjectActiveSince).
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
-
-	selectedExportOptions := getSelectedExportOptions(args.Export, export.GetOptions())
-	args.Export = strings.Join(selectedExportOptions, ",")
 
 	// create api client
 	client, err := NewSASTClient(args.URL, &http.Client{})
@@ -60,12 +56,8 @@ func RunExport(args *Args) {
 		panic(authErr)
 	}
 
-	log.Debug().
-		Str("exportOptions", args.Export).
-		Msgf("parsed export options")
-
 	// validate permissions
-	permissionsValidateErr := validatePermissions(client, selectedExportOptions)
+	permissionsValidateErr := validatePermissions(client, args.Export)
 	if permissionsValidateErr != nil {
 		panic(fmt.Errorf("permissions error - %s", permissionsValidateErr.Error()))
 	}
@@ -87,7 +79,7 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	fetchErr := fetchSelectedData(client, args, selectedExportOptions)
+	fetchErr := fetchSelectedData(client, args)
 	if fetchErr != nil {
 		log.Error().Err(err)
 		panic(fmt.Errorf("fetch error - %s", err.Error()))
@@ -104,8 +96,8 @@ func RunExport(args *Args) {
 }
 
 func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
-
-	if strings.Contains(args.Export, export.UsersOption) {
+	exportOptions := sliceutils.ConvertStringToInterface(args.Export)
+	if sliceutils.Contains(export.UsersOption, exportOptions) {
 		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -123,7 +115,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, export.ResultsOption) {
+	if sliceutils.Contains(export.ResultsOption, exportOptions) {
 		for _, res := range exportData {
 			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
 				return nil, exportErr
@@ -131,7 +123,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, export.TeamsOption) {
+	if sliceutils.Contains(export.TeamsOption, exportOptions) {
 		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -145,7 +137,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, export.UsersOption) || strings.Contains(args.Export, export.TeamsOption) {
+	if sliceutils.Contains(export.UsersOption, exportOptions) || sliceutils.Contains(export.TeamsOption, exportOptions) {
 		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -188,8 +180,8 @@ func validatePermissions(client *SASTClient, selectedExportOptions []string) err
 	return nil
 }
 
-func fetchSelectedData(client *SASTClient, args *Args, selectedExportOptions []string) error {
-	options := sliceutils.ConvertStringToInterface(selectedExportOptions)
+func fetchSelectedData(client *SASTClient, args *Args) error {
+	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
 			log.Info().Msgf("collecting %s", exportOption)
@@ -203,7 +195,7 @@ func fetchSelectedData(client *SASTClient, args *Args, selectedExportOptions []s
 					return err
 				}
 			case export.ResultsOption:
-				if err := fetchResultsData(client, args); err != nil {
+				if err := fetchResultsData(client, args.ResultsProjectActiveSince); err != nil {
 					return err
 				}
 			}
@@ -266,11 +258,11 @@ func fetchTeamsData(client *SASTClient) error {
 	return nil
 }
 
-func fetchResultsData(client *SASTClient, args *Args) (err error) {
+func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err error) {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
-	fromDate := GetDateFromDays(args.ResultsProjectActiveSince, time.Now())
+	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
 
 	// collect last triaged scan by project
 	var lastTriagedScansByProject []TriagedScan
@@ -527,11 +519,4 @@ func getAvailablePermissions(jwtClaims jwt.MapClaims) ([]interface{}, error) {
 	}
 	availablePermissions := append(sastPermissions, accessControlPermissions...)
 	return availablePermissions, nil
-}
-
-func getSelectedExportOptions(selected string, defaultValue []string) []string {
-	if selected != "" {
-		return strings.Split(selected, ",")
-	}
-	return defaultValue
 }
