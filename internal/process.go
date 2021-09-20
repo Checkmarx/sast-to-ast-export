@@ -9,27 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
-
+	"github.com/checkmarxDev/ast-sast-export/internal/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
-
+	"github.com/dgrijalva/jwt-go"
 	"github.com/rs/zerolog/log"
 )
 
 const (
 	createdStatus = "Created"
 
-	usersExportOption   = "users"
-	teamsExportOption   = "teams"
-	resultsExportOption = "results"
-
 	reportType    = "XML"
 	scansFileName = "%d.xml"
-
-	useOdataPermission           = "use-odata"
-	generateScanReportPermission = "generate-scan-report"
-	manageAuthProviderPermission = "manage-authentication-providers"
-	manageRolesPermission        = "manage-roles"
 )
 
 type ReportConsumeOutput struct {
@@ -67,7 +58,7 @@ func RunExport(args *Args) {
 	if args.Export != "" {
 		selectedExportOptions = strings.Split(args.Export, ",")
 	} else {
-		selectedExportOptions = []string{usersExportOption, resultsExportOption, teamsExportOption}
+		selectedExportOptions = []string{export.UsersOption, export.ResultsOption, export.TeamsOption}
 	}
 	args.Export = strings.Join(selectedExportOptions, ",")
 
@@ -84,16 +75,16 @@ func RunExport(args *Args) {
 			Msg("permissions validation failed to parse jwt token")
 		panic(fmt.Errorf("permissions error - could not decode access token"))
 	}
-	sastPermissions, sastPermissionErr := getPermissionsFromJwtClaim(jwtClaims, "sast-permissions")
+	sastPermissions, sastPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "sast-permissions")
 	if sastPermissionErr != nil {
 		panic(fmt.Errorf("permissions error - could not parse SAST permissions"))
 	}
-	accessControlPermissions, accessControlPermissionErr := getPermissionsFromJwtClaim(jwtClaims, "access-control-permissions")
+	accessControlPermissions, accessControlPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "access-control-permissions")
 	if accessControlPermissionErr != nil {
 		panic(fmt.Errorf("permissions error - could not parse Access Control permissions"))
 	}
 	availablePermissions := append(sastPermissions, accessControlPermissions...)
-	requiredPermissions := getPermissionsFromExportOptions(selectedExportOptions)
+	requiredPermissions := permissions.GetFromExportOptions(selectedExportOptions)
 	missingPermissionsCount := 0
 	for _, requiredPermission := range requiredPermissions {
 		if !sliceutils.Contains(requiredPermission, availablePermissions) {
@@ -123,23 +114,23 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	availableExportOptions := []string{usersExportOption, teamsExportOption, resultsExportOption}
+	availableExportOptions := []string{export.UsersOption, export.TeamsOption, export.ResultsOption}
 
 	for _, exportOption := range availableExportOptions {
 		if sliceutils.Contains(exportOption, sliceutils.ConvertStringToInterface(selectedExportOptions)) {
 			log.Info().Msgf("collecting %s", exportOption)
 			switch exportOption {
-			case usersExportOption:
+			case export.UsersOption:
 				if err = fetchUsersData(client); err != nil {
 					log.Error().Err(err)
 					panic(err)
 				}
-			case teamsExportOption:
+			case export.TeamsOption:
 				if err = fetchTeamsData(client); err != nil {
 					log.Error().Err(err)
 					panic(err)
 				}
-			case resultsExportOption:
+			case export.ResultsOption:
 				if err = fetchResultsData(client, args); err != nil {
 					log.Error().Err(err)
 					panic(err)
@@ -160,7 +151,7 @@ func RunExport(args *Args) {
 
 func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 
-	if strings.Contains(args.Export, usersExportOption) {
+	if strings.Contains(args.Export, export.UsersOption) {
 		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -178,7 +169,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, resultsExportOption) {
+	if strings.Contains(args.Export, export.ResultsOption) {
 		for _, res := range exportData {
 			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
 				return nil, exportErr
@@ -186,7 +177,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, teamsExportOption) {
+	if strings.Contains(args.Export, export.TeamsOption) {
 		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -200,7 +191,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, usersExportOption) || strings.Contains(args.Export, teamsExportOption) {
+	if strings.Contains(args.Export, export.UsersOption) || strings.Contains(args.Export, export.TeamsOption) {
 		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -487,39 +478,4 @@ func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, 
 		}
 	}
 	return nil
-}
-
-func getPermissionsFromExportOptions(exportOptions []string) []interface{} {
-	var output []string
-
-	usersPermissions := []string{manageAuthProviderPermission, manageRolesPermission}
-	teamsPermissions := []string{manageAuthProviderPermission}
-	resultsPermissions := []string{useOdataPermission, generateScanReportPermission}
-
-	for _, exportOption := range exportOptions {
-		if exportOption == usersExportOption {
-			output = append(output, usersPermissions...)
-		} else if exportOption == teamsExportOption {
-			output = append(output, teamsPermissions...)
-		} else if exportOption == resultsExportOption {
-			output = append(output, resultsPermissions...)
-		}
-	}
-	return sliceutils.Unique(sliceutils.ConvertStringToInterface(output))
-}
-
-func getPermissionsFromJwtClaim(claims jwt.MapClaims, key string) ([]interface{}, error) {
-	sastPermissions, exists := claims[key]
-	if !exists {
-		return make([]interface{}, 0), nil
-	}
-	multiplePermissions, ok := sastPermissions.([]interface{})
-	if ok {
-		return multiplePermissions, nil
-	}
-	singlePermission, ok := sastPermissions.(interface{})
-	if ok {
-		return []interface{}{singlePermission}, nil
-	}
-	return make([]interface{}, 0), fmt.Errorf("could not parse permissions")
 }
