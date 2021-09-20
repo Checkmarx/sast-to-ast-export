@@ -84,10 +84,15 @@ func RunExport(args *Args) {
 			Msg("permissions validation failed to parse jwt token")
 		panic(fmt.Errorf("permissions error - could not decode access token"))
 	}
-	availablePermissions, permissionErr := getPermissionsFromJwtClaims(jwtClaims)
-	if permissionErr != nil {
-		panic(fmt.Errorf("permissions error - could not parse available permissions"))
+	sastPermissions, sastPermissionErr := getPermissionsFromJwtClaim(jwtClaims, "sast-permissions")
+	if sastPermissionErr != nil {
+		panic(fmt.Errorf("permissions error - could not parse SAST permissions"))
 	}
+	accessControlPermissions, accessControlPermissionErr := getPermissionsFromJwtClaim(jwtClaims, "access-control-permissions")
+	if accessControlPermissionErr != nil {
+		panic(fmt.Errorf("permissions error - could not parse Access Control permissions"))
+	}
+	availablePermissions := append(sastPermissions, accessControlPermissions...)
 	requiredPermissions := getPermissionsFromExportOptions(selectedExportOptions)
 	missingPermissionsCount := 0
 	for _, requiredPermission := range requiredPermissions {
@@ -503,8 +508,8 @@ func getPermissionsFromExportOptions(exportOptions []string) []interface{} {
 	return sliceutils.Unique(sliceutils.ConvertStringToInterface(output))
 }
 
-func getPermissionsFromJwtClaims(claims jwt.MapClaims) ([]interface{}, error) {
-	sastPermissions, exists := claims["sast-permissions"]
+func getPermissionsFromJwtClaim(claims jwt.MapClaims, key string) ([]interface{}, error) {
+	sastPermissions, exists := claims[key]
 	if !exists {
 		return make([]interface{}, 0), nil
 	}

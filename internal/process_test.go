@@ -67,10 +67,12 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 }
 
 func TestGetPermissionsFromJwtClaims(t *testing.T) {
+	key := "permissions"
+
 	t.Run("claims without permission", func(t *testing.T) {
 		claims := jwt.MapClaims{"test": "test"}
 
-		result, err := getPermissionsFromJwtClaims(claims)
+		result, err := getPermissionsFromJwtClaim(claims, key)
 
 		expected := make([]interface{}, 0)
 		assert.NoError(t, err)
@@ -78,9 +80,9 @@ func TestGetPermissionsFromJwtClaims(t *testing.T) {
 	})
 
 	t.Run("claims with one permission", func(t *testing.T) {
-		claims := jwt.MapClaims{"test": "test", "sast-permissions": "use-odata"}
+		claims := jwt.MapClaims{"test": "test", "permissions": "use-odata"}
 
-		result, err := getPermissionsFromJwtClaims(claims)
+		result, err := getPermissionsFromJwtClaim(claims, key)
 
 		expected := []interface{}{"use-odata"}
 		assert.NoError(t, err)
@@ -88,9 +90,9 @@ func TestGetPermissionsFromJwtClaims(t *testing.T) {
 	})
 
 	t.Run("claims with more than one permission", func(t *testing.T) {
-		claims := jwt.MapClaims{"test": "test", "sast-permissions": []interface{}{"use-odata", "generate-scan-report"}}
+		claims := jwt.MapClaims{"test": "test", "permissions": []interface{}{"use-odata", "generate-scan-report"}}
 
-		result, err := getPermissionsFromJwtClaims(claims)
+		result, err := getPermissionsFromJwtClaim(claims, key)
 
 		expected := []interface{}{"use-odata", "generate-scan-report"}
 		assert.NoError(t, err)
