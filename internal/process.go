@@ -24,8 +24,6 @@ const (
 	triagedScansPageLimit = 1000
 )
 
-var isDebug bool
-
 type ReportConsumeOutput struct {
 	Err       error
 	ProjectID int
@@ -33,7 +31,6 @@ type ReportConsumeOutput struct {
 }
 
 func RunExport(args *Args) {
-	isDebug = args.Debug
 	consumerCount := GetNumCPU()
 
 	log.Debug().
@@ -72,7 +69,7 @@ func RunExport(args *Args) {
 		panic(exportCreateErr)
 	}
 
-	if !isDebug {
+	if !args.Debug {
 		defer func(exportValues *Export) {
 			cleanErr := exportValues.Clean()
 			if cleanErr != nil {
@@ -149,7 +146,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 	}
 
 	// create export package
-	if isDebug {
+	if args.Debug {
 		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
 		return &exportValues.TmpDir, nil
 	}
