@@ -90,15 +90,15 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	resultsProjectActiveSinceUsage := "Include only results from projects active in the last N days"
+	resultsProjectActiveSinceUsage := "include only results from projects active in the last N days"
 
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(resultsProjectActiveSinceArg, "", resultsProjectActiveSinceDefaultValue, resultsProjectActiveSinceUsage)
-	rootCmd.Flags().Bool(debugArg, false, "Activate debug mode")
-	rootCmd.Flags().BoolP(verboseArg, "v", false, "Enable verbose logging to console")
+	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
+	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
