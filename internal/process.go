@@ -31,7 +31,6 @@ type ReportConsumeOutput struct {
 
 func RunExport(args *Args) {
 	isDebug = args.Debug
-	var selectedExportOptions []string
 	consumerCount := GetNumCPU()
 
 	log.Debug().
@@ -41,6 +40,9 @@ func RunExport(args *Args) {
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
+
+	selectedExportOptions := getSelectedExportOptions(args.Export, export.GetOptions())
+	args.Export = strings.Join(selectedExportOptions, ",")
 
 	// create api client
 	client, err := NewSASTClient(args.URL, &http.Client{})
@@ -56,13 +58,6 @@ func RunExport(args *Args) {
 		panic(authErr)
 	}
 
-	if args.Export != "" {
-		selectedExportOptions = strings.Split(args.Export, ",")
-	} else {
-		selectedExportOptions = export.GetOptions()
-	}
-	args.Export = strings.Join(selectedExportOptions, ",")
-
 	log.Debug().
 		Str("exportOptions", args.Export).
 		Msgf("parsed export options")
@@ -76,24 +71,16 @@ func RunExport(args *Args) {
 			Msg("permissions validation failed to parse jwt token")
 		panic(fmt.Errorf("permissions error - could not decode access token"))
 	}
-	sastPermissions, sastPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "sast-permissions")
-	if sastPermissionErr != nil {
-		panic(fmt.Errorf("permissions error - could not parse SAST permissions"))
+	availablePermissions, availablePermissionsErr := getAvailablePermissions(jwtClaims)
+	if availablePermissionsErr != nil {
+		panic(fmt.Errorf("permissions error - %s", availablePermissionsErr.Error()))
 	}
-	accessControlPermissions, accessControlPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "access-control-permissions")
-	if accessControlPermissionErr != nil {
-		panic(fmt.Errorf("permissions error - could not parse Access Control permissions"))
-	}
-	availablePermissions := append(sastPermissions, accessControlPermissions...)
 	requiredPermissions := permissions.GetFromExportOptions(selectedExportOptions)
-	missingPermissionsCount := 0
-	for _, requiredPermission := range requiredPermissions {
-		if !sliceutils.Contains(requiredPermission, availablePermissions) {
-			missingPermissionsCount++
-			log.Error().Msgf("missing permission: %s", requiredPermission)
+	missingPermissions := getMissingPermissions(requiredPermissions, availablePermissions)
+	if len(missingPermissions) > 0 {
+		for _, permission := range missingPermissions {
+			log.Error().Msgf("missing permission: %s", permission)
 		}
-	}
-	if missingPermissionsCount > 0 {
 		panic(fmt.Errorf("please add missing permissions to your SAST user"))
 	}
 
@@ -476,4 +463,34 @@ func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, 
 		}
 	}
 	return nil
+}
+
+func getMissingPermissions(requiredPermissions, availablePermissions []interface{}) []interface{} {
+	output := make([]interface{}, 0)
+	for _, requiredPermission := range requiredPermissions {
+		if !sliceutils.Contains(requiredPermission, availablePermissions) {
+			output = append(output, requiredPermission)
+		}
+	}
+	return output
+}
+
+func getAvailablePermissions(jwtClaims jwt.MapClaims) ([]interface{}, error) {
+	sastPermissions, sastPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "sast-permissions")
+	if sastPermissionErr != nil {
+		return nil, fmt.Errorf("could not parse SAST permissions")
+	}
+	accessControlPermissions, accessControlPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "access-control-permissions")
+	if accessControlPermissionErr != nil {
+		return nil, fmt.Errorf("could not parse Access Control permissions")
+	}
+	availablePermissions := append(sastPermissions, accessControlPermissions...)
+	return availablePermissions, nil
+}
+
+func getSelectedExportOptions(selected string, defaultValue []string) []string {
+	if selected != "" {
+		return strings.Split(selected, ",")
+	}
+	return defaultValue
 }
