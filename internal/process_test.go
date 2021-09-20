@@ -13,7 +13,7 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 		exportOptions := []string{usersExportOption}
 		result := getPermissionsFromExportOptions(exportOptions)
 
-		expected := []string{manageAuthProviderPermission, manageRolesPermission}
+		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -21,7 +21,7 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 		exportOptions := []string{teamsExportOption}
 		result := getPermissionsFromExportOptions(exportOptions)
 
-		expected := []string{manageAuthProviderPermission}
+		expected := []interface{}{manageAuthProviderPermission}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -29,7 +29,7 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 		exportOptions := []string{resultsExportOption}
 		result := getPermissionsFromExportOptions(exportOptions)
 
-		expected := []string{useOdataPermission, generateScanReportPermission}
+		expected := []interface{}{useOdataPermission, generateScanReportPermission}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -37,7 +37,7 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 		exportOptions := []string{usersExportOption, teamsExportOption}
 		result := getPermissionsFromExportOptions(exportOptions)
 
-		expected := []string{manageAuthProviderPermission, manageRolesPermission}
+		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -45,7 +45,7 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 		exportOptions := []string{usersExportOption, resultsExportOption}
 		result := getPermissionsFromExportOptions(exportOptions)
 
-		expected := []string{manageAuthProviderPermission, manageRolesPermission, useOdataPermission, generateScanReportPermission}
+		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission, useOdataPermission, generateScanReportPermission}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -53,7 +53,7 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 		exportOptions := []string{resultsExportOption, usersExportOption}
 		result := getPermissionsFromExportOptions(exportOptions)
 
-		expected := []string{manageAuthProviderPermission, manageRolesPermission, useOdataPermission, generateScanReportPermission}
+		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission, useOdataPermission, generateScanReportPermission}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -61,7 +61,7 @@ func TestGetPermissionsFromExportOptions(t *testing.T) {
 		exportOptions := []string{teamsExportOption, resultsExportOption}
 		result := getPermissionsFromExportOptions(exportOptions)
 
-		expected := []string{manageAuthProviderPermission, useOdataPermission, generateScanReportPermission}
+		expected := []interface{}{manageAuthProviderPermission, useOdataPermission, generateScanReportPermission}
 		assert.ElementsMatch(t, expected, result)
 	})
 }

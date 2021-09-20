@@ -88,7 +88,7 @@ func RunExport(args *Args) {
 	if permissionErr != nil {
 		panic(fmt.Errorf("permissions error - could not parse available permissions"))
 	}
-	requiredPermissions := sliceutils.ConvertStringToInterface(getPermissionsFromExportOptions(selectedExportOptions))
+	requiredPermissions := getPermissionsFromExportOptions(selectedExportOptions)
 	missingPermissionsCount := 0
 	for _, requiredPermission := range requiredPermissions {
 		if !sliceutils.Contains(requiredPermission, availablePermissions) {
@@ -484,7 +484,7 @@ func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, 
 	return nil
 }
 
-func getPermissionsFromExportOptions(exportOptions []string) []string {
+func getPermissionsFromExportOptions(exportOptions []string) []interface{} {
 	var output []string
 
 	usersPermissions := []string{manageAuthProviderPermission, manageRolesPermission}
@@ -500,7 +500,7 @@ func getPermissionsFromExportOptions(exportOptions []string) []string {
 			output = append(output, resultsPermissions...)
 		}
 	}
-	return sliceutils.ConvertInterfaceToString(sliceutils.Unique(sliceutils.ConvertStringToInterface(output)))
+	return sliceutils.Unique(sliceutils.ConvertStringToInterface(output))
 }
 
 func getPermissionsFromJwtClaims(claims jwt.MapClaims) ([]interface{}, error) {
