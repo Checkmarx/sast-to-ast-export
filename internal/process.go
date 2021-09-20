@@ -42,13 +42,14 @@ func RunExport(args *Args) {
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
-	// create api client and authenticate
+	// create api client
 	client, err := NewSASTClient(args.URL, &http.Client{})
 	if err != nil {
 		log.Error().Err(err)
 		panic(err)
 	}
 
+	// authenticate
 	log.Info().Msg("connecting to SAST")
 	if authErr := client.Authenticate(args.Username, args.Password); authErr != nil {
 		log.Error().Err(authErr)
@@ -58,7 +59,7 @@ func RunExport(args *Args) {
 	if args.Export != "" {
 		selectedExportOptions = strings.Split(args.Export, ",")
 	} else {
-		selectedExportOptions = []string{export.UsersOption, export.ResultsOption, export.TeamsOption}
+		selectedExportOptions = export.GetOptions()
 	}
 	args.Export = strings.Join(selectedExportOptions, ",")
 
@@ -96,9 +97,8 @@ func RunExport(args *Args) {
 		panic(fmt.Errorf("please add missing permissions to your SAST user"))
 	}
 
-	// start export
+	// collect export data
 	log.Info().Msg("collecting data from SAST")
-
 	exportValues, exportCreateErr := CreateExport(args.ProductName)
 	if exportCreateErr != nil {
 		log.Error().Err(exportCreateErr)
@@ -114,9 +114,7 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	availableExportOptions := []string{export.UsersOption, export.TeamsOption, export.ResultsOption}
-
-	for _, exportOption := range availableExportOptions {
+	for _, exportOption := range export.GetOptions() {
 		if sliceutils.Contains(exportOption, sliceutils.ConvertStringToInterface(selectedExportOptions)) {
 			log.Info().Msgf("collecting %s", exportOption)
 			switch exportOption {
@@ -139,8 +137,8 @@ func RunExport(args *Args) {
 		}
 	}
 
+	// export data to file
 	log.Info().Msg("exporting collected data")
-
 	exportFileName, exportErr := ExportResultsToFile(args, &exportValues)
 	if exportErr != nil {
 		log.Error().Err(exportErr).Msg("error exporting collected data")

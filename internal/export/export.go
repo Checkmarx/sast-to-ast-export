@@ -5,3 +5,7 @@ const (
 	TeamsOption   = "teams"
 	ResultsOption = "results"
 )
+
+func GetOptions() []string {
+	return []string{UsersOption, TeamsOption, ResultsOption}
+}
