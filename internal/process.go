@@ -24,6 +24,8 @@ const (
 	triagedScansPageLimit = 1000
 )
 
+var isDebug bool
+
 type ReportConsumeOutput struct {
 	Err       error
 	ProjectID int

@@ -41,8 +41,6 @@ const (
 	LastTriagedFilters             = "Date gt %s and Comment ne null"
 )
 
-var isDebug bool
-
 type HTTPAdapter interface {
 	Do(req *http.Request) (*http.Response, error)
 }
