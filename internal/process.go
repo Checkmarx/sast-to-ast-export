@@ -63,25 +63,9 @@ func RunExport(args *Args) {
 		Msgf("parsed export options")
 
 	// validate permissions
-	jwtClaims := jwt.MapClaims{}
-	_, _, jwtErr := new(jwt.Parser).ParseUnverified(client.Token.AccessToken, jwtClaims)
-	if jwtErr != nil {
-		log.Debug().
-			Err(jwtErr).
-			Msg("permissions validation failed to parse jwt token")
-		panic(fmt.Errorf("permissions error - could not decode access token"))
-	}
-	availablePermissions, availablePermissionsErr := getAvailablePermissions(jwtClaims)
-	if availablePermissionsErr != nil {
-		panic(fmt.Errorf("permissions error - %s", availablePermissionsErr.Error()))
-	}
-	requiredPermissions := permissions.GetFromExportOptions(selectedExportOptions)
-	missingPermissions := getMissingPermissions(requiredPermissions, availablePermissions)
-	if len(missingPermissions) > 0 {
-		for _, permission := range missingPermissions {
-			log.Error().Msgf("missing permission: %s", permission)
-		}
-		panic(fmt.Errorf("please add missing permissions to your SAST user"))
+	permissionsValidateErr := validatePermissions(client, selectedExportOptions)
+	if permissionsValidateErr != nil {
+		panic(fmt.Errorf("permissions error - %s", permissionsValidateErr.Error()))
 	}
 
 	// collect export data
@@ -101,27 +85,10 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	for _, exportOption := range export.GetOptions() {
-		if sliceutils.Contains(exportOption, sliceutils.ConvertStringToInterface(selectedExportOptions)) {
-			log.Info().Msgf("collecting %s", exportOption)
-			switch exportOption {
-			case export.UsersOption:
-				if err = fetchUsersData(client); err != nil {
-					log.Error().Err(err)
-					panic(err)
-				}
-			case export.TeamsOption:
-				if err = fetchTeamsData(client); err != nil {
-					log.Error().Err(err)
-					panic(err)
-				}
-			case export.ResultsOption:
-				if err = fetchResultsData(client, args); err != nil {
-					log.Error().Err(err)
-					panic(err)
-				}
-			}
-		}
+	fetchErr := fetchSelectedData(client, args, selectedExportOptions)
+	if fetchErr != nil {
+		log.Error().Err(err)
+		panic(fmt.Errorf("fetch error - %s", err.Error()))
 	}
 
 	// export data to file
@@ -196,6 +163,51 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		return nil, exportErr
 	}
 	return &exportFileName, exportErr
+}
+
+func validatePermissions(client *SASTClient, selectedExportOptions []string) error {
+	jwtClaims := jwt.MapClaims{}
+	_, _, jwtErr := new(jwt.Parser).ParseUnverified(client.Token.AccessToken, jwtClaims)
+	if jwtErr != nil {
+		return jwtErr
+	}
+	availablePermissions, availablePermissionsErr := getAvailablePermissions(jwtClaims)
+	if availablePermissionsErr != nil {
+		return availablePermissionsErr
+	}
+	requiredPermissions := permissions.GetFromExportOptions(selectedExportOptions)
+	missingPermissions := getMissingPermissions(requiredPermissions, availablePermissions)
+	if len(missingPermissions) > 0 {
+		for _, permission := range missingPermissions {
+			log.Warn().Msgf("missing permission %s", permission)
+		}
+		return fmt.Errorf("please add missing permissions to your SAST user")
+	}
+	return nil
+}
+
+func fetchSelectedData(client *SASTClient, args *Args, selectedExportOptions []string) error {
+	options := sliceutils.ConvertStringToInterface(selectedExportOptions)
+	for _, exportOption := range export.GetOptions() {
+		if sliceutils.Contains(exportOption, options) {
+			log.Info().Msgf("collecting %s", exportOption)
+			switch exportOption {
+			case export.UsersOption:
+				if err := fetchUsersData(client); err != nil {
+					return err
+				}
+			case export.TeamsOption:
+				if err := fetchTeamsData(client); err != nil {
+					return err
+				}
+			case export.ResultsOption:
+				if err := fetchResultsData(client, args); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func fetchUsersData(c *SASTClient) error {
