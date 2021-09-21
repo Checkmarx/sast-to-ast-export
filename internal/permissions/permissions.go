@@ -15,6 +15,13 @@ const (
 	manageRolesPermission        = "manage-roles"
 )
 
+var permissionDescription = map[interface{}]string{
+	useOdataPermission:           "Sast > API > Use Odata",
+	generateScanReportPermission: "Sast > Reports > Generate Scan Report",
+	manageAuthProviderPermission: "Access Control > General > Manage Authentication Providers",
+	manageRolesPermission:        "Access Control > General > Manage Roles",
+}
+
 func GetFromExportOptions(exportOptions []string) []interface{} {
 	var output []string
 
@@ -48,4 +55,12 @@ func GetFromJwtClaim(claims jwt.MapClaims, key string) ([]interface{}, error) {
 		return []interface{}{singlePermission}, nil
 	}
 	return make([]interface{}, 0), fmt.Errorf("could not parse permissions")
+}
+
+func GetDescription(permission interface{}) (string, error) {
+	description, ok := permissionDescription[permission]
+	if !ok {
+		return "", fmt.Errorf("unknown permission %s", permission)
+	}
+	return description, nil
 }

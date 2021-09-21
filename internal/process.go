@@ -185,7 +185,12 @@ func validatePermissions(client *SASTClient, selectedExportOptions []string) err
 	missingPermissions := getMissingPermissions(requiredPermissions, availablePermissions)
 	if len(missingPermissions) > 0 {
 		for _, permission := range missingPermissions {
-			log.Warn().Msgf("missing permission %s", permission)
+			description, descriptionErr := permissions.GetDescription(permission)
+			if descriptionErr != nil {
+				description = permission.(string)
+				log.Debug().Err(descriptionErr).Msg("could not get permission description")
+			}
+			log.Warn().Msgf("missing permission %s", description)
 		}
 		return fmt.Errorf("please add missing permissions to your SAST user")
 	}
