@@ -12,8 +12,8 @@ const (
 	Accept                    = "Accept"
 	ContentType               = "Content-Type"
 	Authorization             = "Authorization"
-	JSONContentType           = "application/json"
-	FormUrlEncodedContentType = "application/x-www-form-urlencoded"
+	JSONContentType           = "application/json;v=1.0"
+	FormURLEncodedContentType = "application/x-www-form-urlencoded"
 )
 
 func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request, error) {
@@ -29,13 +29,13 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add(ContentType, FormUrlEncodedContentType)
-	req.Header.Add(Accept, FormUrlEncodedContentType)
+	req.Header.Add(ContentType, FormURLEncodedContentType)
+	req.Header.Add(Accept, FormURLEncodedContentType)
 	return req, nil
 }
 
-func CreateRequest(httpMethod, url string, requestBody io.Reader, token *AccessToken) (*http.Request, error) {
-	resp, err := http.NewRequest(httpMethod, url, requestBody)
+func CreateRequest(httpMethod, requestURL string, requestBody io.Reader, token *AccessToken) (*http.Request, error) {
+	resp, err := http.NewRequest(httpMethod, requestURL, requestBody)
 	if err != nil {
 		return nil, err
 	}
