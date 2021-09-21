@@ -177,14 +177,15 @@ func validatePermissions(client *SASTClient, selectedExportOptions []string) err
 	if jwtErr != nil {
 		return jwtErr
 	}
-	availablePermissions, availablePermissionsErr := getAvailablePermissions(jwtClaims)
-	if availablePermissionsErr != nil {
-		return availablePermissionsErr
+	claimKeys := []string{"sast-permissions", "access-control-permissions"}
+	available, availableErr := permissions.GetFromJwtClaims(jwtClaims, claimKeys)
+	if availableErr != nil {
+		return availableErr
 	}
-	requiredPermissions := permissions.GetFromExportOptions(selectedExportOptions)
-	missingPermissions := getMissingPermissions(requiredPermissions, availablePermissions)
-	if len(missingPermissions) > 0 {
-		for _, permission := range missingPermissions {
+	required := permissions.GetFromExportOptions(selectedExportOptions)
+	missing := permissions.GetMissing(required, available)
+	if len(missing) > 0 {
+		for _, permission := range missing {
 			description, descriptionErr := permissions.GetDescription(permission)
 			if descriptionErr != nil {
 				description = permission.(string)
@@ -513,27 +514,4 @@ func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, 
 		}
 	}
 	return nil
-}
-
-func getMissingPermissions(requiredPermissions, availablePermissions []interface{}) []interface{} {
-	output := make([]interface{}, 0)
-	for _, requiredPermission := range requiredPermissions {
-		if !sliceutils.Contains(requiredPermission, availablePermissions) {
-			output = append(output, requiredPermission)
-		}
-	}
-	return output
-}
-
-func getAvailablePermissions(jwtClaims jwt.MapClaims) ([]interface{}, error) {
-	sastPermissions, sastPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "sast-permissions")
-	if sastPermissionErr != nil {
-		return nil, fmt.Errorf("could not parse SAST permissions")
-	}
-	accessControlPermissions, accessControlPermissionErr := permissions.GetFromJwtClaim(jwtClaims, "access-control-permissions")
-	if accessControlPermissionErr != nil {
-		return nil, fmt.Errorf("could not parse Access Control permissions")
-	}
-	availablePermissions := append(sastPermissions, accessControlPermissions...)
-	return availablePermissions, nil
 }
