@@ -191,7 +191,7 @@ func validatePermissions(client *SASTClient, selectedExportOptions []string) err
 				description = permission.(string)
 				log.Debug().Err(descriptionErr).Msg("could not get permission description")
 			}
-			log.Warn().Msgf("missing permission %s", description)
+			log.Error().Msgf("missing permission %s", description)
 		}
 		return fmt.Errorf("please add missing permissions to your SAST user")
 	}
