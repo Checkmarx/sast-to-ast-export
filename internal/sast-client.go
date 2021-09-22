@@ -59,7 +59,6 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	}
 
 	resp, err := c.Adapter.Do(req)
-
 	if err != nil {
 		log.Debug().
 			Err(err).
@@ -68,6 +67,7 @@ func (c *SASTClient) Authenticate(username, password string) error {
 			Msgf("authenticate failed request")
 		return fmt.Errorf("authentication error - request failed")
 	}
+	defer debugErr(resp.Body.Close(), "authenticate")
 
 	logger := log.With().
 		Str("method", req.Method).
@@ -76,7 +76,6 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		Logger()
 
 	if resp.StatusCode == http.StatusOK {
-		defer closeResponseBody(resp, "authenticate status ok")
 		responseBody, ioErr := ioutil.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate ok failed read response")
@@ -93,7 +92,6 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		}
 		return nil
 	} else if resp.StatusCode == http.StatusBadRequest {
-		defer closeResponseBody(resp, "authenticate bad request")
 		responseBody, ioErr := ioutil.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate bad request failed to read response")
@@ -127,7 +125,7 @@ func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	defer closeResponseBody(resp, "getResponseBody")
+	defer debugErr(resp.Body.Close(), "getResponseBody")
 
 	return ioutil.ReadAll(resp.Body)
 }
@@ -142,7 +140,7 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	if err != nil {
 		return []byte{}, err
 	}
-	defer closeResponseBody(resp, "postResponseBody")
+	defer debugErr(resp.Body.Close(), "postResponseBody")
 
 	return ioutil.ReadAll(resp.Body)
 }
@@ -159,7 +157,7 @@ func (c *SASTClient) doRequest(req *retryablehttp.Request, expectStatusCode int)
 		Int("statusCode", resp.StatusCode).
 		Msg("request")
 	if resp.StatusCode != expectStatusCode {
-		defer closeResponseBody(resp, "doRequest")
+		defer debugErr(resp.Body.Close(), "doRequest")
 		return nil, fmt.Errorf("request %s %s failed with status code %d", req.Method, req.URL.String(), resp.StatusCode)
 	}
 	return resp, nil
@@ -235,12 +233,8 @@ func (c *SASTClient) PostReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(CreateReportIDEndpoint, body)
 }
 
-func closeResponseBody(resp *http.Response, contextName string) {
-	ioErr := resp.Body.Close()
-	if ioErr != nil {
-		log.Debug().
-			Err(ioErr).
-			Str("context", contextName).
-			Msg("closing response body")
+func debugErr(err error, msg string) {
+	if err != nil {
+		log.Debug().Err(err).Msg(msg)
 	}
 }
