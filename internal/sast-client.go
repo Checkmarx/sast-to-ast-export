@@ -10,19 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	exportData []ExportData
-	usersData,
-	rolesData,
-	ldapRolesData,
-	samlRolesData,
-	teamsData,
-	samlTeamsData,
-	ldapTeamsData,
-	samlIDpsData,
-	ldapServersData []byte
-)
-
 const (
 	UsersEndpoint = "/CxRestAPI/auth/Users"
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"
@@ -40,8 +27,6 @@ const (
 	CreateReportIDEndpoint         = "/CxRestAPI/help/reports/sastScan"
 	LastTriagedFilters             = "Date gt %s and Comment ne null"
 )
-
-var isDebug bool
 
 type HTTPAdapter interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -100,7 +85,7 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		unmarshalErr := json.Unmarshal(responseBody, c.Token)
 		if unmarshalErr != nil {
 			logger.Debug().
-				Err(ioErr).
+				Err(unmarshalErr).
 				Str("responseBody", string(responseBody)).
 				Msg("authenticate ok failed to unmarshal response")
 			return fmt.Errorf("authentication error - could not decode response")

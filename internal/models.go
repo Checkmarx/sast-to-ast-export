@@ -8,9 +8,9 @@ type Args struct {
 	URL,
 	Username,
 	Password,
-	Export,
 	OutputPath,
 	ProductName string
+	Export                    []string
 	ResultsProjectActiveSince int
 	Debug                     bool
 }

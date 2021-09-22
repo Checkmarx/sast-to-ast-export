@@ -25,7 +25,7 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
-	args.Export, err = cmd.Flags().GetString(exportArg)
+	args.Export, err = cmd.Flags().GetStringSlice(exportArg)
 	if err != nil {
 		panic(err)
 	}

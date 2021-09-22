@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
+	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -90,16 +90,15 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	resultsProjectActiveSinceUsage := fmt.Sprintf(
-		"SAST [optional] custom results project active since (days) - %d if nothing defined", resultsProjectActiveSinceDefaultValue)
+	resultsProjectActiveSinceUsage := "include only results from projects active in the last N days"
 
-	rootCmd.Flags().StringP(userArg, "", "", "SAST admin username")
-	rootCmd.Flags().StringP(passArg, "", "", "SAST admin password")
+	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
+	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
-	rootCmd.Flags().StringP(exportArg, "", "", "SAST [optional] export options --export users,results,teams, all if nothing defined")
+	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(resultsProjectActiveSinceArg, "", resultsProjectActiveSinceDefaultValue, resultsProjectActiveSinceUsage)
-	rootCmd.Flags().Bool(debugArg, false, "Activate debug mode")
-	rootCmd.Flags().BoolP(verboseArg, "v", false, "Enable verbose logging to console")
+	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
+	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
@@ -108,9 +107,6 @@ func init() {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagRequired(urlArg); err != nil {
-		panic(err)
-	}
-	if err := rootCmd.MarkFlagCustom(exportArg, "users,results,teams"); err != nil {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagCustom(resultsProjectActiveSinceArg, resultsProjectActiveSinceUsage); err != nil {

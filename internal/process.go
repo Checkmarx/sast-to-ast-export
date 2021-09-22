@@ -6,25 +6,35 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
-	"strings"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
-
+	"github.com/dgrijalva/jwt-go"
 	"github.com/rs/zerolog/log"
 )
 
 const (
 	createdStatus = "Created"
 
-	usersExportOption   = "users"
-	teamsExportOption   = "teams"
-	resultsExportOption = "results"
-
 	reportType    = "XML"
 	scansFileName = "%d.xml"
 
 	triagedScansPageLimit = 1000
+)
+
+var (
+	exportData []ExportData
+	usersData,
+	rolesData,
+	ldapRolesData,
+	samlRolesData,
+	teamsData,
+	samlTeamsData,
+	ldapTeamsData,
+	samlIDpsData,
+	ldapServersData []byte
 )
 
 type ReportConsumeOutput struct {
@@ -34,52 +44,45 @@ type ReportConsumeOutput struct {
 }
 
 func RunExport(args *Args) {
-	isDebug = args.Debug
-	var selectedExportOptions []string
 	consumerCount := GetNumCPU()
 
 	log.Debug().
 		Str("url", args.URL).
-		Str("export", args.Export).
+		Str("export", fmt.Sprintf("%v", args.Export)).
 		Int("resultsProjectActiveSince", args.ResultsProjectActiveSince).
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
-	// create api client and authenticate
+	// create api client
 	client, err := NewSASTClient(args.URL, &http.Client{})
 	if err != nil {
 		log.Error().Err(err)
 		panic(err)
 	}
 
+	// authenticate
 	log.Info().Msg("connecting to SAST")
 	if authErr := client.Authenticate(args.Username, args.Password); authErr != nil {
 		log.Error().Err(authErr)
 		panic(authErr)
 	}
 
-	if args.Export != "" {
-		selectedExportOptions = strings.Split(args.Export, ",")
-	} else {
-		selectedExportOptions = []string{usersExportOption, resultsExportOption, teamsExportOption}
+	// validate permissions
+	permissionsValidateErr := validatePermissions(client, args.Export)
+	if permissionsValidateErr != nil {
+		panic(fmt.Errorf("permissions error - %s", permissionsValidateErr.Error()))
 	}
-	args.Export = strings.Join(selectedExportOptions, ",")
 
-	log.Debug().
-		Str("exportOptions", args.Export).
-		Msgf("parsed export options")
-
-	// start export
+	// collect export data
 	log.Info().Msg("collecting data from SAST")
-
 	exportValues, exportCreateErr := CreateExport(args.ProductName)
 	if exportCreateErr != nil {
 		log.Error().Err(exportCreateErr)
 		panic(exportCreateErr)
 	}
 
-	if !isDebug {
+	if !args.Debug {
 		defer func(exportValues *Export) {
 			cleanErr := exportValues.Clean()
 			if cleanErr != nil {
@@ -88,33 +91,14 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	availableExportOptions := []string{usersExportOption, teamsExportOption, resultsExportOption}
-
-	for _, exportOption := range availableExportOptions {
-		if sliceutils.Contains(exportOption, sliceutils.ConvertStringToInterface(selectedExportOptions)) {
-			log.Info().Msgf("collecting %s", exportOption)
-			switch exportOption {
-			case usersExportOption:
-				if err = fetchUsersData(client); err != nil {
-					log.Error().Err(err)
-					panic(err)
-				}
-			case teamsExportOption:
-				if err = fetchTeamsData(client); err != nil {
-					log.Error().Err(err)
-					panic(err)
-				}
-			case resultsExportOption:
-				if err = fetchResultsData(client, args); err != nil {
-					log.Error().Err(err)
-					panic(err)
-				}
-			}
-		}
+	fetchErr := fetchSelectedData(client, args)
+	if fetchErr != nil {
+		log.Error().Err(err)
+		panic(fmt.Errorf("fetch error - %s", err.Error()))
 	}
 
+	// export data to file
 	log.Info().Msg("exporting collected data")
-
 	exportFileName, exportErr := ExportResultsToFile(args, &exportValues)
 	if exportErr != nil {
 		log.Error().Err(exportErr).Msg("error exporting collected data")
@@ -124,8 +108,8 @@ func RunExport(args *Args) {
 }
 
 func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
-
-	if strings.Contains(args.Export, usersExportOption) {
+	exportOptions := sliceutils.ConvertStringToInterface(args.Export)
+	if sliceutils.Contains(export.UsersOption, exportOptions) {
 		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -143,7 +127,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, resultsExportOption) {
+	if sliceutils.Contains(export.ResultsOption, exportOptions) {
 		for _, res := range exportData {
 			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
 				return nil, exportErr
@@ -151,7 +135,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, teamsExportOption) {
+	if sliceutils.Contains(export.TeamsOption, exportOptions) {
 		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -165,7 +149,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		}
 	}
 
-	if strings.Contains(args.Export, usersExportOption) || strings.Contains(args.Export, teamsExportOption) {
+	if sliceutils.Contains(export.UsersOption, exportOptions) || sliceutils.Contains(export.TeamsOption, exportOptions) {
 		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
 			return nil, exportErr
 		}
@@ -175,7 +159,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 	}
 
 	// create export package
-	if isDebug {
+	if args.Debug {
 		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
 		return &exportValues.TmpDir, nil
 	}
@@ -185,6 +169,57 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 		return nil, exportErr
 	}
 	return &exportFileName, exportErr
+}
+
+func validatePermissions(client *SASTClient, selectedExportOptions []string) error {
+	jwtClaims := jwt.MapClaims{}
+	_, _, jwtErr := new(jwt.Parser).ParseUnverified(client.Token.AccessToken, jwtClaims)
+	if jwtErr != nil {
+		return jwtErr
+	}
+	claimKeys := []string{"sast-permissions", "access-control-permissions"}
+	available, availableErr := permissions.GetFromJwtClaims(jwtClaims, claimKeys)
+	if availableErr != nil {
+		return availableErr
+	}
+	required := permissions.GetFromExportOptions(selectedExportOptions)
+	missing := permissions.GetMissing(required, available)
+	if len(missing) > 0 {
+		for _, permission := range missing {
+			description, descriptionErr := permissions.GetDescription(permission)
+			if descriptionErr != nil {
+				description = permission.(string)
+				log.Debug().Err(descriptionErr).Msg("could not get permission description")
+			}
+			log.Error().Msgf("missing permission %s", description)
+		}
+		return fmt.Errorf("please add missing permissions to your SAST user")
+	}
+	return nil
+}
+
+func fetchSelectedData(client *SASTClient, args *Args) error {
+	options := sliceutils.ConvertStringToInterface(args.Export)
+	for _, exportOption := range export.GetOptions() {
+		if sliceutils.Contains(exportOption, options) {
+			log.Info().Msgf("collecting %s", exportOption)
+			switch exportOption {
+			case export.UsersOption:
+				if err := fetchUsersData(client); err != nil {
+					return err
+				}
+			case export.TeamsOption:
+				if err := fetchTeamsData(client); err != nil {
+					return err
+				}
+			case export.ResultsOption:
+				if err := fetchResultsData(client, args.ResultsProjectActiveSince); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func fetchUsersData(c *SASTClient) error {
@@ -241,11 +276,11 @@ func fetchTeamsData(client *SASTClient) error {
 	return nil
 }
 
-func fetchResultsData(client *SASTClient, args *Args) (err error) {
+func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err error) {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
-	fromDate := GetDateFromDays(args.ResultsProjectActiveSince, time.Now())
+	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
 
 	// collect last triaged scan by project
 	var lastTriagedScansByProject []TriagedScan
