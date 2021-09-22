@@ -75,6 +75,44 @@ func TestSASTClient_Authenticate(t *testing.T) {
 	})
 }
 
+func TestSASTClient_doRequest(t *testing.T) {
+	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
+
+	t.Run("returns successful response", func(t *testing.T) {
+		request, err := http.NewRequest("GET", "http://localhost/test", nil)
+		assert.NoError(t, err)
+		expectedStatusCode := 200
+		responseJSON := `{"data": "some data"}`
+		adapter := &HTTPClientMock{DoResponse: makeOkResponse(responseJSON), DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+		client.Token = mockToken
+
+		result, err := client.doRequest(request, expectedStatusCode)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, result.StatusCode, expectedStatusCode)
+
+		defer result.Body.Close()
+		content, ioErr := ioutil.ReadAll(result.Body)
+		assert.NoError(t, ioErr)
+		assert.Equal(t, responseJSON, string(content))
+	})
+
+	t.Run("returns error if response is not the expected one", func(t *testing.T) {
+		request, err := http.NewRequest("GET", "http://localhost/test", nil)
+		assert.NoError(t, err)
+		expectedStatusCode := 400
+		adapter := &HTTPClientMock{DoResponse: makeBadRequestResponse(ErrorResponseJSON), DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+		client.Token = mockToken
+
+		result, err := client.doRequest(request, expectedStatusCode)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, result.StatusCode, expectedStatusCode)
+	})
+}
+
 func TestSASTClient_GetUsersResponseBody(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 
