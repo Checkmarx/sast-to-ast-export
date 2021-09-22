@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os/exec"
 	"time"
 
@@ -12,6 +11,8 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
 	"github.com/golang-jwt/jwt"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,6 +23,10 @@ const (
 	scansFileName = "%d.xml"
 
 	triagedScansPageLimit = 1000
+
+	httpRetryWaitMin = 1 * time.Second
+	httpRetryWaitMax = 30 * time.Second
+	httpRetryMax     = 4
 )
 
 var (
@@ -55,7 +60,15 @@ func RunExport(args *Args) {
 		Msg("starting export")
 
 	// create api client
-	client, err := NewSASTClient(args.URL, &http.Client{})
+	client, err := NewSASTClient(args.URL, &retryablehttp.Client{
+		HTTPClient:   cleanhttp.DefaultPooledClient(),
+		Logger:       export.NewLeveledLogger(&log.Logger),
+		RetryWaitMin: httpRetryWaitMin,
+		RetryWaitMax: httpRetryWaitMax,
+		RetryMax:     httpRetryMax,
+		CheckRetry:   retryablehttp.DefaultRetryPolicy,
+		Backoff:      retryablehttp.DefaultBackoff,
+	})
 	if err != nil {
 		log.Error().Err(err)
 		panic(err)
@@ -93,8 +106,8 @@ func RunExport(args *Args) {
 
 	fetchErr := fetchSelectedData(client, args)
 	if fetchErr != nil {
-		log.Error().Err(err)
-		panic(fmt.Errorf("fetch error - %s", err.Error()))
+		log.Error().Err(fetchErr)
+		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))
 	}
 
 	// export data to file
@@ -301,11 +314,13 @@ func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err er
 
 		triagedScansResponse, errFetch := client.GetTriagedScansFromDate(fromDate, triagedScansOffset, triagedScansLimit)
 		if errFetch != nil {
-			return errFetch
+			log.Debug().Err(errFetch).Msg("failed fetching triaged scans")
+			return fmt.Errorf("error finding triaged scans")
 		}
 
 		if errUnmarshal := json.Unmarshal(triagedScansResponse, &triagedScansPage); errUnmarshal != nil {
-			return errUnmarshal
+			log.Debug().Err(errUnmarshal).Msg("failed unmarshalling triaged scans")
+			return fmt.Errorf("error finding triaged scans")
 		}
 
 		if len(triagedScansPage.Value) == 0 {

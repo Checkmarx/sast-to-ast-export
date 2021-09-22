@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ type HTTPClientMock struct {
 	DoError    error
 }
 
-func (c *HTTPClientMock) Do(req *http.Request) (*http.Response, error) {
+func (c *HTTPClientMock) Do(_ *retryablehttp.Request) (*http.Response, error) {
 	return &c.DoResponse, c.DoError
 }
 
@@ -79,7 +80,7 @@ func TestSASTClient_doRequest(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 
 	t.Run("returns successful response", func(t *testing.T) {
-		request, err := http.NewRequest("GET", "http://localhost/test", nil)
+		request, err := retryablehttp.NewRequest("GET", "http://localhost/test", nil)
 		assert.NoError(t, err)
 		expectedStatusCode := 200
 		responseJSON := `{"data": "some data"}`
@@ -92,14 +93,17 @@ func TestSASTClient_doRequest(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, result.StatusCode, expectedStatusCode)
 
-		defer result.Body.Close()
+		defer func() {
+			err := result.Body.Close()
+			assert.NoError(t, err)
+		}()
 		content, ioErr := ioutil.ReadAll(result.Body)
 		assert.NoError(t, ioErr)
 		assert.Equal(t, responseJSON, string(content))
 	})
 
 	t.Run("returns error if response is not the expected one", func(t *testing.T) {
-		request, err := http.NewRequest("GET", "http://localhost/test", nil)
+		request, err := retryablehttp.NewRequest("GET", "http://localhost/test", nil)
 		assert.NoError(t, err)
 		expectedStatusCode := 400
 		adapter := &HTTPClientMock{DoResponse: makeBadRequestResponse(ErrorResponseJSON), DoError: nil}
