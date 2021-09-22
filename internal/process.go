@@ -11,7 +11,7 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/rs/zerolog/log"
 )
 
@@ -160,7 +160,10 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 
 	// create export package
 	if args.Debug {
-		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
+		cmdErr := exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run() //nolint:gosec
+		if cmdErr != nil {
+			log.Debug().Err(cmdErr).Msg("could not open temporary folder")
+		}
 		return &exportValues.TmpDir, nil
 	}
 

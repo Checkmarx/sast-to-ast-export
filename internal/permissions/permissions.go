@@ -5,7 +5,7 @@ import (
 
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 )
 
 const (
