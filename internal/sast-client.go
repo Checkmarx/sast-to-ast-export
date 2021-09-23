@@ -67,7 +67,11 @@ func (c *SASTClient) Authenticate(username, password string) error {
 			Msgf("authenticate failed request")
 		return fmt.Errorf("authentication error - request failed")
 	}
-	defer debugErr(resp.Body.Close(), "authenticate")
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("authenticate")
+		}
+	}()
 
 	logger := log.With().
 		Str("method", req.Method).
@@ -125,8 +129,11 @@ func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	defer debugErr(resp.Body.Close(), "getResponseBody")
-
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("getResponseBody")
+		}
+	}()
 	return ioutil.ReadAll(resp.Body)
 }
 
@@ -140,8 +147,11 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	if err != nil {
 		return []byte{}, err
 	}
-	defer debugErr(resp.Body.Close(), "postResponseBody")
-
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("postResponseBody")
+		}
+	}()
 	return ioutil.ReadAll(resp.Body)
 }
 
@@ -157,7 +167,11 @@ func (c *SASTClient) doRequest(req *retryablehttp.Request, expectStatusCode int)
 		Int("statusCode", resp.StatusCode).
 		Msg("request")
 	if resp.StatusCode != expectStatusCode {
-		defer debugErr(resp.Body.Close(), "doRequest")
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				log.Debug().Err(closeErr).Msg("doRequest")
+			}
+		}()
 		return nil, fmt.Errorf("request %s %s failed with status code %d", req.Method, req.URL.String(), resp.StatusCode)
 	}
 	return resp, nil
@@ -231,10 +245,4 @@ func (c *SASTClient) GetReportResult(reportID int) ([]byte, error) {
 
 func (c *SASTClient) PostReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(CreateReportIDEndpoint, body)
-}
-
-func debugErr(err error, msg string) {
-	if err != nil {
-		log.Debug().Err(err).Msg(msg)
-	}
 }

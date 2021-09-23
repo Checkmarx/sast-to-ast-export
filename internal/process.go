@@ -62,7 +62,7 @@ func RunExport(args *Args) {
 	// create api client
 	client, err := NewSASTClient(args.URL, &retryablehttp.Client{
 		HTTPClient:   cleanhttp.DefaultPooledClient(),
-		Logger:       export.NewLeveledLogger(&log.Logger),
+		Logger:       NewLeveledLogger(&log.Logger),
 		RetryWaitMin: httpRetryWaitMin,
 		RetryWaitMax: httpRetryWaitMax,
 		RetryMax:     httpRetryMax,
