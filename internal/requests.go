@@ -3,9 +3,10 @@ package internal
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 	FormURLEncodedContentType = "application/x-www-form-urlencoded"
 )
 
-func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request, error) {
+func CreateAccessTokenRequest(baseURL, username, password string) (*retryablehttp.Request, error) {
 	tokenURL := fmt.Sprintf("%s/CxRestAPI/auth/identity/connect/token", baseURL)
 	data := url.Values{}
 	data.Add("username", username)
@@ -25,7 +26,7 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	data.Add("scope", "access_control_api sast_api")
 	data.Add("client_id", "resource_owner_sast_client")
 	data.Add("client_secret", "014DF517-39D1-4453-B7B3-9930C563627C")
-	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+	req, err := retryablehttp.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +35,8 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*http.Request
 	return req, nil
 }
 
-func CreateRequest(httpMethod, requestURL string, requestBody io.Reader, token *AccessToken) (*http.Request, error) {
-	resp, err := http.NewRequest(httpMethod, requestURL, requestBody)
+func CreateRequest(httpMethod, requestURL string, requestBody io.Reader, token *AccessToken) (*retryablehttp.Request, error) {
+	resp, err := retryablehttp.NewRequest(httpMethod, requestURL, requestBody)
 	if err != nil {
 		return nil, err
 	}

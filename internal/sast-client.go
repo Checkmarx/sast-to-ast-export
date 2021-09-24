@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,13 +29,13 @@ const (
 	LastTriagedFilters             = "Date gt %s and Comment ne null"
 )
 
-type HTTPAdapter interface {
-	Do(req *http.Request) (*http.Response, error)
+type RetryableHTTPAdapter interface {
+	Do(req *retryablehttp.Request) (*http.Response, error)
 }
 
 type SASTClient struct {
 	BaseURL string
-	Adapter HTTPAdapter
+	Adapter RetryableHTTPAdapter
 	Token   *AccessToken
 }
 
@@ -43,7 +44,7 @@ type SASTError struct {
 	ErrorDescription string `json:"error_description"`
 }
 
-func NewSASTClient(baseURL string, adapter HTTPAdapter) (*SASTClient, error) {
+func NewSASTClient(baseURL string, adapter RetryableHTTPAdapter) (*SASTClient, error) {
 	client := SASTClient{
 		BaseURL: baseURL,
 		Adapter: adapter,
@@ -58,15 +59,19 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	}
 
 	resp, err := c.Adapter.Do(req)
-
 	if err != nil {
 		log.Debug().
 			Err(err).
 			Str("method", req.Method).
 			Str("url", req.URL.String()).
 			Msgf("authenticate failed request")
-		return fmt.Errorf("authentication error - request failed")
+		return fmt.Errorf("authentication error - please confirm you can connect to SAST")
 	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("authenticate")
+		}
+	}()
 
 	logger := log.With().
 		Str("method", req.Method).
@@ -75,7 +80,6 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		Logger()
 
 	if resp.StatusCode == http.StatusOK {
-		defer resp.Body.Close()
 		responseBody, ioErr := ioutil.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate ok failed read response")
@@ -92,7 +96,6 @@ func (c *SASTClient) Authenticate(username, password string) error {
 		}
 		return nil
 	} else if resp.StatusCode == http.StatusBadRequest {
-		defer resp.Body.Close()
 		responseBody, ioErr := ioutil.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate bad request failed to read response")
@@ -126,8 +129,11 @@ func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	defer resp.Body.Close()
-
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("getResponseBody")
+		}
+	}()
 	return ioutil.ReadAll(resp.Body)
 }
 
@@ -141,24 +147,25 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	if err != nil {
 		return []byte{}, err
 	}
-	defer resp.Body.Close()
-
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("postResponseBody")
+		}
+	}()
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (c *SASTClient) doRequest(req *http.Request, expectStatusCode int) (*http.Response, error) {
+func (c *SASTClient) doRequest(req *retryablehttp.Request, expectStatusCode int) (*http.Response, error) {
 	resp, err := c.Adapter.Do(req)
-	log.Debug().
-		Err(err).
-		Str("method", req.Method).
-		Str("url", req.URL.String()).
-		Int("statusCode", resp.StatusCode).
-		Msg("request")
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != expectStatusCode {
-		defer resp.Body.Close()
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				log.Debug().Err(closeErr).Msg("doRequest")
+			}
+		}()
 		return nil, fmt.Errorf("request %s %s failed with status code %d", req.Method, req.URL.String(), resp.StatusCode)
 	}
 	return resp, nil

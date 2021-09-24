@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,6 +25,10 @@ const (
 	scansFileName = "%d.xml"
 
 	triagedScansPageLimit = 1000
+
+	httpRetryWaitMin = 1 * time.Second
+	httpRetryWaitMax = 30 * time.Second
+	httpRetryMax     = 4
 )
 
 var (
@@ -55,7 +62,29 @@ func RunExport(args *Args) {
 		Msg("starting export")
 
 	// create api client
-	client, err := NewSASTClient(args.URL, &http.Client{})
+	client, err := NewSASTClient(args.URL, &retryablehttp.Client{
+		HTTPClient:   cleanhttp.DefaultPooledClient(),
+		Logger:       nil,
+		RetryWaitMin: httpRetryWaitMin,
+		RetryWaitMax: httpRetryWaitMax,
+		RetryMax:     httpRetryMax,
+		CheckRetry:   retryablehttp.DefaultRetryPolicy,
+		Backoff:      retryablehttp.DefaultBackoff,
+		RequestLogHook: func(logger retryablehttp.Logger, request *http.Request, i int) {
+			log.Debug().
+				Str("method", request.Method).
+				Str("url", request.URL.String()).
+				Int("attempt", i+1).
+				Msg("request")
+		},
+		ResponseLogHook: func(logger retryablehttp.Logger, response *http.Response) {
+			log.Debug().
+				Str("method", response.Request.Method).
+				Str("url", response.Request.URL.String()).
+				Int("status", response.StatusCode).
+				Msg("response")
+		},
+	})
 	if err != nil {
 		log.Error().Err(err)
 		panic(err)
@@ -93,8 +122,8 @@ func RunExport(args *Args) {
 
 	fetchErr := fetchSelectedData(client, args)
 	if fetchErr != nil {
-		log.Error().Err(err)
-		panic(fmt.Errorf("fetch error - %s", err.Error()))
+		log.Error().Err(fetchErr)
+		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))
 	}
 
 	// export data to file
@@ -160,7 +189,13 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 
 	// create export package
 	if args.Debug {
-		exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run()
+		if runtime.GOOS == "windows" {
+			cmdErr := exec.Command(`explorer`, exportValues.TmpDir).Run() //nolint:gosec
+			// ignore exit status 1, it was being returned even on success
+			if cmdErr != nil && cmdErr.Error() != "exit status 1" {
+				log.Debug().Err(cmdErr).Msg("could not open temporary folder")
+			}
+		}
 		return &exportValues.TmpDir, nil
 	}
 
@@ -298,11 +333,13 @@ func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err er
 
 		triagedScansResponse, errFetch := client.GetTriagedScansFromDate(fromDate, triagedScansOffset, triagedScansLimit)
 		if errFetch != nil {
-			return errFetch
+			log.Debug().Err(errFetch).Msg("failed fetching triaged scans")
+			return fmt.Errorf("error finding triaged scans")
 		}
 
 		if errUnmarshal := json.Unmarshal(triagedScansResponse, &triagedScansPage); errUnmarshal != nil {
-			return errUnmarshal
+			log.Debug().Err(errUnmarshal).Msg("failed unmarshalling triaged scans")
+			return fmt.Errorf("error finding triaged scans")
 		}
 
 		if len(triagedScansPage.Value) == 0 {

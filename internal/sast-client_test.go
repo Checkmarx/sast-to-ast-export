@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ type HTTPClientMock struct {
 	DoError    error
 }
 
-func (c *HTTPClientMock) Do(req *http.Request) (*http.Response, error) {
+func (c *HTTPClientMock) Do(_ *retryablehttp.Request) (*http.Response, error) {
 	return &c.DoResponse, c.DoError
 }
 
@@ -39,12 +40,8 @@ func TestNewSASTClient(t *testing.T) {
 
 func TestSASTClient_Authenticate(t *testing.T) {
 	t.Run("authenticates successfully", func(t *testing.T) {
-		responseJSON := `{"access_token":"jwttoken", "token_type":"Bearer", "expires_in": 1234}`
-		response := http.Response{
-			StatusCode: 200,
-			Status:     "OK",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
-		}
+		responseJSON := `{"access_token":"jwt", "token_type":"Bearer", "expires_in": 1234}`
+		response := makeOkResponse(responseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
@@ -52,16 +49,12 @@ func TestSASTClient_Authenticate(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, client.Token)
-		expected := &AccessToken{AccessToken: "jwttoken", TokenType: "Bearer", ExpiresIn: 1234}
+		expected := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 		assert.Equal(t, client.Token, expected)
 	})
 
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
-		response := http.Response{
-			StatusCode: 400,
-			Status:     "Bad Request",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
-		}
+		response := makeBadRequestResponse(ErrorResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
@@ -72,11 +65,7 @@ func TestSASTClient_Authenticate(t *testing.T) {
 	})
 
 	t.Run("returns error if can't parse response", func(t *testing.T) {
-		response := http.Response{
-			StatusCode: 200,
-			Status:     "OK",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(InvalidDataResponseJSON)),
-		}
+		response := makeOkResponse(InvalidDataResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
@@ -87,6 +76,47 @@ func TestSASTClient_Authenticate(t *testing.T) {
 	})
 }
 
+func TestSASTClient_doRequest(t *testing.T) {
+	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
+
+	t.Run("returns successful response", func(t *testing.T) {
+		request, err := retryablehttp.NewRequest("GET", "http://localhost/test", nil)
+		assert.NoError(t, err)
+		expectedStatusCode := 200
+		responseJSON := `{"data": "some data"}`
+		adapter := &HTTPClientMock{DoResponse: makeOkResponse(responseJSON), DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+		client.Token = mockToken
+
+		result, err := client.doRequest(request, expectedStatusCode)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, result.StatusCode, expectedStatusCode)
+
+		defer func() {
+			err := result.Body.Close()
+			assert.NoError(t, err)
+		}()
+		content, ioErr := ioutil.ReadAll(result.Body)
+		assert.NoError(t, ioErr)
+		assert.Equal(t, responseJSON, string(content))
+	})
+
+	t.Run("returns error if response is not the expected one", func(t *testing.T) {
+		request, err := retryablehttp.NewRequest("GET", "http://localhost/test", nil)
+		assert.NoError(t, err)
+		expectedStatusCode := 400
+		adapter := &HTTPClientMock{DoResponse: makeBadRequestResponse(ErrorResponseJSON), DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+		client.Token = mockToken
+
+		result, err := client.doRequest(request, expectedStatusCode)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, result.StatusCode, expectedStatusCode)
+	})
+}
+
 func TestSASTClient_GetUsersResponseBody(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 
@@ -94,11 +124,7 @@ func TestSASTClient_GetUsersResponseBody(t *testing.T) {
 		responseJSON := `[{"id": 1, "userName": "test1", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true},
 						  {"id": 2, "userName": "test2", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true},
 						  {"id": 3, "userName": "test3", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true}]`
-		response := http.Response{
-			StatusCode: 200,
-			Status:     "OK",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
-		}
+		response := makeOkResponse(responseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
@@ -111,11 +137,7 @@ func TestSASTClient_GetUsersResponseBody(t *testing.T) {
 	})
 
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
-		response := http.Response{
-			StatusCode: 400,
-			Status:     "Bad Request",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
-		}
+		response := makeBadRequestResponse(ErrorResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
@@ -134,11 +156,7 @@ func TestSASTClient_GetTeamsResponseBody(t *testing.T) {
 		responseJSON := `[{"id": 1, "name": "test1", "fullName": "/CxServer/test1", "parentId": 1},
 						  {"id": 2, "name": "test2", "fullName": "/CxServer/test2", "parentId": 1},
 						  {"id": 3, "name": "test3", "fullName": "/CxServer/test3", "parentId": 1}]`
-		response := http.Response{
-			StatusCode: 200,
-			Status:     "OK",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(responseJSON)),
-		}
+		response := makeOkResponse(responseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
@@ -151,11 +169,7 @@ func TestSASTClient_GetTeamsResponseBody(t *testing.T) {
 	})
 
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
-		response := http.Response{
-			StatusCode: 400,
-			Status:     "Bad Request",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
-		}
+		response := makeBadRequestResponse(ErrorResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
@@ -165,4 +179,20 @@ func TestSASTClient_GetTeamsResponseBody(t *testing.T) {
 		assert.Error(t, err)
 		assert.Len(t, result, 0)
 	})
+}
+
+func makeOkResponse(body string) http.Response {
+	return http.Response{
+		StatusCode: 200,
+		Status:     "OK",
+		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+	}
+}
+
+func makeBadRequestResponse(body string) http.Response {
+	return http.Response{
+		StatusCode: 400,
+		Status:     "Bad Request",
+		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+	}
 }
