@@ -65,7 +65,7 @@ func (c *SASTClient) Authenticate(username, password string) error {
 			Str("method", req.Method).
 			Str("url", req.URL.String()).
 			Msgf("authenticate failed request")
-		return fmt.Errorf("authentication error - request failed")
+		return fmt.Errorf("authentication error - please confirm you can connect to SAST")
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -160,12 +160,6 @@ func (c *SASTClient) doRequest(req *retryablehttp.Request, expectStatusCode int)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().
-		Err(err).
-		Str("method", req.Method).
-		Str("url", req.URL.String()).
-		Int("statusCode", resp.StatusCode).
-		Msg("request")
 	if resp.StatusCode != expectStatusCode {
 		defer func() {
 			if closeErr := resp.Body.Close(); closeErr != nil {

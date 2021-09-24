@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"time"
 
@@ -62,12 +63,26 @@ func RunExport(args *Args) {
 	// create api client
 	client, err := NewSASTClient(args.URL, &retryablehttp.Client{
 		HTTPClient:   cleanhttp.DefaultPooledClient(),
-		Logger:       NewLeveledLogger(&log.Logger),
+		Logger:       nil,
 		RetryWaitMin: httpRetryWaitMin,
 		RetryWaitMax: httpRetryWaitMax,
 		RetryMax:     httpRetryMax,
 		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      retryablehttp.DefaultBackoff,
+		RequestLogHook: func(logger retryablehttp.Logger, request *http.Request, i int) {
+			log.Debug().
+				Str("method", request.Method).
+				Str("url", request.URL.String()).
+				Int("attempt", i+1).
+				Msg("request")
+		},
+		ResponseLogHook: func(logger retryablehttp.Logger, response *http.Response) {
+			log.Debug().
+				Str("method", response.Request.Method).
+				Str("url", response.Request.URL.String()).
+				Int("status", response.StatusCode).
+				Msg("response")
+		},
 	})
 	if err != nil {
 		log.Error().Err(err)
