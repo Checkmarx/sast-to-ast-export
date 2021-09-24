@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
@@ -188,9 +189,12 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 
 	// create export package
 	if args.Debug {
-		cmdErr := exec.Command(`explorer`, `/select,`, exportValues.TmpDir).Run() //nolint:gosec
-		if cmdErr != nil {
-			log.Debug().Err(cmdErr).Msg("could not open temporary folder")
+		if runtime.GOOS == "windows" {
+			cmdErr := exec.Command(`explorer`, exportValues.TmpDir).Run() //nolint:gosec
+			// ignore exit status 1, it was being returned even on success
+			if cmdErr != nil && cmdErr.Error() != "exit status 1" {
+				log.Debug().Err(cmdErr).Msg("could not open temporary folder")
+			}
 		}
 		return &exportValues.TmpDir, nil
 	}
