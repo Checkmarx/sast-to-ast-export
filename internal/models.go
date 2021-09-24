@@ -101,8 +101,3 @@ type TriagedScan struct {
 	ProjectID int
 	ScanID    int
 }
-
-type ExportData struct {
-	FileName string
-	Data     []byte
-}

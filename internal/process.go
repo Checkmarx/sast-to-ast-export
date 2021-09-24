@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -29,19 +30,6 @@ const (
 	httpRetryWaitMin = 1 * time.Second
 	httpRetryWaitMax = 30 * time.Second
 	httpRetryMax     = 4
-)
-
-var (
-	exportData []ExportData
-	usersData,
-	rolesData,
-	ldapRolesData,
-	samlRolesData,
-	teamsData,
-	samlTeamsData,
-	ldapTeamsData,
-	samlIDpsData,
-	ldapServersData []byte
 )
 
 type ReportConsumeOutput struct {
@@ -120,7 +108,7 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	fetchErr := fetchSelectedData(client, args)
+	fetchErr := fetchSelectedData(client, &exportValues, args)
 	if fetchErr != nil {
 		log.Error().Err(fetchErr)
 		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))
@@ -137,56 +125,6 @@ func RunExport(args *Args) {
 }
 
 func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
-	exportOptions := sliceutils.ConvertStringToInterface(args.Export)
-	if sliceutils.Contains(export.UsersOption, exportOptions) {
-		if exportErr := exportValues.AddFile(UsersFileName, usersData); exportErr != nil {
-			return nil, exportErr
-		}
-
-		if exportErr := exportValues.AddFile(RolesFileName, rolesData); exportErr != nil {
-			return nil, exportErr
-		}
-
-		if exportErr := exportValues.AddFile(LdapRoleMappingsFileName, ldapRolesData); exportErr != nil {
-			return nil, exportErr
-		}
-
-		if exportErr := exportValues.AddFile(SamlRoleMappingsFileName, samlRolesData); exportErr != nil {
-			return nil, exportErr
-		}
-	}
-
-	if sliceutils.Contains(export.ResultsOption, exportOptions) {
-		for _, res := range exportData {
-			if exportErr := exportValues.AddFile(res.FileName, res.Data); exportErr != nil {
-				return nil, exportErr
-			}
-		}
-	}
-
-	if sliceutils.Contains(export.TeamsOption, exportOptions) {
-		if exportErr := exportValues.AddFile(TeamsFileName, teamsData); exportErr != nil {
-			return nil, exportErr
-		}
-
-		if exportErr := exportValues.AddFile(LdapTeamMappingsFileName, ldapTeamsData); exportErr != nil {
-			return nil, exportErr
-		}
-
-		if exportErr := exportValues.AddFile(SamlTeamMappingsFileName, samlTeamsData); exportErr != nil {
-			return nil, exportErr
-		}
-	}
-
-	if sliceutils.Contains(export.UsersOption, exportOptions) || sliceutils.Contains(export.TeamsOption, exportOptions) {
-		if exportErr := exportValues.AddFile(LdapServersFileName, ldapServersData); exportErr != nil {
-			return nil, exportErr
-		}
-		if exportErr := exportValues.AddFile(SamlIdpFileName, samlIDpsData); exportErr != nil {
-			return nil, exportErr
-		}
-	}
-
 	// create export package
 	if args.Debug {
 		if runtime.GOOS == "windows" {
@@ -233,22 +171,22 @@ func validatePermissions(client *SASTClient, selectedExportOptions []string) err
 	return nil
 }
 
-func fetchSelectedData(client *SASTClient, args *Args) error {
+func fetchSelectedData(client *SASTClient, exporter *Export, args *Args) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
 			log.Info().Msgf("collecting %s", exportOption)
 			switch exportOption {
 			case export.UsersOption:
-				if err := fetchUsersData(client); err != nil {
+				if err := fetchUsersData(client, exporter); err != nil {
 					return err
 				}
 			case export.TeamsOption:
-				if err := fetchTeamsData(client); err != nil {
+				if err := fetchTeamsData(client, exporter); err != nil {
 					return err
 				}
 			case export.ResultsOption:
-				if err := fetchResultsData(client, args.ResultsProjectActiveSince); err != nil {
+				if err := fetchResultsData(client, exporter, args.ResultsProjectActiveSince); err != nil {
 					return err
 				}
 			}
@@ -257,61 +195,56 @@ func fetchSelectedData(client *SASTClient, args *Args) error {
 	return nil
 }
 
-func fetchUsersData(c *SASTClient) error {
-	var err error
-	usersData, err = c.GetUsers()
-	if err != nil {
+func fetchUsersData(client *SASTClient, exporter *Export) error {
+	if err := exporter.AddFileWithDataSource(UsersFileName, client.GetUsers); err != nil {
 		return err
 	}
-	rolesData, err = c.GetRoles()
-	if err != nil {
+	if err := exporter.AddFileWithDataSource(RolesFileName, client.GetRoles); err != nil {
 		return err
 	}
-	ldapRolesData, err = c.GetLdapRoleMappings()
-	if err != nil {
+	if err := exporter.AddFileWithDataSource(LdapRoleMappingsFileName, client.GetLdapRoleMappings); err != nil {
 		return err
 	}
-	samlRolesData, err = c.GetSamlRoleMappings()
-	if err != nil {
+	if err := exporter.AddFileWithDataSource(SamlRoleMappingsFileName, client.GetSamlRoleMappings); err != nil {
 		return err
 	}
-	ldapServersData, err = c.GetLdapServers()
-	if err != nil {
-		return err
+	if _, fileErr := os.Stat(LdapServersFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(LdapServersFileName, client.GetLdapServers); err != nil {
+			return err
+		}
 	}
-	samlIDpsData, err = c.GetSamlIdentityProviders()
-	if err != nil {
-		return err
+	if _, fileErr := os.Stat(SamlIdpFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func fetchTeamsData(client *SASTClient) error {
-	var err error
-	teamsData, err = client.GetTeams()
-	if err != nil {
+func fetchTeamsData(client *SASTClient, exporter *Export) error {
+	if err := exporter.AddFileWithDataSource(TeamsFileName, client.GetTeams); err != nil {
 		return err
 	}
-	ldapTeamsData, err = client.GetLdapTeamMappings()
-	if err != nil {
+	if err := exporter.AddFileWithDataSource(LdapTeamMappingsFileName, client.GetLdapTeamMappings); err != nil {
 		return err
 	}
-	samlTeamsData, err = client.GetSamlTeamMappings()
-	if err != nil {
+	if err := exporter.AddFileWithDataSource(SamlTeamMappingsFileName, client.GetSamlTeamMappings); err != nil {
 		return err
 	}
-	ldapServersData, err = client.GetLdapServers()
-	if err != nil {
-		return err
+	if _, fileErr := os.Stat(LdapServersFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(LdapServersFileName, client.GetLdapServers); err != nil {
+			return err
+		}
 	}
-	samlIDpsData, err = client.GetSamlIdentityProviders()
-	if err != nil {
-		return err
+	if _, fileErr := os.Stat(SamlIdpFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err error) {
+func fetchResultsData(client *SASTClient, exporter *Export, resultsProjectActiveSince int) (err error) {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
@@ -378,7 +311,7 @@ func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err er
 	reportConsumeOutputs := make(chan ReportConsumeOutput, reportCount)
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
-		go consumeReports(client, consumerID, reportJobs, reportConsumeOutputs)
+		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs)
 	}
 
 	reportConsumeErrorCount := 0
@@ -422,7 +355,7 @@ func produceReports(reportJobs chan<- ReportJob, scans []TriagedScan) {
 	close(reportJobs)
 }
 
-func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
+func consumeReports(client *SASTClient, exporter *Export, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
 	sleep := 2 * time.Second // default first time waiting, will increase in every loop
 	retryAttempts := 4
 	for reportJob := range reportJobs {
@@ -445,7 +378,7 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 			logger.Debug().
 				Err(marshalErr).
 				Str("reportBody", fmt.Sprintf("%v", reportBody)).
-				Msg("failed marshalling report body")
+				Msg("failed marshaling report body")
 			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
@@ -480,7 +413,7 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 			continue
 		}
 		if status.Status.Value == createdStatus {
-			err := fetchReportData(client, report.ReportID, reportJob.ProjectID)
+			err := fetchReportData(client, exporter, report.ReportID, reportJob.ProjectID)
 			if err == nil {
 				logger.Debug().Msg("report created")
 			} else {
@@ -489,7 +422,7 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 				continue
 			}
 		} else {
-			err := retryGetReport(client, retryAttempts, report.ReportID, reportJob.ProjectID, sleep, report)
+			err := retryGetReport(client, exporter, retryAttempts, report.ReportID, reportJob.ProjectID, sleep, report)
 			if err != nil {
 				logger.Debug().Err(err).Msg("failed report fetch retry")
 				done <- ReportConsumeOutput{Err: err, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
@@ -500,21 +433,16 @@ func consumeReports(client *SASTClient, worker int, reportJobs <-chan ReportJob,
 	}
 }
 
-func fetchReportData(client *SASTClient, reportID, projectID int) error {
+func fetchReportData(client *SASTClient, exporter *Export, reportID, projectID int) error {
 	finalResultOut, errGetResult := client.GetReportResult(reportID)
 	if errGetResult != nil {
 		return errGetResult
 	}
 
-	exportData = append(exportData, ExportData{
-		FileName: fmt.Sprintf(scansFileName, projectID),
-		Data:     finalResultOut,
-	})
-
-	return nil
+	return exporter.AddFile(fmt.Sprintf(scansFileName, projectID), finalResultOut)
 }
 
-func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, sleep time.Duration, response ReportResponse) error {
+func retryGetReport(client *SASTClient, exporter *Export, totalAttempts, reportID, projectID int, sleep time.Duration, response ReportResponse) error { //nolint:lll
 	state := true
 	attempt := 2
 	var status *StatusResponse
@@ -536,10 +464,10 @@ func retryGetReport(client *SASTClient, totalAttempts, reportID, projectID int, 
 
 		state = status.Status.Value != createdStatus
 
-		// Code to repeatedly execute until we have create status
+		// Code to repeatedly execute until we have created status
 		if status.Status.Value == createdStatus {
 			state = false
-			errReportData := fetchReportData(client, reportID, projectID)
+			errReportData := fetchReportData(client, exporter, reportID, projectID)
 			if errReportData != nil {
 				return errReportData
 			}
