@@ -25,7 +25,7 @@ const (
 	reportType    = "XML"
 	scansFileName = "%d.xml"
 
-	triagedScansPageLimit = 1000
+	triagedScansPageLimit = 10000
 
 	httpRetryWaitMin = 1 * time.Second
 	httpRetryWaitMax = 30 * time.Second
@@ -175,7 +175,6 @@ func fetchSelectedData(client *SASTClient, exporter *Export, args *Args) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
-			log.Info().Msgf("collecting %s", exportOption)
 			switch exportOption {
 			case export.UsersOption:
 				if err := fetchUsersData(client, exporter); err != nil {
@@ -196,6 +195,7 @@ func fetchSelectedData(client *SASTClient, exporter *Export, args *Args) error {
 }
 
 func fetchUsersData(client *SASTClient, exporter *Export) error {
+	log.Info().Msg("collecting users")
 	if err := exporter.AddFileWithDataSource(UsersFileName, client.GetUsers); err != nil {
 		return err
 	}
@@ -222,6 +222,7 @@ func fetchUsersData(client *SASTClient, exporter *Export) error {
 }
 
 func fetchTeamsData(client *SASTClient, exporter *Export) error {
+	log.Info().Msg("collecting teams")
 	if err := exporter.AddFileWithDataSource(TeamsFileName, client.GetTeams); err != nil {
 		return err
 	}
@@ -264,6 +265,8 @@ func fetchResultsData(client *SASTClient, exporter *Export, resultsProjectActive
 			Int("limit", triagedScansLimit).
 			Msg("fetching triaged scans")
 
+		log.Info().Msg("searching for results...")
+
 		triagedScansResponse, errFetch := client.GetTriagedScansFromDate(fromDate, triagedScansOffset, triagedScansLimit)
 		if errFetch != nil {
 			log.Debug().Err(errFetch).Msg("failed fetching triaged scans")
@@ -303,6 +306,8 @@ func fetchResultsData(client *SASTClient, exporter *Export, resultsProjectActive
 		Int("count", len(lastTriagedScansByProject)).
 		Str("scans", fmt.Sprintf("%v", lastTriagedScansByProject)).
 		Msg("last scans by project")
+
+	log.Info().Msgf("%d results found", len(lastTriagedScansByProject))
 
 	// create and fetch report for each scan
 	go produceReports(reportJobs, lastTriagedScansByProject)
