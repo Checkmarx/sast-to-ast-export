@@ -24,7 +24,7 @@ const (
 	reportType    = "XML"
 	scansFileName = "%d.xml"
 
-	triagedScansPageLimit = 1000
+	triagedScansPageLimit = 10000
 
 	httpRetryWaitMin = 1 * time.Second
 	httpRetryWaitMax = 30 * time.Second
@@ -237,7 +237,6 @@ func fetchSelectedData(client *SASTClient, args *Args) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
-			log.Info().Msgf("collecting %s", exportOption)
 			switch exportOption {
 			case export.UsersOption:
 				if err := fetchUsersData(client); err != nil {
@@ -258,6 +257,7 @@ func fetchSelectedData(client *SASTClient, args *Args) error {
 }
 
 func fetchUsersData(c *SASTClient) error {
+	log.Info().Msg("collecting users")
 	var err error
 	usersData, err = c.GetUsers()
 	if err != nil {
@@ -287,6 +287,7 @@ func fetchUsersData(c *SASTClient) error {
 }
 
 func fetchTeamsData(client *SASTClient) error {
+	log.Info().Msg("collecting teams")
 	var err error
 	teamsData, err = client.GetTeams()
 	if err != nil {
@@ -331,6 +332,8 @@ func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err er
 			Int("limit", triagedScansLimit).
 			Msg("fetching triaged scans")
 
+		log.Info().Msg("searching for results...")
+
 		triagedScansResponse, errFetch := client.GetTriagedScansFromDate(fromDate, triagedScansOffset, triagedScansLimit)
 		if errFetch != nil {
 			log.Debug().Err(errFetch).Msg("failed fetching triaged scans")
@@ -370,6 +373,8 @@ func fetchResultsData(client *SASTClient, resultsProjectActiveSince int) (err er
 		Int("count", len(lastTriagedScansByProject)).
 		Str("scans", fmt.Sprintf("%v", lastTriagedScansByProject)).
 		Msg("last scans by project")
+
+	log.Info().Msgf("%d results found", len(lastTriagedScansByProject))
 
 	// create and fetch report for each scan
 	go produceReports(reportJobs, lastTriagedScansByProject)
