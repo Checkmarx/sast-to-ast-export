@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	userArg                      = "user"
-	passArg                      = "pass"
-	urlArg                       = "url"
-	exportArg                    = "export"
-	resultsProjectActiveSinceArg = "results-project-active-since"
-	debugArg                     = "debug"
-	verboseArg                   = "verbose"
+	userArg                = "user"
+	passArg                = "pass"
+	urlArg                 = "url"
+	exportArg              = "export"
+	projectsActiveSinceArg = "projects-active-since"
+	debugArg               = "debug"
+	verboseArg             = "verbose"
 
-	resultsProjectActiveSinceDefaultValue = 180
+	projectsActiveSinceDefaultValue = 180
 )
 
 // productName is defined in Makefile and initialized during build
@@ -54,7 +54,11 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 		if err != nil {
 			panic(err)
 		}
-		defer logFileWriter.Close()
+		defer func() {
+			if closeErr := logFileWriter.Close(); closeErr != nil {
+				log.Debug().Err(closeErr).Msg("closing log file writer")
+			}
+		}()
 
 		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, aol.GetNewConsoleWriter(), logFileWriter)
 
@@ -90,13 +94,13 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	resultsProjectActiveSinceUsage := "include only results from projects active in the last N days"
+	projectsActiveSinceUsage := "include only results from projects active in the last N days"
 
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
-	rootCmd.Flags().IntP(resultsProjectActiveSinceArg, "", resultsProjectActiveSinceDefaultValue, resultsProjectActiveSinceUsage)
+	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
 
@@ -109,7 +113,7 @@ func init() {
 	if err := rootCmd.MarkFlagRequired(urlArg); err != nil {
 		panic(err)
 	}
-	if err := rootCmd.MarkFlagCustom(resultsProjectActiveSinceArg, resultsProjectActiveSinceUsage); err != nil {
+	if err := rootCmd.MarkFlagCustom(projectsActiveSinceArg, projectsActiveSinceUsage); err != nil {
 		panic(err)
 	}
 }

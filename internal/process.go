@@ -44,7 +44,7 @@ func RunExport(args *Args) {
 	log.Debug().
 		Str("url", args.URL).
 		Str("export", fmt.Sprintf("%v", args.Export)).
-		Int("resultsProjectActiveSince", args.ResultsProjectActiveSince).
+		Int("projectsActiveSince", args.ProjectsActiveSince).
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
@@ -185,7 +185,7 @@ func fetchSelectedData(client *SASTClient, exporter *Export, args *Args) error {
 					return err
 				}
 			case export.ResultsOption:
-				if err := fetchResultsData(client, exporter, args.ResultsProjectActiveSince); err != nil {
+				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince); err != nil {
 					return err
 				}
 			}

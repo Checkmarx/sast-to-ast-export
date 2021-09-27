@@ -10,9 +10,9 @@ type Args struct {
 	Password,
 	OutputPath,
 	ProductName string
-	Export                    []string
-	ResultsProjectActiveSince int
-	Debug                     bool
+	Export              []string
+	ProjectsActiveSince int
+	Debug               bool
 }
 
 type AccessToken struct {
