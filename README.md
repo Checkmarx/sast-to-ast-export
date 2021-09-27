@@ -13,19 +13,16 @@ add --debug parameter to bypass the zip and encryption process.
 # How to build
 
 1. Make sure you have access to AWS KMS
-2. Fetch KMS public key
-3. Build
+2. Set KMS key id environment variable
+3. Make public key file
+4. Build
 
-Having configured AWS CLI access, you can fetch the public key using the following command:
+Example for dev environment:
 ```
-aws kms get-public-key --key-id "cb3052be-1e3a-4a9c-b3f0-84d963c53a06" | jq -r .PublicKey > public.key
+$env:SAST_EXPORT_KMS_KEY_ID="cb3052be-1e3a-4a9c-b3f0-84d963c53a06"
+make public_key
+make build
 ```
-
-Note: 
- * the key id in this example is for development environment
- * this command depends on having jq command (https://stedolan.github.io/jq/) installed
- 
-Then you can build with: `make build`
 
 # How to run repo
 
