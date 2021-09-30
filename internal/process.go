@@ -330,7 +330,7 @@ func getTriagedScans(client *SASTClient, fromDate string) ([]TriagedScan, error)
 					Int("projectID", project.ID).
 					Int("scanID", project.LastScanID).
 					Msg("failed fetching triaged results")
-				continue
+				return output, triagedResultsErr
 			}
 			if len(*triagedResults) > 0 {
 				output = append(output, TriagedScan{project.ID, project.LastScanID})
