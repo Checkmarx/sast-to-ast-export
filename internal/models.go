@@ -101,3 +101,21 @@ type TriagedScan struct {
 	ProjectID int
 	ScanID    int
 }
+
+type ODataProjectsWithLastScanID struct {
+	OdataContext string                  `json:"@odata.context"`
+	Value        []ProjectWithLastScanID `json:"value"`
+}
+
+type ProjectWithLastScanID struct {
+	ID         int `json:"Id"`
+	LastScanID int `json:"LastScanId"`
+}
+
+type ODataTriagedResultsByScan struct {
+	Value []TriagedScanResult
+}
+
+type TriagedScanResult struct {
+	ID int `json:"Id"`
+}
