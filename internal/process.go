@@ -23,6 +23,10 @@ const (
 	httpRetryWaitMin = 1 * time.Second
 	httpRetryWaitMax = 30 * time.Second
 	httpRetryMax     = 4
+
+	scanReportCreateAttempts = 10
+	scanReportCreateMinSleep = 1 * time.Second
+	scanReportCreateMaxSleep = 5 * time.Minute
 )
 
 type ReportConsumeOutput struct {
@@ -352,17 +356,34 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 
 func consumeReports(client *SASTClient, exporter *Export, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
 	for reportJob := range reportJobs {
-		report, reportErr := client.GetScanReport(reportJob.ScanID, reportJob.ReportType)
-		if reportErr != nil {
-			log.Debug().Err(reportErr).
+		// create scan report
+		var reportData []byte
+		var reportCreateErr error
+		for i := 1; i <= scanReportCreateAttempts; i++ {
+			reportData, reportCreateErr = client.CreateScanReport(reportJob.ScanID, reportJob.ReportType)
+			if reportCreateErr != nil {
+				log.Debug().Err(reportCreateErr).
+					Int("ProjectID", reportJob.ProjectID).
+					Int("ScanID", reportJob.ScanID).
+					Int("worker", worker).
+					Int("attempt", i).
+					Msg("failed creating scan report")
+				time.Sleep(retryablehttp.DefaultBackoff(scanReportCreateMinSleep, scanReportCreateMaxSleep, i, nil))
+			} else {
+				break
+			}
+		}
+		if len(reportData) == 0 {
+			log.Debug().Err(reportCreateErr).
 				Int("ProjectID", reportJob.ProjectID).
 				Int("ScanID", reportJob.ScanID).
 				Int("worker", worker).
-				Msg("failed fetching report")
-			done <- ReportConsumeOutput{Err: reportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				Msgf("failed creating scan report after %d attempts", scanReportCreateAttempts)
+			done <- ReportConsumeOutput{Err: reportCreateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
-		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), report)
+		// export scan report
+		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), reportData)
 		if exportErr != nil {
 			log.Debug().Err(exportErr).
 				Int("ProjectID", reportJob.ProjectID).

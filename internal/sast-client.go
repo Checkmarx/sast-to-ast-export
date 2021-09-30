@@ -285,7 +285,7 @@ func (c *SASTClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult
 	return &response.Value, nil
 }
 
-func (c *SASTClient) GetScanReport(scanID int, reportType string) ([]byte, error) {
+func (c *SASTClient) CreateScanReport(scanID int, reportType string) ([]byte, error) {
 	minSleep := 1 * time.Second
 	maxSleep := 5 * time.Minute
 	attempts := 10
