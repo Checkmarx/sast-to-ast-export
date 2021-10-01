@@ -83,7 +83,13 @@ func RunExport(args *Args) {
 	}
 
 	// validate permissions
-	permissionsValidateErr := validatePermissions(client, args.Export)
+	jwtClaims := jwt.MapClaims{}
+	_, _, jwtErr := new(jwt.Parser).ParseUnverified(client.Token.AccessToken, jwtClaims)
+	if jwtErr != nil {
+		log.Error().Err(jwtErr)
+		panic(fmt.Errorf("permissions error - could not parse token"))
+	}
+	permissionsValidateErr := validatePermissions(jwtClaims, args.Export)
 	if permissionsValidateErr != nil {
 		panic(fmt.Errorf("permissions error - %s", permissionsValidateErr.Error()))
 	}
@@ -141,12 +147,7 @@ func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
 	return &exportFileName, exportErr
 }
 
-func validatePermissions(client *SASTClient, selectedExportOptions []string) error {
-	jwtClaims := jwt.MapClaims{}
-	_, _, jwtErr := new(jwt.Parser).ParseUnverified(client.Token.AccessToken, jwtClaims)
-	if jwtErr != nil {
-		return jwtErr
-	}
+func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string) error {
 	claimKeys := []string{"sast-permissions", "access-control-permissions"}
 	available, availableErr := permissions.GetFromJwtClaims(jwtClaims, claimKeys)
 	if availableErr != nil {
