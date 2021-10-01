@@ -33,7 +33,7 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
-	args.ResultsProjectActiveSince, err = cmd.Flags().GetInt(resultsProjectActiveSinceArg)
+	args.ProjectsActiveSince, err = cmd.Flags().GetInt(projectsActiveSinceArg)
 	if err != nil {
 		panic(err)
 	}

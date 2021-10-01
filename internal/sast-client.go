@@ -1,11 +1,13 @@
 package internal
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
@@ -16,17 +18,17 @@ const (
 	TeamsEndpoint = "/CxRestAPI/auth/Teams"
 	RolesEndpoint = "/CxRestAPI/auth/Roles"
 
-	LdapServersEndpoint            = "/CxRestAPI/auth/LDAPServers"
-	LdapRoleMappingsEndpoint       = "/CxRestAPI/auth/LDAPRoleMappings"
-	LdapTeamMappingsEndpoint       = "/CxRestAPI/auth/LDAPTeamMappings"
-	SamlIdentityProvidersEndpoint  = "/CxRestAPI/auth/SamlIdentityProviders"
-	SamlRoleMappingsEndpoint       = "/CxRestAPI/auth/SamlRoleMappings"
-	TeamMappingsEndpoint           = "/CxRestAPI/auth/SamlTeamMappings"
-	ReportsLastTriagedScanEndpoint = "/CxWebInterface/odata/v1/Results?$select=Id,ScanId,Date,Scan&$expand=Scan($select=ProjectId)&$filter="
-	ReportsCheckStatusEndpoint     = "/CxRestAPI/help/reports/sastScan/%d/status"
-	ReportsResultEndpoint          = "/CxRestAPI/help/reports/sastScan/%d"
-	CreateReportIDEndpoint         = "/CxRestAPI/help/reports/sastScan"
-	LastTriagedFilters             = "Date gt %s and Comment ne null"
+	LdapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
+	LdapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
+	LdapTeamMappingsEndpoint      = "/CxRestAPI/auth/LDAPTeamMappings"
+	SamlIdentityProvidersEndpoint = "/CxRestAPI/auth/SamlIdentityProviders"
+	SamlRoleMappingsEndpoint      = "/CxRestAPI/auth/SamlRoleMappings"
+	TeamMappingsEndpoint          = "/CxRestAPI/auth/SamlTeamMappings"
+	ReportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
+	ReportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
+	CreateReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
+
+	ScanReportTypeXML = "XML"
 )
 
 type RetryableHTTPAdapter interface {
@@ -124,7 +126,10 @@ func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
+	return c.GetResponseBodyFromRequest(req)
+}
 
+func (c *SASTClient) GetResponseBodyFromRequest(req *retryablehttp.Request) ([]byte, error) {
 	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
 		return []byte{}, err
@@ -172,7 +177,7 @@ func (c *SASTClient) doRequest(req *retryablehttp.Request, expectStatusCode int)
 }
 
 func (c *SASTClient) GetReportStatusResponse(report ReportResponse) (*StatusResponse, error) {
-	statusUnm, errGetStatus := c.GetReportIDStatus(report.ReportID)
+	statusUnm, errGetStatus := c.getReportIDStatus(report.ReportID)
 	if errGetStatus != nil {
 		return &StatusResponse{}, errGetStatus
 	}
@@ -222,21 +227,108 @@ func (c *SASTClient) GetSamlTeamMappings() ([]byte, error) {
 	return c.GetResponseBody(TeamMappingsEndpoint)
 }
 
-func (c *SASTClient) GetTriagedScansFromDate(fromDate string, offset, limit int) ([]byte, error) {
-	url := ReportsLastTriagedScanEndpoint
-	url += GetEncodingURL(LastTriagedFilters, fromDate)
-	url += fmt.Sprintf("&$skip=%d&$top=%d", offset, limit)
-	return c.GetResponseBody(url)
-}
-
-func (c *SASTClient) GetReportIDStatus(reportID int) ([]byte, error) {
+func (c *SASTClient) getReportIDStatus(reportID int) ([]byte, error) {
 	return c.GetResponseBody(fmt.Sprintf(ReportsCheckStatusEndpoint, reportID))
 }
 
-func (c *SASTClient) GetReportResult(reportID int) ([]byte, error) {
+func (c *SASTClient) getReportResult(reportID int) ([]byte, error) {
 	return c.GetResponseBody(fmt.Sprintf(ReportsResultEndpoint, reportID))
 }
 
-func (c *SASTClient) PostReportID(body io.Reader) ([]byte, error) {
+func (c *SASTClient) postReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(CreateReportIDEndpoint, body)
+}
+
+func (c *SASTClient) GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error) {
+	url := fmt.Sprintf("%s/Cxwebinterface/odata/v1/Projects", c.BaseURL)
+	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
+	if requestErr != nil {
+		return nil, requestErr
+	}
+	q := req.URL.Query()
+	q.Add("$select", "Id,LastScanId")
+	q.Add("$expand", "LastScan($select=Id)")
+	q.Add("$filter", fmt.Sprintf("LastScan/ScanCompletedOn gt %s", fromDate))
+	q.Add("$skip", fmt.Sprintf("%d", offset))
+	q.Add("$top", fmt.Sprintf("%d", limit))
+	req.URL.RawQuery = q.Encode()
+	body, getErr := c.GetResponseBodyFromRequest(req)
+	if getErr != nil {
+		return nil, getErr
+	}
+	var response ODataProjectsWithLastScanID
+	unmarshalErr := json.Unmarshal(body, &response)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return &response.Value, nil
+}
+
+func (c *SASTClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error) {
+	url := fmt.Sprintf("%s/Cxwebinterface/odata/v1/Scans(%d)/Results", c.BaseURL, scanID)
+	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
+	if requestErr != nil {
+		return nil, requestErr
+	}
+	q := req.URL.Query()
+	q.Add("$filter", "Comment ne null")
+	req.URL.RawQuery = q.Encode()
+	body, getErr := c.GetResponseBodyFromRequest(req)
+	if getErr != nil {
+		return nil, getErr
+	}
+	var response ODataTriagedResultsByScan
+	unmarshalErr := json.Unmarshal(body, &response)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return &response.Value, nil
+}
+
+func (c *SASTClient) CreateScanReport(scanID int, reportType string) ([]byte, error) {
+	minSleep := 1 * time.Second
+	maxSleep := 5 * time.Minute
+	attempts := 10
+	reportBody := &ReportRequest{
+		ReportType: reportType,
+		ScanID:     scanID,
+	}
+	reportJSON, marshalErr := json.Marshal(reportBody)
+	if marshalErr != nil {
+		return []byte{}, marshalErr
+	}
+	body := bytes.NewBuffer(reportJSON)
+	log.Debug().
+		Int("scanID", scanID).
+		Str("type", reportType).
+		Msg("creating report")
+	postResponse, createErr := c.postReportID(body)
+	if createErr != nil {
+		return []byte{}, createErr
+	}
+	var reportCreateResponse ReportResponse
+	unmarshalErr := json.Unmarshal(postResponse, &reportCreateResponse)
+	if unmarshalErr != nil {
+		return []byte{}, unmarshalErr
+	}
+	for i := 1; i <= attempts; i++ {
+		time.Sleep(retryablehttp.DefaultBackoff(minSleep, maxSleep, i, nil))
+		log.Debug().
+			Int("attempt", i).
+			Int("scanID", scanID).
+			Str("type", reportType).
+			Msg("getting report")
+		status, statusFetchErr := c.GetReportStatusResponse(reportCreateResponse)
+		if statusFetchErr != nil {
+			return []byte{}, statusFetchErr
+		}
+		if status.Status.Value == "Created" {
+			reportData, getReportErr := c.getReportResult(reportCreateResponse.ReportID)
+			if getReportErr != nil {
+				return []byte{}, getReportErr
+			}
+			return reportData, nil
+		}
+	}
+	return []byte{}, fmt.Errorf("failed getting report after %d attempts", attempts)
 }

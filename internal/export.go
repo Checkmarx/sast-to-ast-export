@@ -9,6 +9,8 @@ import (
 	"os"
 	"path"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -53,13 +55,27 @@ func (e *Export) AddFile(fileName string, data []byte) error {
 	return ioutil.WriteFile(filePath, data, FilePerm)
 }
 
+// AddFileWithDataSource creates the specified file with content provided by dataSource
+func (e *Export) AddFileWithDataSource(fileName string, dataSource func() ([]byte, error)) error {
+	content, err := dataSource()
+	if err != nil {
+		return err
+	}
+	return e.AddFile(fileName, content)
+}
+
 // CreateExportPackage compresses and encrypts all files added so far
+//nolint:funlen
 func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) {
 	tmpZipFile, err := ioutil.TempFile(e.TmpDir, fmt.Sprintf("%s.*.zip", prefix))
 	if err != nil {
 		return "", err
 	}
-	defer tmpZipFile.Close()
+	defer func() {
+		if closeErr := tmpZipFile.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("closing tmp zip file")
+		}
+	}()
 
 	initialPath, getwdErr := os.Getwd()
 	if getwdErr != nil {
@@ -69,7 +85,11 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	if chdirErr := os.Chdir(e.TmpDir); chdirErr != nil {
 		return "", chdirErr
 	}
-	defer os.Chdir(initialPath)
+	defer func() {
+		if chdirErr := os.Chdir(initialPath); chdirErr != nil {
+			log.Debug().Err(chdirErr).Msg("changing back to initial path")
+		}
+	}()
 
 	zipErr := CreateZipFile(tmpZipFile, e.FileList)
 	if zipErr != nil {
@@ -122,7 +142,11 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	if ioErr != nil {
 		return "", ioErr
 	}
-	defer exportFile.Close()
+	defer func() {
+		if closeErr := exportFile.Close(); closeErr != nil {
+			log.Debug().Err(closeErr).Msg("closing export file")
+		}
+	}()
 
 	exportErr := CreateZipFile(exportFile, []string{EncryptedKeyFileName, EncryptedZipFileName})
 	return exportFileName, exportErr
