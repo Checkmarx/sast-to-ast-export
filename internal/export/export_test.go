@@ -1,4 +1,4 @@
-package internal
+package export
 
 import (
 	"archive/zip"
@@ -16,7 +16,10 @@ func TestCreateExport(t *testing.T) {
 	prefix := "cxsast-create-export"
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
-	defer export.Clean()
+	defer func() {
+		closeErr := export.Clean()
+		assert.NoError(t, closeErr)
+	}()
 
 	info, statErr := os.Stat(export.TmpDir)
 	assert.NoError(t, statErr)
@@ -28,7 +31,10 @@ func TestExport_AddFile(t *testing.T) {
 	prefix := "cxsast-add-file"
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
-	defer export.Clean()
+	defer func() {
+		closeErr := export.Clean()
+		assert.NoError(t, closeErr)
+	}()
 
 	addErr := export.AddFile("test1.txt", []byte("this is test1"))
 	assert.NoError(t, addErr)

@@ -1,4 +1,4 @@
-package internal
+package sast
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func TestNewSASTClient(t *testing.T) {
 	assert.Equal(t, adapter, client.Adapter)
 }
 
-func TestSASTClient_Authenticate(t *testing.T) {
+func TestAPIClient_Authenticate(t *testing.T) {
 	t.Run("authenticates successfully", func(t *testing.T) {
 		responseJSON := `{"access_token":"jwt", "token_type":"Bearer", "expires_in": 1234}`
 		response := makeOkResponse(responseJSON)
@@ -76,7 +76,7 @@ func TestSASTClient_Authenticate(t *testing.T) {
 	})
 }
 
-func TestSASTClient_doRequest(t *testing.T) {
+func TestAPIClient_doRequest(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 
 	t.Run("returns successful response", func(t *testing.T) {
@@ -89,14 +89,14 @@ func TestSASTClient_doRequest(t *testing.T) {
 		client.Token = mockToken
 
 		result, err := client.doRequest(request, expectedStatusCode)
+		defer func() {
+			closeErr := result.Body.Close()
+			assert.NoError(t, closeErr)
+		}()
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, result.StatusCode, expectedStatusCode)
 
-		defer func() {
-			err := result.Body.Close()
-			assert.NoError(t, err)
-		}()
 		content, ioErr := ioutil.ReadAll(result.Body)
 		assert.NoError(t, ioErr)
 		assert.Equal(t, responseJSON, string(content))
@@ -111,13 +111,17 @@ func TestSASTClient_doRequest(t *testing.T) {
 		client.Token = mockToken
 
 		result, err := client.doRequest(request, expectedStatusCode)
+		defer func() {
+			closeErr := result.Body.Close()
+			assert.NoError(t, closeErr)
+		}()
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, result.StatusCode, expectedStatusCode)
 	})
 }
 
-func TestSASTClient_GetUsersResponseBody(t *testing.T) {
+func TestAPIClient_GetUsersResponseBody(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 
 	t.Run("returns users response", func(t *testing.T) {
@@ -149,7 +153,7 @@ func TestSASTClient_GetUsersResponseBody(t *testing.T) {
 	})
 }
 
-func TestSASTClient_GetTeamsResponseBody(t *testing.T) {
+func TestAPIClient_GetTeamsResponseBody(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 
 	t.Run("returns teams response", func(t *testing.T) {

@@ -1,4 +1,4 @@
-package internal
+package sast
 
 import (
 	"bytes"
@@ -31,30 +31,48 @@ const (
 	ScanReportTypeXML = "XML"
 )
 
+type Client interface {
+	Authenticate(username, password string) error
+	GetResponseBody(endpoint string) ([]byte, error)
+	PostResponseBody(endpoint string, body io.Reader) ([]byte, error)
+	GetUsers() ([]byte, error)
+	GetRoles() ([]byte, error)
+	GetTeams() ([]byte, error)
+	GetLdapServers() ([]byte, error)
+	GetLdapRoleMappings() ([]byte, error)
+	GetLdapTeamMappings() ([]byte, error)
+	GetSamlIdentityProviders() ([]byte, error)
+	GetSamlRoleMappings() ([]byte, error)
+	GetSamlTeamMappings() ([]byte, error)
+	GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error)
+	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
+	CreateScanReport(scanID int, reportType string) ([]byte, error)
+}
+
 type RetryableHTTPAdapter interface {
 	Do(req *retryablehttp.Request) (*http.Response, error)
 }
 
-type SASTClient struct {
+type APIClient struct {
 	BaseURL string
 	Adapter RetryableHTTPAdapter
 	Token   *AccessToken
 }
 
-type SASTError struct {
+type APIError struct {
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
 }
 
-func NewSASTClient(baseURL string, adapter RetryableHTTPAdapter) (*SASTClient, error) {
-	client := SASTClient{
+func NewSASTClient(baseURL string, adapter RetryableHTTPAdapter) (*APIClient, error) {
+	client := APIClient{
 		BaseURL: baseURL,
 		Adapter: adapter,
 	}
 	return &client, nil
 }
 
-func (c *SASTClient) Authenticate(username, password string) error {
+func (c *APIClient) Authenticate(username, password string) error {
 	req, err := CreateAccessTokenRequest(c.BaseURL, username, password)
 	if err != nil {
 		return err
@@ -103,7 +121,7 @@ func (c *SASTClient) Authenticate(username, password string) error {
 			logger.Debug().Err(ioErr).Msg("authenticate bad request failed to read response")
 			return fmt.Errorf("authentication error - could not read response")
 		}
-		var response SASTError
+		var response APIError
 		unmarshalErr := json.Unmarshal(responseBody, &response)
 		if unmarshalErr != nil {
 			logger.Debug().
@@ -121,15 +139,15 @@ func (c *SASTClient) Authenticate(username, password string) error {
 	return fmt.Errorf("authentication error - please try again later or contact support")
 }
 
-func (c *SASTClient) GetResponseBody(endpoint string) ([]byte, error) {
+func (c *APIClient) GetResponseBody(endpoint string) ([]byte, error) {
 	req, err := CreateRequest(http.MethodGet, c.BaseURL+endpoint, nil, c.Token)
 	if err != nil {
 		return []byte{}, err
 	}
-	return c.GetResponseBodyFromRequest(req)
+	return c.getResponseBodyFromRequest(req)
 }
 
-func (c *SASTClient) GetResponseBodyFromRequest(req *retryablehttp.Request) ([]byte, error) {
+func (c *APIClient) getResponseBodyFromRequest(req *retryablehttp.Request) ([]byte, error) {
 	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
 		return []byte{}, err
@@ -142,7 +160,7 @@ func (c *SASTClient) GetResponseBodyFromRequest(req *retryablehttp.Request) ([]b
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, error) {
+func (c *APIClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, error) {
 	req, err := CreateRequest(http.MethodPost, c.BaseURL+endpoint, body, c.Token)
 	if err != nil {
 		return []byte{}, err
@@ -160,7 +178,7 @@ func (c *SASTClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, 
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (c *SASTClient) doRequest(req *retryablehttp.Request, expectStatusCode int) (*http.Response, error) {
+func (c *APIClient) doRequest(req *retryablehttp.Request, expectStatusCode int) (*http.Response, error) {
 	resp, err := c.Adapter.Do(req)
 	if err != nil {
 		return nil, err
@@ -176,7 +194,7 @@ func (c *SASTClient) doRequest(req *retryablehttp.Request, expectStatusCode int)
 	return resp, nil
 }
 
-func (c *SASTClient) GetReportStatusResponse(report ReportResponse) (*StatusResponse, error) {
+func (c *APIClient) getReportStatusResponse(report ReportResponse) (*StatusResponse, error) {
 	statusUnm, errGetStatus := c.getReportIDStatus(report.ReportID)
 	if errGetStatus != nil {
 		return &StatusResponse{}, errGetStatus
@@ -191,55 +209,55 @@ func (c *SASTClient) GetReportStatusResponse(report ReportResponse) (*StatusResp
 	return &status, nil
 }
 
-func (c *SASTClient) GetUsers() ([]byte, error) {
+func (c *APIClient) GetUsers() ([]byte, error) {
 	return c.GetResponseBody(UsersEndpoint)
 }
 
-func (c *SASTClient) GetRoles() ([]byte, error) {
+func (c *APIClient) GetRoles() ([]byte, error) {
 	return c.GetResponseBody(RolesEndpoint)
 }
 
-func (c *SASTClient) GetTeams() ([]byte, error) {
+func (c *APIClient) GetTeams() ([]byte, error) {
 	return c.GetResponseBody(TeamsEndpoint)
 }
 
-func (c *SASTClient) GetLdapServers() ([]byte, error) {
+func (c *APIClient) GetLdapServers() ([]byte, error) {
 	return c.GetResponseBody(LdapServersEndpoint)
 }
 
-func (c *SASTClient) GetLdapRoleMappings() ([]byte, error) {
+func (c *APIClient) GetLdapRoleMappings() ([]byte, error) {
 	return c.GetResponseBody(LdapRoleMappingsEndpoint)
 }
 
-func (c *SASTClient) GetLdapTeamMappings() ([]byte, error) {
+func (c *APIClient) GetLdapTeamMappings() ([]byte, error) {
 	return c.GetResponseBody(LdapTeamMappingsEndpoint)
 }
 
-func (c *SASTClient) GetSamlIdentityProviders() ([]byte, error) {
+func (c *APIClient) GetSamlIdentityProviders() ([]byte, error) {
 	return c.GetResponseBody(SamlIdentityProvidersEndpoint)
 }
 
-func (c *SASTClient) GetSamlRoleMappings() ([]byte, error) {
+func (c *APIClient) GetSamlRoleMappings() ([]byte, error) {
 	return c.GetResponseBody(SamlRoleMappingsEndpoint)
 }
 
-func (c *SASTClient) GetSamlTeamMappings() ([]byte, error) {
+func (c *APIClient) GetSamlTeamMappings() ([]byte, error) {
 	return c.GetResponseBody(TeamMappingsEndpoint)
 }
 
-func (c *SASTClient) getReportIDStatus(reportID int) ([]byte, error) {
+func (c *APIClient) getReportIDStatus(reportID int) ([]byte, error) {
 	return c.GetResponseBody(fmt.Sprintf(ReportsCheckStatusEndpoint, reportID))
 }
 
-func (c *SASTClient) getReportResult(reportID int) ([]byte, error) {
+func (c *APIClient) getReportResult(reportID int) ([]byte, error) {
 	return c.GetResponseBody(fmt.Sprintf(ReportsResultEndpoint, reportID))
 }
 
-func (c *SASTClient) postReportID(body io.Reader) ([]byte, error) {
+func (c *APIClient) postReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(CreateReportIDEndpoint, body)
 }
 
-func (c *SASTClient) GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error) {
+func (c *APIClient) GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error) {
 	url := fmt.Sprintf("%s/Cxwebinterface/odata/v1/Projects", c.BaseURL)
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
 	if requestErr != nil {
@@ -252,7 +270,7 @@ func (c *SASTClient) GetProjectsWithLastScanID(fromDate string, offset, limit in
 	q.Add("$skip", fmt.Sprintf("%d", offset))
 	q.Add("$top", fmt.Sprintf("%d", limit))
 	req.URL.RawQuery = q.Encode()
-	body, getErr := c.GetResponseBodyFromRequest(req)
+	body, getErr := c.getResponseBodyFromRequest(req)
 	if getErr != nil {
 		return nil, getErr
 	}
@@ -264,7 +282,7 @@ func (c *SASTClient) GetProjectsWithLastScanID(fromDate string, offset, limit in
 	return &response.Value, nil
 }
 
-func (c *SASTClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error) {
+func (c *APIClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error) {
 	url := fmt.Sprintf("%s/Cxwebinterface/odata/v1/Scans(%d)/Results", c.BaseURL, scanID)
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
 	if requestErr != nil {
@@ -273,7 +291,7 @@ func (c *SASTClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult
 	q := req.URL.Query()
 	q.Add("$filter", "Comment ne null")
 	req.URL.RawQuery = q.Encode()
-	body, getErr := c.GetResponseBodyFromRequest(req)
+	body, getErr := c.getResponseBodyFromRequest(req)
 	if getErr != nil {
 		return nil, getErr
 	}
@@ -285,7 +303,7 @@ func (c *SASTClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult
 	return &response.Value, nil
 }
 
-func (c *SASTClient) CreateScanReport(scanID int, reportType string) ([]byte, error) {
+func (c *APIClient) CreateScanReport(scanID int, reportType string) ([]byte, error) {
 	minSleep := 1 * time.Second
 	maxSleep := 5 * time.Minute
 	attempts := 10
@@ -318,7 +336,7 @@ func (c *SASTClient) CreateScanReport(scanID int, reportType string) ([]byte, er
 			Int("scanID", scanID).
 			Str("type", reportType).
 			Msg("getting report")
-		status, statusFetchErr := c.GetReportStatusResponse(reportCreateResponse)
+		status, statusFetchErr := c.getReportStatusResponse(reportCreateResponse)
 		if statusFetchErr != nil {
 			return []byte{}, statusFetchErr
 		}

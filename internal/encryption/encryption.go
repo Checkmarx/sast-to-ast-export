@@ -1,4 +1,4 @@
-package internal
+package encryption
 
 import (
 	"crypto/aes"
@@ -11,8 +11,8 @@ import (
 	"io"
 )
 
-// buildTimeRSAPublicKey is a base64-encoded RSA public key initialized during build
-var buildTimeRSAPublicKey string
+// BuildTimeRSAPublicKey is a base64-encoded RSA public key initialized during build
+var BuildTimeRSAPublicKey string
 
 // CreatePublicKeyFromKeyBytes creates an RSA PublicKey structure from public key bytes
 func CreatePublicKeyFromKeyBytes(keyBytes []byte) (*rsa.PublicKey, error) {

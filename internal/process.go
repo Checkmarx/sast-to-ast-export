@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	"net/http"
 	"os"
 	"os/exec"
@@ -47,7 +48,7 @@ func RunExport(args *Args) {
 		Msg("starting export")
 
 	// create api client
-	client, err := NewSASTClient(args.URL, &retryablehttp.Client{
+	client, err := sast.NewSASTClient(args.URL, &retryablehttp.Client{
 		HTTPClient:   cleanhttp.DefaultPooledClient(),
 		Logger:       nil,
 		RetryWaitMin: httpRetryWaitMin,
@@ -96,14 +97,14 @@ func RunExport(args *Args) {
 
 	// collect export data
 	log.Info().Msg("collecting data from SAST")
-	exportValues, exportCreateErr := CreateExport(args.ProductName)
+	exportValues, exportCreateErr := export.CreateExport(args.ProductName)
 	if exportCreateErr != nil {
 		log.Error().Err(exportCreateErr)
 		panic(exportCreateErr)
 	}
 
 	if !args.Debug {
-		defer func(exportValues *Export) {
+		defer func(exportValues export.Exporter) {
 			cleanErr := exportValues.Clean()
 			if cleanErr != nil {
 				log.Error().Err(cleanErr).Msg("error cleaning export temporary folder")
@@ -127,17 +128,18 @@ func RunExport(args *Args) {
 	log.Info().Msgf("export completed to %s", *exportFileName)
 }
 
-func ExportResultsToFile(args *Args, exportValues *Export) (*string, error) {
+func ExportResultsToFile(args *Args, exportValues export.Exporter) (*string, error) {
 	// create export package
+	tmpDir := exportValues.GetTmpDir()
 	if args.Debug {
 		if runtime.GOOS == "windows" {
-			cmdErr := exec.Command(`explorer`, exportValues.TmpDir).Run() //nolint:gosec
+			cmdErr := exec.Command(`explorer`, tmpDir).Run() //nolint:gosec
 			// ignore exit status 1, it was being returned even on success
 			if cmdErr != nil && cmdErr.Error() != "exit status 1" {
 				log.Debug().Err(cmdErr).Msg("could not open temporary folder")
 			}
 		}
-		return &exportValues.TmpDir, nil
+		return &tmpDir, nil
 	}
 
 	exportFileName, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
@@ -169,7 +171,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 	return nil
 }
 
-func fetchSelectedData(client *SASTClient, exporter *Export, args *Args) error {
+func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
@@ -192,58 +194,58 @@ func fetchSelectedData(client *SASTClient, exporter *Export, args *Args) error {
 	return nil
 }
 
-func fetchUsersData(client *SASTClient, exporter *Export) error {
+func fetchUsersData(client sast.Client, exporter export.Exporter) error {
 	log.Info().Msg("collecting users")
-	if err := exporter.AddFileWithDataSource(UsersFileName, client.GetUsers); err != nil {
+	if err := exporter.AddFileWithDataSource(export.UsersFileName, client.GetUsers); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(RolesFileName, client.GetRoles); err != nil {
+	if err := exporter.AddFileWithDataSource(export.RolesFileName, client.GetRoles); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(LdapRoleMappingsFileName, client.GetLdapRoleMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export.LdapRoleMappingsFileName, client.GetLdapRoleMappings); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(SamlRoleMappingsFileName, client.GetSamlRoleMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export.SamlRoleMappingsFileName, client.GetSamlRoleMappings); err != nil {
 		return err
 	}
-	if _, fileErr := os.Stat(LdapServersFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(LdapServersFileName, client.GetLdapServers); err != nil {
+	if _, fileErr := os.Stat(export.LdapServersFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export.LdapServersFileName, client.GetLdapServers); err != nil {
 			return err
 		}
 	}
-	if _, fileErr := os.Stat(SamlIdpFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
+	if _, fileErr := os.Stat(export.SamlIdpFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export.SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func fetchTeamsData(client *SASTClient, exporter *Export) error {
+func fetchTeamsData(client sast.Client, exporter export.Exporter) error {
 	log.Info().Msg("collecting teams")
-	if err := exporter.AddFileWithDataSource(TeamsFileName, client.GetTeams); err != nil {
+	if err := exporter.AddFileWithDataSource(export.TeamsFileName, client.GetTeams); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(LdapTeamMappingsFileName, client.GetLdapTeamMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export.LdapTeamMappingsFileName, client.GetLdapTeamMappings); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(SamlTeamMappingsFileName, client.GetSamlTeamMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export.SamlTeamMappingsFileName, client.GetSamlTeamMappings); err != nil {
 		return err
 	}
-	if _, fileErr := os.Stat(LdapServersFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(LdapServersFileName, client.GetLdapServers); err != nil {
+	if _, fileErr := os.Stat(export.LdapServersFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export.LdapServersFileName, client.GetLdapServers); err != nil {
 			return err
 		}
 	}
-	if _, fileErr := os.Stat(SamlIdpFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
+	if _, fileErr := os.Stat(export.SamlIdpFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export.SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func fetchResultsData(client *SASTClient, exporter *Export, resultsProjectActiveSince int) (err error) {
+func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProjectActiveSince int) (err error) {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
@@ -295,7 +297,7 @@ func fetchResultsData(client *SASTClient, exporter *Export, resultsProjectActive
 	return nil
 }
 
-func getTriagedScans(client *SASTClient, fromDate string) ([]TriagedScan, error) {
+func getTriagedScans(client sast.Client, fromDate string) ([]TriagedScan, error) {
 	var output []TriagedScan
 	projectOffset := 0
 	projectLimit := resultsPageLimit
@@ -349,13 +351,13 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 		reportJobs <- ReportJob{
 			ProjectID:  scan.ProjectID,
 			ScanID:     scan.ScanID,
-			ReportType: ScanReportTypeXML,
+			ReportType: sast.ScanReportTypeXML,
 		}
 	}
 	close(reportJobs)
 }
 
-func consumeReports(client *SASTClient, exporter *Export, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
+func consumeReports(client sast.Client, exporter export.Exporter, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
 	for reportJob := range reportJobs {
 		// create scan report
 		var reportData []byte

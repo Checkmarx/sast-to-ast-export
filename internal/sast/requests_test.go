@@ -1,17 +1,18 @@
-package internal
+package sast
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
-	tokenURL = "/CxRestAPI/auth/identity/connect/token"
+	tokenURL = "/CxRestAPI/auth/identity/connect/token" //nolint:gosec
 	username = "abcd"
 	password = "Cx1234"
 )
