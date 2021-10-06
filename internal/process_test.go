@@ -47,7 +47,7 @@ type writeUsersExpect struct {
 	SamlIdentityProviders writeUsersExpectProp
 }
 
-func fetchUsersSetupExpects(client *sast2.MockClient, expect fetchUsersExpect) {
+func fetchUsersSetupExpects(client *sast2.MockClient, expect *fetchUsersExpect) {
 	client.EXPECT().
 		GetUsers().
 		Return([]byte{}, expect.GetUsers.ReturnError).
@@ -80,7 +80,7 @@ func fetchUsersSetupExpects(client *sast2.MockClient, expect fetchUsersExpect) {
 		MaxTimes(expect.GetSamlIdentityProviders.RunCount)
 }
 
-func writeUsersSetupExpects(exporter *export2.MockExporter, expect writeUsersExpect) {
+func writeUsersSetupExpects(exporter *export2.MockExporter, expect *writeUsersExpect) {
 	exporter.EXPECT().
 		AddFileWithDataSource(export.UsersFileName, gomock.Any()).
 		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
@@ -195,12 +195,13 @@ func TestValidatePermissions(t *testing.T) {
 	}
 }
 
+//nolint:funlen
 func TestFetchUsersData(t *testing.T) {
 	t.Run("fails if fetch users fail", func(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to read users")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers: fetchUsersExpectProp{err, 1},
 		})
 		exporter.EXPECT().
@@ -220,10 +221,10 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to write users file")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers: fetchUsersExpectProp{nil, 1},
 		})
-		writeUsersSetupExpects(exporter, writeUsersExpect{
+		writeUsersSetupExpects(exporter, &writeUsersExpect{
 			Users: writeUsersExpectProp{err, 1},
 		})
 		result := fetchUsersData(client, exporter)
@@ -235,7 +236,7 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to read roles")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers: fetchUsersExpectProp{nil, 1},
 			GetRoles: fetchUsersExpectProp{err, 1},
 		})
@@ -256,11 +257,11 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to write roles file")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers: fetchUsersExpectProp{nil, 1},
 			GetRoles: fetchUsersExpectProp{nil, 1},
 		})
-		writeUsersSetupExpects(exporter, writeUsersExpect{
+		writeUsersSetupExpects(exporter, &writeUsersExpect{
 			Users: writeUsersExpectProp{nil, 1},
 			Roles: writeUsersExpectProp{err, 1},
 		})
@@ -273,7 +274,7 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to read LDAP role mappings")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:            fetchUsersExpectProp{nil, 1},
 			GetRoles:            fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings: fetchUsersExpectProp{err, 1},
@@ -295,12 +296,12 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to write LDAP role mappings file")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:            fetchUsersExpectProp{nil, 1},
 			GetRoles:            fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
 		})
-		writeUsersSetupExpects(exporter, writeUsersExpect{
+		writeUsersSetupExpects(exporter, &writeUsersExpect{
 			Users:            writeUsersExpectProp{nil, 1},
 			Roles:            writeUsersExpectProp{nil, 1},
 			LdapRoleMappings: writeUsersExpectProp{err, 1},
@@ -314,7 +315,7 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to read SAML role mappings")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:            fetchUsersExpectProp{nil, 1},
 			GetRoles:            fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
@@ -337,13 +338,13 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to write SAML role mappings file")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:            fetchUsersExpectProp{nil, 1},
 			GetRoles:            fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
 			GetSamlRoleMappings: fetchUsersExpectProp{nil, 1},
 		})
-		writeUsersSetupExpects(exporter, writeUsersExpect{
+		writeUsersSetupExpects(exporter, &writeUsersExpect{
 			Users:            writeUsersExpectProp{nil, 1},
 			Roles:            writeUsersExpectProp{nil, 1},
 			LdapRoleMappings: writeUsersExpectProp{nil, 1},
@@ -358,7 +359,7 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to read LDAP servers")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:            fetchUsersExpectProp{nil, 1},
 			GetRoles:            fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
@@ -382,14 +383,14 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to write LDAP servers file")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:            fetchUsersExpectProp{nil, 1},
 			GetRoles:            fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
 			GetSamlRoleMappings: fetchUsersExpectProp{nil, 1},
 			GetLdapServers:      fetchUsersExpectProp{nil, 1},
 		})
-		writeUsersSetupExpects(exporter, writeUsersExpect{
+		writeUsersSetupExpects(exporter, &writeUsersExpect{
 			Users:            writeUsersExpectProp{nil, 1},
 			Roles:            writeUsersExpectProp{nil, 1},
 			LdapRoleMappings: writeUsersExpectProp{nil, 1},
@@ -405,7 +406,7 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to read SAML servers")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:                 fetchUsersExpectProp{nil, 1},
 			GetRoles:                 fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings:      fetchUsersExpectProp{nil, 1},
@@ -430,7 +431,7 @@ func TestFetchUsersData(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
 		err := fmt.Errorf("failed to write SAML servers file")
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:                 fetchUsersExpectProp{nil, 1},
 			GetRoles:                 fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings:      fetchUsersExpectProp{nil, 1},
@@ -438,7 +439,7 @@ func TestFetchUsersData(t *testing.T) {
 			GetLdapServers:           fetchUsersExpectProp{nil, 1},
 			GetSamlIdentityProviders: fetchUsersExpectProp{nil, 1},
 		})
-		writeUsersSetupExpects(exporter, writeUsersExpect{
+		writeUsersSetupExpects(exporter, &writeUsersExpect{
 			Users:                 writeUsersExpectProp{nil, 1},
 			Roles:                 writeUsersExpectProp{nil, 1},
 			LdapRoleMappings:      writeUsersExpectProp{nil, 1},
@@ -454,7 +455,7 @@ func TestFetchUsersData(t *testing.T) {
 	t.Run("succeeds if all fetch and add file succeed", func(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
-		fetchUsersSetupExpects(client, fetchUsersExpect{
+		fetchUsersSetupExpects(client, &fetchUsersExpect{
 			GetUsers:                 fetchUsersExpectProp{nil, 1},
 			GetRoles:                 fetchUsersExpectProp{nil, 1},
 			GetLdapRoleMappings:      fetchUsersExpectProp{nil, 1},
