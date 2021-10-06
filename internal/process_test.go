@@ -2,10 +2,11 @@ package internal
 
 import (
 	"fmt"
+	"testing"
+
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/test/mocks/export"
 	sast2 "github.com/checkmarxDev/ast-sast-export/internal/test/mocks/sast"
 	"github.com/golang/mock/gomock"
-	"testing"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/golang-jwt/jwt"
@@ -19,68 +20,90 @@ type validatePermissionTest struct {
 	Message       string
 }
 
-type fetchUsersExpectProp struct {
+type mockExpectProps struct {
 	ReturnError error
 	RunCount    int
 }
 
-type fetchUsersExpect struct {
-	GetUsers                 fetchUsersExpectProp
-	GetRoles                 fetchUsersExpectProp
-	GetLdapRoleMappings      fetchUsersExpectProp
-	GetSamlRoleMappings      fetchUsersExpectProp
-	GetLdapServers           fetchUsersExpectProp
-	GetSamlIdentityProviders fetchUsersExpectProp
+type usersExpect struct {
+	Users            mockExpectProps
+	Roles            mockExpectProps
+	LdapRoleMappings mockExpectProps
+	SamlRoleMappings mockExpectProps
+	LdapServers      mockExpectProps
+	SamlServers      mockExpectProps
 }
 
-type writeUsersExpectProp struct {
-	ReturnError error
-	RunCount    int
+type teamsExpect struct {
+	Teams            mockExpectProps
+	LdapTeamMappings mockExpectProps
+	SamlTeamMappings mockExpectProps
+	LdapServers      mockExpectProps
+	SamlServers      mockExpectProps
 }
 
-type writeUsersExpect struct {
-	Users                 writeUsersExpectProp
-	Roles                 writeUsersExpectProp
-	LdapRoleMappings      writeUsersExpectProp
-	SamlRoleMappings      writeUsersExpectProp
-	LdapServers           writeUsersExpectProp
-	SamlIdentityProviders writeUsersExpectProp
-}
-
-func fetchUsersSetupExpects(client *sast2.MockClient, expect *fetchUsersExpect) {
+func fetchUsersSetupExpects(client *sast2.MockClient, expect *usersExpect) {
 	client.EXPECT().
 		GetUsers().
-		Return([]byte{}, expect.GetUsers.ReturnError).
-		MinTimes(expect.GetUsers.RunCount).
-		MaxTimes(expect.GetUsers.RunCount)
+		Return([]byte{}, expect.Users.ReturnError).
+		MinTimes(expect.Users.RunCount).
+		MaxTimes(expect.Users.RunCount)
 	client.EXPECT().
 		GetRoles().
-		Return([]byte{}, expect.GetRoles.ReturnError).
-		MinTimes(expect.GetRoles.RunCount).
-		MaxTimes(expect.GetRoles.RunCount)
+		Return([]byte{}, expect.Roles.ReturnError).
+		MinTimes(expect.Roles.RunCount).
+		MaxTimes(expect.Roles.RunCount)
 	client.EXPECT().
 		GetLdapRoleMappings().
-		Return([]byte{}, expect.GetLdapRoleMappings.ReturnError).
-		MinTimes(expect.GetLdapRoleMappings.RunCount).
-		MaxTimes(expect.GetLdapRoleMappings.RunCount)
+		Return([]byte{}, expect.LdapRoleMappings.ReturnError).
+		MinTimes(expect.LdapRoleMappings.RunCount).
+		MaxTimes(expect.LdapRoleMappings.RunCount)
 	client.EXPECT().
 		GetSamlRoleMappings().
-		Return([]byte{}, expect.GetSamlRoleMappings.ReturnError).
-		MinTimes(expect.GetSamlRoleMappings.RunCount).
-		MaxTimes(expect.GetSamlRoleMappings.RunCount)
+		Return([]byte{}, expect.SamlRoleMappings.ReturnError).
+		MinTimes(expect.SamlRoleMappings.RunCount).
+		MaxTimes(expect.SamlRoleMappings.RunCount)
 	client.EXPECT().
 		GetLdapServers().
-		Return([]byte{}, expect.GetLdapServers.ReturnError).
-		MinTimes(expect.GetLdapServers.RunCount).
-		MaxTimes(expect.GetLdapServers.RunCount)
+		Return([]byte{}, expect.LdapServers.ReturnError).
+		MinTimes(expect.LdapServers.RunCount).
+		MaxTimes(expect.LdapServers.RunCount)
 	client.EXPECT().
 		GetSamlIdentityProviders().
-		Return([]byte{}, expect.GetSamlIdentityProviders.ReturnError).
-		MinTimes(expect.GetSamlIdentityProviders.RunCount).
-		MaxTimes(expect.GetSamlIdentityProviders.RunCount)
+		Return([]byte{}, expect.SamlServers.ReturnError).
+		MinTimes(expect.SamlServers.RunCount).
+		MaxTimes(expect.SamlServers.RunCount)
 }
 
-func writeUsersSetupExpects(exporter *export2.MockExporter, expect *writeUsersExpect) {
+func fetchTeamsSetupExpects(client *sast2.MockClient, expect *teamsExpect) {
+	client.EXPECT().
+		GetTeams().
+		Return([]byte{}, expect.Teams.ReturnError).
+		MinTimes(expect.Teams.RunCount).
+		MaxTimes(expect.Teams.RunCount)
+	client.EXPECT().
+		GetLdapTeamMappings().
+		Return([]byte{}, expect.LdapTeamMappings.ReturnError).
+		MinTimes(expect.LdapTeamMappings.RunCount).
+		MaxTimes(expect.LdapTeamMappings.RunCount)
+	client.EXPECT().
+		GetSamlTeamMappings().
+		Return([]byte{}, expect.SamlTeamMappings.ReturnError).
+		MinTimes(expect.SamlTeamMappings.RunCount).
+		MaxTimes(expect.SamlTeamMappings.RunCount)
+	client.EXPECT().
+		GetLdapServers().
+		Return([]byte{}, expect.LdapServers.ReturnError).
+		MinTimes(expect.LdapServers.RunCount).
+		MaxTimes(expect.LdapServers.RunCount)
+	client.EXPECT().
+		GetSamlIdentityProviders().
+		Return([]byte{}, expect.SamlServers.ReturnError).
+		MinTimes(expect.SamlServers.RunCount).
+		MaxTimes(expect.SamlServers.RunCount)
+}
+
+func writeUsersSetupExpects(exporter *export2.MockExporter, expect *usersExpect) {
 	exporter.EXPECT().
 		AddFileWithDataSource(export.UsersFileName, gomock.Any()).
 		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
@@ -119,10 +142,48 @@ func writeUsersSetupExpects(exporter *export2.MockExporter, expect *writeUsersEx
 	exporter.EXPECT().
 		AddFileWithDataSource(export.SamlIdpFileName, gomock.Any()).
 		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
-			return expect.SamlIdentityProviders.ReturnError
+			return expect.SamlServers.ReturnError
 		}).
-		MinTimes(expect.SamlIdentityProviders.RunCount).
-		MaxTimes(expect.SamlIdentityProviders.RunCount)
+		MinTimes(expect.SamlServers.RunCount).
+		MaxTimes(expect.SamlServers.RunCount)
+}
+
+func writeTeamsSetupExpects(exporter *export2.MockExporter, expect *teamsExpect) {
+	exporter.EXPECT().
+		AddFileWithDataSource(export.TeamsFileName, gomock.Any()).
+		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+			return expect.Teams.ReturnError
+		}).
+		MinTimes(expect.Teams.RunCount).
+		MaxTimes(expect.Teams.RunCount)
+	exporter.EXPECT().
+		AddFileWithDataSource(export.LdapTeamMappingsFileName, gomock.Any()).
+		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+			return expect.LdapTeamMappings.ReturnError
+		}).
+		MinTimes(expect.LdapTeamMappings.RunCount).
+		MaxTimes(expect.LdapTeamMappings.RunCount)
+	exporter.EXPECT().
+		AddFileWithDataSource(export.SamlTeamMappingsFileName, gomock.Any()).
+		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+			return expect.SamlTeamMappings.ReturnError
+		}).
+		MinTimes(expect.SamlTeamMappings.RunCount).
+		MaxTimes(expect.SamlTeamMappings.RunCount)
+	exporter.EXPECT().
+		AddFileWithDataSource(export.LdapServersFileName, gomock.Any()).
+		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+			return expect.LdapServers.ReturnError
+		}).
+		MinTimes(expect.LdapServers.RunCount).
+		MaxTimes(expect.LdapServers.RunCount)
+	exporter.EXPECT().
+		AddFileWithDataSource(export.SamlIdpFileName, gomock.Any()).
+		DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+			return expect.SamlServers.ReturnError
+		}).
+		MinTimes(expect.SamlServers.RunCount).
+		MaxTimes(expect.SamlServers.RunCount)
 }
 
 func TestValidatePermissions(t *testing.T) {
@@ -197,271 +258,205 @@ func TestValidatePermissions(t *testing.T) {
 
 //nolint:funlen
 func TestFetchUsersData(t *testing.T) {
-	t.Run("fails if fetch users fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to read users")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers: fetchUsersExpectProp{err, 1},
-		})
-		exporter.EXPECT().
-			AddFileWithDataSource(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
-				_, callbackErr := callback()
-				return callbackErr
-			}).
-			AnyTimes()
+	t.Run("fails if any fetch fails", func(t *testing.T) {
+		usersErr := fmt.Errorf("failed to read users")
+		rolesErr := fmt.Errorf("failed to read roles")
+		ldapMappingsErr := fmt.Errorf("failed to read LDAP role mappings")
+		samlMappingsErr := fmt.Errorf("failed to read SAML role mappings")
+		ldapServersErr := fmt.Errorf("failed to read LDAP servers")
+		samlServersErr := fmt.Errorf("failed to read SAML servers")
+		tests := []struct {
+			mockExpects usersExpect
+			expectedErr error
+		}{
+			{
+				usersExpect{
+					Users: mockExpectProps{usersErr, 1},
+				},
+				usersErr,
+			},
+			{
+				usersExpect{
+					Users: mockExpectProps{nil, 1},
+					Roles: mockExpectProps{rolesErr, 1},
+				},
+				rolesErr,
+			},
+			{
+				usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{ldapMappingsErr, 1},
+				},
+				ldapMappingsErr,
+			},
+			{
+				usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{samlMappingsErr, 1},
+				},
+				samlMappingsErr,
+			},
+			{
+				usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{ldapServersErr, 1},
+				},
+				ldapServersErr,
+			},
+			{
+				usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+					SamlServers:      mockExpectProps{samlServersErr, 1},
+				},
+				samlServersErr,
+			},
+		}
+		for _, test := range tests {
+			exporter := export2.NewMockExporter(gomock.NewController(t))
+			client := sast2.NewMockClient(gomock.NewController(t))
+			fetchUsersSetupExpects(client, &test.mockExpects)
+			exporter.EXPECT().
+				AddFileWithDataSource(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
+					_, callbackErr := callback()
+					return callbackErr
+				}).
+				AnyTimes()
 
-		result := fetchUsersData(client, exporter)
+			result := fetchUsersData(client, exporter)
 
-		assert.ErrorIs(t, result, err)
+			assert.ErrorIs(t, result, test.expectedErr)
+		}
 	})
+	t.Run("fails if any file write fails", func(t *testing.T) {
+		usersErr := fmt.Errorf("failed to write users file")
+		rolesErr := fmt.Errorf("failed to write roles file")
+		ldapMappingsErr := fmt.Errorf("failed to write LDAP role mappings file")
+		samlMappingsErr := fmt.Errorf("failed to write SAML role mappings file")
+		ldapServersErr := fmt.Errorf("failed to write LDAP servers file")
+		samlServersErr := fmt.Errorf("failed to write SAML servers file")
+		tests := []struct {
+			fetchMockExpects usersExpect
+			writeMockExpects usersExpect
+			expectedErr      error
+		}{
+			{
+				fetchMockExpects: usersExpect{
+					Users: mockExpectProps{nil, 1},
+				},
+				writeMockExpects: usersExpect{
+					Users: mockExpectProps{usersErr, 1},
+				},
+				expectedErr: usersErr,
+			},
+			{
+				fetchMockExpects: usersExpect{
+					Users: mockExpectProps{nil, 1},
+					Roles: mockExpectProps{nil, 1},
+				},
+				writeMockExpects: usersExpect{
+					Users: mockExpectProps{nil, 1},
+					Roles: mockExpectProps{rolesErr, 1},
+				},
+				expectedErr: rolesErr,
+			},
+			{
+				fetchMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+				},
+				writeMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{ldapMappingsErr, 1},
+				},
+				expectedErr: ldapMappingsErr,
+			},
+			{
+				fetchMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{nil, 1},
+				},
+				writeMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{samlMappingsErr, 1},
+				},
+				expectedErr: samlMappingsErr,
+			},
+			{
+				fetchMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+				},
+				writeMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{ldapServersErr, 1},
+				},
+				expectedErr: ldapServersErr,
+			},
+			{
+				fetchMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+					SamlServers:      mockExpectProps{nil, 1},
+				},
+				writeMockExpects: usersExpect{
+					Users:            mockExpectProps{nil, 1},
+					Roles:            mockExpectProps{nil, 1},
+					LdapRoleMappings: mockExpectProps{nil, 1},
+					SamlRoleMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+					SamlServers:      mockExpectProps{samlServersErr, 1},
+				},
+				expectedErr: samlServersErr,
+			},
+		}
+		for _, test := range tests {
+			exporter := export2.NewMockExporter(gomock.NewController(t))
+			client := sast2.NewMockClient(gomock.NewController(t))
 
-	t.Run("fails if add users file fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to write users file")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers: fetchUsersExpectProp{nil, 1},
-		})
-		writeUsersSetupExpects(exporter, &writeUsersExpect{
-			Users: writeUsersExpectProp{err, 1},
-		})
-		result := fetchUsersData(client, exporter)
+			fetchUsersSetupExpects(client, &test.fetchMockExpects)
+			writeUsersSetupExpects(exporter, &test.writeMockExpects)
 
-		assert.ErrorIs(t, result, err)
+			result := fetchUsersData(client, exporter)
+
+			assert.ErrorIs(t, result, test.expectedErr)
+		}
 	})
-
-	t.Run("fails if fetch roles fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to read roles")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers: fetchUsersExpectProp{nil, 1},
-			GetRoles: fetchUsersExpectProp{err, 1},
-		})
-		exporter.EXPECT().
-			AddFileWithDataSource(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
-				_, callbackErr := callback()
-				return callbackErr
-			}).
-			AnyTimes()
-
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if add roles file fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to write roles file")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers: fetchUsersExpectProp{nil, 1},
-			GetRoles: fetchUsersExpectProp{nil, 1},
-		})
-		writeUsersSetupExpects(exporter, &writeUsersExpect{
-			Users: writeUsersExpectProp{nil, 1},
-			Roles: writeUsersExpectProp{err, 1},
-		})
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if fetch LDAP role mappings fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to read LDAP role mappings")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:            fetchUsersExpectProp{nil, 1},
-			GetRoles:            fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings: fetchUsersExpectProp{err, 1},
-		})
-		exporter.EXPECT().
-			AddFileWithDataSource(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
-				_, callbackErr := callback()
-				return callbackErr
-			}).
-			AnyTimes()
-
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if add LDAP role mappings file fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to write LDAP role mappings file")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:            fetchUsersExpectProp{nil, 1},
-			GetRoles:            fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
-		})
-		writeUsersSetupExpects(exporter, &writeUsersExpect{
-			Users:            writeUsersExpectProp{nil, 1},
-			Roles:            writeUsersExpectProp{nil, 1},
-			LdapRoleMappings: writeUsersExpectProp{err, 1},
-		})
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if fetch SAML role mappings fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to read SAML role mappings")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:            fetchUsersExpectProp{nil, 1},
-			GetRoles:            fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
-			GetSamlRoleMappings: fetchUsersExpectProp{err, 1},
-		})
-		exporter.EXPECT().
-			AddFileWithDataSource(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
-				_, callbackErr := callback()
-				return callbackErr
-			}).
-			AnyTimes()
-
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if add SAML role mappings file fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to write SAML role mappings file")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:            fetchUsersExpectProp{nil, 1},
-			GetRoles:            fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
-			GetSamlRoleMappings: fetchUsersExpectProp{nil, 1},
-		})
-		writeUsersSetupExpects(exporter, &writeUsersExpect{
-			Users:            writeUsersExpectProp{nil, 1},
-			Roles:            writeUsersExpectProp{nil, 1},
-			LdapRoleMappings: writeUsersExpectProp{nil, 1},
-			SamlRoleMappings: writeUsersExpectProp{err, 1},
-		})
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if fetch LDAP servers fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to read LDAP servers")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:            fetchUsersExpectProp{nil, 1},
-			GetRoles:            fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
-			GetSamlRoleMappings: fetchUsersExpectProp{nil, 1},
-			GetLdapServers:      fetchUsersExpectProp{err, 1},
-		})
-		exporter.EXPECT().
-			AddFileWithDataSource(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
-				_, callbackErr := callback()
-				return callbackErr
-			}).
-			AnyTimes()
-
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if add LDAP servers file fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to write LDAP servers file")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:            fetchUsersExpectProp{nil, 1},
-			GetRoles:            fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings: fetchUsersExpectProp{nil, 1},
-			GetSamlRoleMappings: fetchUsersExpectProp{nil, 1},
-			GetLdapServers:      fetchUsersExpectProp{nil, 1},
-		})
-		writeUsersSetupExpects(exporter, &writeUsersExpect{
-			Users:            writeUsersExpectProp{nil, 1},
-			Roles:            writeUsersExpectProp{nil, 1},
-			LdapRoleMappings: writeUsersExpectProp{nil, 1},
-			SamlRoleMappings: writeUsersExpectProp{nil, 1},
-			LdapServers:      writeUsersExpectProp{err, 1},
-		})
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if fetch SAML servers fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to read SAML servers")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:                 fetchUsersExpectProp{nil, 1},
-			GetRoles:                 fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings:      fetchUsersExpectProp{nil, 1},
-			GetSamlRoleMappings:      fetchUsersExpectProp{nil, 1},
-			GetLdapServers:           fetchUsersExpectProp{nil, 1},
-			GetSamlIdentityProviders: fetchUsersExpectProp{err, 1},
-		})
-		exporter.EXPECT().
-			AddFileWithDataSource(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
-				_, callbackErr := callback()
-				return callbackErr
-			}).
-			AnyTimes()
-
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
-	t.Run("fails if add SAML servers file fail", func(t *testing.T) {
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		client := sast2.NewMockClient(gomock.NewController(t))
-		err := fmt.Errorf("failed to write SAML servers file")
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:                 fetchUsersExpectProp{nil, 1},
-			GetRoles:                 fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings:      fetchUsersExpectProp{nil, 1},
-			GetSamlRoleMappings:      fetchUsersExpectProp{nil, 1},
-			GetLdapServers:           fetchUsersExpectProp{nil, 1},
-			GetSamlIdentityProviders: fetchUsersExpectProp{nil, 1},
-		})
-		writeUsersSetupExpects(exporter, &writeUsersExpect{
-			Users:                 writeUsersExpectProp{nil, 1},
-			Roles:                 writeUsersExpectProp{nil, 1},
-			LdapRoleMappings:      writeUsersExpectProp{nil, 1},
-			SamlRoleMappings:      writeUsersExpectProp{nil, 1},
-			LdapServers:           writeUsersExpectProp{nil, 1},
-			SamlIdentityProviders: writeUsersExpectProp{err, 1},
-		})
-		result := fetchUsersData(client, exporter)
-
-		assert.ErrorIs(t, result, err)
-	})
-
 	t.Run("succeeds if all fetch and add file succeed", func(t *testing.T) {
 		exporter := export2.NewMockExporter(gomock.NewController(t))
 		client := sast2.NewMockClient(gomock.NewController(t))
-		fetchUsersSetupExpects(client, &fetchUsersExpect{
-			GetUsers:                 fetchUsersExpectProp{nil, 1},
-			GetRoles:                 fetchUsersExpectProp{nil, 1},
-			GetLdapRoleMappings:      fetchUsersExpectProp{nil, 1},
-			GetSamlRoleMappings:      fetchUsersExpectProp{nil, 1},
-			GetLdapServers:           fetchUsersExpectProp{nil, 1},
-			GetSamlIdentityProviders: fetchUsersExpectProp{nil, 1},
+		fetchUsersSetupExpects(client, &usersExpect{
+			Users:            mockExpectProps{nil, 1},
+			Roles:            mockExpectProps{nil, 1},
+			LdapRoleMappings: mockExpectProps{nil, 1},
+			SamlRoleMappings: mockExpectProps{nil, 1},
+			LdapServers:      mockExpectProps{nil, 1},
+			SamlServers:      mockExpectProps{nil, 1},
 		})
 		exporter.EXPECT().
 			AddFileWithDataSource(gomock.Any(), gomock.Any()).
@@ -472,6 +467,189 @@ func TestFetchUsersData(t *testing.T) {
 			AnyTimes()
 
 		result := fetchUsersData(client, exporter)
+
+		assert.NoError(t, result)
+	})
+}
+
+//nolint:funlen
+func TestFetchTeamsData(t *testing.T) {
+	t.Run("fails if any fetch fails", func(t *testing.T) {
+		teamsErr := fmt.Errorf("failed to read teams")
+		ldapTeamMappingsErr := fmt.Errorf("failed to read LDAP team mappings")
+		samlTeamMappingsErr := fmt.Errorf("failed to read SAML team mappings")
+		ldapServersErr := fmt.Errorf("failed to read LDAP servers")
+		samlServersErr := fmt.Errorf("failed to read SAML servers")
+		tests := []struct {
+			mockExpects teamsExpect
+			expectedErr error
+		}{
+			{
+				teamsExpect{
+					Teams: mockExpectProps{teamsErr, 1},
+				},
+				teamsErr,
+			},
+			{
+				teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{ldapTeamMappingsErr, 1},
+				},
+				ldapTeamMappingsErr,
+			},
+			{
+				teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{samlTeamMappingsErr, 1},
+				},
+				samlTeamMappingsErr,
+			},
+			{
+				teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{ldapServersErr, 1},
+				},
+				ldapServersErr,
+			},
+			{
+				teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+					SamlServers:      mockExpectProps{samlServersErr, 1},
+				},
+				samlServersErr,
+			},
+		}
+		for _, test := range tests {
+			exporter := export2.NewMockExporter(gomock.NewController(t))
+			client := sast2.NewMockClient(gomock.NewController(t))
+			fetchTeamsSetupExpects(client, &test.mockExpects)
+			exporter.EXPECT().
+				AddFileWithDataSource(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
+					_, callbackErr := callback()
+					return callbackErr
+				}).
+				AnyTimes()
+
+			result := fetchTeamsData(client, exporter)
+
+			assert.ErrorIs(t, result, test.expectedErr)
+		}
+	})
+	t.Run("fails if any file write fails", func(t *testing.T) {
+		teamsErr := fmt.Errorf("failed to write teams file")
+		ldapTeamMappingsErr := fmt.Errorf("failed to write LDAP team mappings file")
+		samlTeamMappingsErr := fmt.Errorf("failed to write SAML team mappings file")
+		ldapServersErr := fmt.Errorf("failed to write LDAP servers file")
+		samlServersErr := fmt.Errorf("failed to write SAML servers file")
+		tests := []struct {
+			fetchMockExpects teamsExpect
+			writeMockExpects teamsExpect
+			expectedErr      error
+		}{
+			{
+				fetchMockExpects: teamsExpect{
+					Teams: mockExpectProps{nil, 1},
+				},
+				writeMockExpects: teamsExpect{
+					Teams: mockExpectProps{teamsErr, 1},
+				},
+				expectedErr: teamsErr,
+			},
+			{
+				fetchMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+				},
+				writeMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{ldapTeamMappingsErr, 1},
+				},
+				expectedErr: ldapTeamMappingsErr,
+			},
+			{
+				fetchMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{nil, 1},
+				},
+				writeMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{samlTeamMappingsErr, 1},
+				},
+				expectedErr: samlTeamMappingsErr,
+			},
+			{
+				fetchMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+				},
+				writeMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{ldapServersErr, 1},
+				},
+				expectedErr: ldapServersErr,
+			},
+			{
+				fetchMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+					SamlServers:      mockExpectProps{nil, 1},
+				},
+				writeMockExpects: teamsExpect{
+					Teams:            mockExpectProps{nil, 1},
+					LdapTeamMappings: mockExpectProps{nil, 1},
+					SamlTeamMappings: mockExpectProps{nil, 1},
+					LdapServers:      mockExpectProps{nil, 1},
+					SamlServers:      mockExpectProps{samlServersErr, 1},
+				},
+				expectedErr: samlServersErr,
+			},
+		}
+		for _, test := range tests {
+			exporter := export2.NewMockExporter(gomock.NewController(t))
+			client := sast2.NewMockClient(gomock.NewController(t))
+
+			fetchTeamsSetupExpects(client, &test.fetchMockExpects)
+			writeTeamsSetupExpects(exporter, &test.writeMockExpects)
+
+			result := fetchTeamsData(client, exporter)
+
+			assert.ErrorIs(t, result, test.expectedErr)
+		}
+	})
+	t.Run("succeeds if all fetch and add file succeed", func(t *testing.T) {
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		client := sast2.NewMockClient(gomock.NewController(t))
+		fetchTeamsSetupExpects(client, &teamsExpect{
+			Teams:            mockExpectProps{nil, 1},
+			LdapTeamMappings: mockExpectProps{nil, 1},
+			SamlTeamMappings: mockExpectProps{nil, 1},
+			LdapServers:      mockExpectProps{nil, 1},
+			SamlServers:      mockExpectProps{nil, 1},
+		})
+		exporter.EXPECT().
+			AddFileWithDataSource(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
+				_, callbackErr := callback()
+				return callbackErr
+			}).
+			AnyTimes()
+
+		result := fetchTeamsData(client, exporter)
 
 		assert.NoError(t, result)
 	})
