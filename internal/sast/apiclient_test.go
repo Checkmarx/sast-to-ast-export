@@ -233,6 +233,30 @@ func TestAPIClient_GetRoles(t *testing.T) {
 	})
 }
 
+func TestAPIClient_GetProjectsWithLastScanID(t *testing.T) {
+	odataResponse := `
+{
+    "@odata.context": "http://localhost/odata/$metadata#somecontext",
+    "value": [
+        {"Id": 1,"LastScanId": 1000000,"LastScan": {"Id": 1000000}},
+        {"Id": 2,"LastScanId": 1000001,"LastScan": {"Id": 1000001}}
+	]
+}`
+	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
+	adapter := &HTTPClientMock{DoResponse: makeOkResponse(odataResponse), DoError: nil}
+	client, _ := NewSASTClient(BaseURL, adapter)
+	client.Token = mockToken
+
+	result, err := client.GetProjectsWithLastScanID("2021-10-7", 0, 10)
+
+	expected := []ProjectWithLastScanID{
+		{ID: 1, LastScanID: 1000000},
+		{ID: 2, LastScanID: 1000001},
+	}
+	assert.NoError(t, err)
+	assert.Equal(t, expected, *result)
+}
+
 func makeOkResponse(body string) http.Response {
 	return http.Response{
 		StatusCode: 200,
