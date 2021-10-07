@@ -185,7 +185,8 @@ func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args)
 					return err
 				}
 			case export.ResultsOption:
-				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince); err != nil {
+				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, scanReportCreateAttempts,
+					scanReportCreateMinSleep, scanReportCreateMaxSleep); err != nil {
 					return err
 				}
 			}
@@ -245,7 +246,9 @@ func fetchTeamsData(client sast.Client, exporter export.Exporter) error {
 	return nil
 }
 
-func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProjectActiveSince int) (err error) {
+func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProjectActiveSince int,
+	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration,
+) error {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
@@ -270,7 +273,7 @@ func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProje
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
 		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs,
-			scanReportCreateAttempts, scanReportCreateMinSleep, scanReportCreateMaxSleep)
+			retryAttempts, retryMinSleep, retryMaxSleep)
 	}
 
 	reportConsumeErrorCount := 0

@@ -883,3 +883,99 @@ func TestConsumeReports(t *testing.T) {
 		assert.Equal(t, expected[i].ScanID, out.ScanID)
 	}
 }
+
+func TestFetchResultsData(t *testing.T) {
+	t.Run("success case", func(t *testing.T) {
+		projectPage := []sast.ProjectWithLastScanID{
+			{ID: 1, LastScanID: 1},
+			{ID: 2, LastScanID: 2},
+		}
+		client := sast2.NewMockClient(gomock.NewController(t))
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Eq(resultsPageLimit)).
+			Return(&projectPage, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(resultsPageLimit), gomock.Eq(resultsPageLimit)).
+			Return(&[]sast.ProjectWithLastScanID{}, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(1)).
+			Return(&[]sast.TriagedScanResult{{ID: 1}}, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(2)).
+			Return(&[]sast.TriagedScanResult{{ID: 2}}, nil).
+			AnyTimes()
+		client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML)).
+			Return([]byte("1"), nil).
+			AnyTimes()
+		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML)).
+			Return([]byte("2"), nil).
+			AnyTimes()
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond)
+
+		assert.NoError(t, result)
+	})
+	t.Run("fails if triage scans returns error", func(t *testing.T) {
+		projectPage := []sast.ProjectWithLastScanID{
+			{ID: 1, LastScanID: 1},
+			{ID: 2, LastScanID: 2},
+		}
+		client := sast2.NewMockClient(gomock.NewController(t))
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Eq(resultsPageLimit)).
+			Return(&projectPage, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(resultsPageLimit), gomock.Eq(resultsPageLimit)).
+			Return(&[]sast.ProjectWithLastScanID{}, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(1)).
+			Return(nil, fmt.Errorf("failed getting triaged scan")).
+			AnyTimes()
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond)
+
+		assert.EqualError(t, result, "failed getting triaged scan")
+	})
+	t.Run("doesn't fail if some results fail to fetch", func(t *testing.T) {
+		projectPage := []sast.ProjectWithLastScanID{
+			{ID: 1, LastScanID: 1},
+			{ID: 2, LastScanID: 2},
+		}
+		client := sast2.NewMockClient(gomock.NewController(t))
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Eq(resultsPageLimit)).
+			Return(&projectPage, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(resultsPageLimit), gomock.Eq(resultsPageLimit)).
+			Return(&[]sast.ProjectWithLastScanID{}, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(1)).
+			Return(&[]sast.TriagedScanResult{{ID: 1}}, nil).
+			AnyTimes()
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(2)).
+			Return(&[]sast.TriagedScanResult{{ID: 2}}, nil).
+			AnyTimes()
+		client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML)).
+			Return([]byte("1"), nil).
+			AnyTimes()
+		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML)).
+			Return([]byte{}, fmt.Errorf("failed getting report #2")).
+			AnyTimes()
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond)
+
+		assert.NoError(t, result)
+	})
+}
