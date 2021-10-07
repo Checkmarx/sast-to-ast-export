@@ -764,7 +764,7 @@ func TestGetTriagedScans(t *testing.T) {
 					err:   fmt.Errorf("failed getting result for scanID 2"),
 				},
 			},
-			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
+			expectedResult: nil,
 			expectedErr:    fmt.Errorf("failed getting result for scanID 2"),
 			msg:            "fails if can't get second result",
 		},
@@ -795,5 +795,24 @@ func TestGetTriagedScans(t *testing.T) {
 			assert.EqualError(t, err, test.expectedErr.Error())
 		}
 		assert.Equal(t, test.expectedResult, result, test.msg)
+	}
+}
+
+func TestProduceReports(t *testing.T) {
+	triagedScans := []TriagedScan{
+		{ProjectID: 1, ScanID: 1},
+		{ProjectID: 2, ScanID: 2},
+	}
+	reportJobs := make(chan ReportJob, 2)
+
+	produceReports(triagedScans, reportJobs)
+
+	expected := []ReportJob{
+		{ProjectID: 1, ScanID: 1, ReportType: sast.ScanReportTypeXML},
+		{ProjectID: 2, ScanID: 2, ReportType: sast.ScanReportTypeXML},
+	}
+	for i := 0; i < 2; i++ {
+		v := <-reportJobs
+		assert.Equal(t, expected[i], v)
 	}
 }
