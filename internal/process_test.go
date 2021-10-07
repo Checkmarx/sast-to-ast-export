@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/test/mocks/export"
 	sast2 "github.com/checkmarxDev/ast-sast-export/internal/test/mocks/sast"
 	"github.com/golang/mock/gomock"
@@ -653,4 +654,146 @@ func TestFetchTeamsData(t *testing.T) {
 
 		assert.NoError(t, result)
 	})
+}
+
+func TestGetTriagedScans(t *testing.T) {
+	type projectReturn struct {
+		value []sast.ProjectWithLastScanID
+		err   error
+	}
+	type resultReturn struct {
+		value []sast.TriagedScanResult
+		err   error
+	}
+	type getTriagedScansTest struct {
+		projectReturns []projectReturn
+		resultReturns  map[int]resultReturn
+		expectedResult []TriagedScan
+		expectedErr    error
+		msg            string
+	}
+	tests := []getTriagedScansTest{
+		{
+			projectReturns: []projectReturn{
+				{
+					value: []sast.ProjectWithLastScanID{
+						{ID: 1, LastScanID: 1},
+						{ID: 2, LastScanID: 2},
+						{ID: 3, LastScanID: 3},
+					},
+				},
+				{},
+			},
+			resultReturns: map[int]resultReturn{
+				1: {value: []sast.TriagedScanResult{{ID: 1}}},
+				2: {value: []sast.TriagedScanResult{{ID: 2}}},
+				3: {value: []sast.TriagedScanResult{{ID: 3}}},
+			},
+			expectedResult: []TriagedScan{
+				{ProjectID: 1, ScanID: 1},
+				{ProjectID: 2, ScanID: 2},
+				{ProjectID: 3, ScanID: 3},
+			},
+			expectedErr: nil,
+			msg:         "success case",
+		},
+		{
+			projectReturns: []projectReturn{
+				{
+					value: []sast.ProjectWithLastScanID{},
+					err:   fmt.Errorf("failed to get projects"),
+				},
+			},
+			resultReturns:  map[int]resultReturn{},
+			expectedResult: nil,
+			expectedErr:    fmt.Errorf("error searching for results"),
+			msg:            "fails if can't get first project page",
+		},
+		{
+			projectReturns: []projectReturn{
+				{
+					value: []sast.ProjectWithLastScanID{
+						{ID: 1, LastScanID: 1},
+					},
+				},
+				{
+					value: []sast.ProjectWithLastScanID{},
+					err:   fmt.Errorf("failed to get projects"),
+				},
+			},
+			resultReturns: map[int]resultReturn{
+				1: {value: []sast.TriagedScanResult{{ID: 1}}},
+			},
+			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
+			expectedErr:    fmt.Errorf("error searching for results"),
+			msg:            "fails if can't get second project page",
+		},
+		{
+			projectReturns: []projectReturn{
+				{
+					value: []sast.ProjectWithLastScanID{
+						{ID: 1, LastScanID: 1},
+					},
+				},
+				{},
+			},
+			resultReturns: map[int]resultReturn{
+				1: {
+					value: []sast.TriagedScanResult{},
+					err:   fmt.Errorf("failed getting result for scanID 1"),
+				},
+			},
+			expectedResult: nil,
+			expectedErr:    fmt.Errorf("failed getting result for scanID 1"),
+			msg:            "fails if can't get result",
+		},
+		{
+			projectReturns: []projectReturn{
+				{
+					value: []sast.ProjectWithLastScanID{
+						{ID: 1, LastScanID: 1},
+						{ID: 2, LastScanID: 2},
+					},
+				},
+				{},
+			},
+			resultReturns: map[int]resultReturn{
+				1: {value: []sast.TriagedScanResult{{ID: 1}}},
+				2: {
+					value: []sast.TriagedScanResult{},
+					err:   fmt.Errorf("failed getting result for scanID 2"),
+				},
+			},
+			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
+			expectedErr:    fmt.Errorf("failed getting result for scanID 2"),
+			msg:            "fails if can't get second result",
+		},
+	}
+	fromDate := "2021-9-7"
+	for _, test := range tests {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		for i, v := range test.projectReturns { //nolint:gofmt
+			client.EXPECT().
+				GetProjectsWithLastScanID(gomock.Eq(fromDate), gomock.Eq(i*resultsPageLimit), gomock.Eq(resultsPageLimit)).
+				Return(&test.projectReturns[i].value, v.err).
+				MinTimes(1).
+				MaxTimes(1)
+		}
+		for k, v := range test.resultReturns {
+			client.EXPECT().
+				GetTriagedResultsByScanID(gomock.Eq(k)).
+				Return(&v.value, v.err). //nolint:gosec
+				MinTimes(1).
+				MaxTimes(1)
+		}
+
+		result, err := getTriagedScans(client, fromDate)
+
+		if test.expectedErr == nil {
+			assert.NoError(t, err)
+		} else {
+			assert.EqualError(t, err, test.expectedErr.Error())
+		}
+		assert.Equal(t, test.expectedResult, result, test.msg)
+	}
 }
