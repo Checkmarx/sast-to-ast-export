@@ -143,9 +143,8 @@ func TestAPIClient_doRequest(t *testing.T) {
 	})
 }
 
-func TestAPIClient_GetUsersResponseBody(t *testing.T) {
+func TestAPIClient_GetUsers(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
-
 	t.Run("returns users response", func(t *testing.T) {
 		responseJSON := `[{"id": 1, "userName": "test1", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true},
 						  {"id": 2, "userName": "test2", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true},
@@ -161,7 +160,6 @@ func TestAPIClient_GetUsersResponseBody(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, responseJSON, string(result))
 	})
-
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
 		response := makeBadRequestResponse(ErrorResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
@@ -175,9 +173,8 @@ func TestAPIClient_GetUsersResponseBody(t *testing.T) {
 	})
 }
 
-func TestAPIClient_GetTeamsResponseBody(t *testing.T) {
+func TestAPIClient_GetTeams(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
-
 	t.Run("returns teams response", func(t *testing.T) {
 		responseJSON := `[{"id": 1, "name": "test1", "fullName": "/CxServer/test1", "parentId": 1},
 						  {"id": 2, "name": "test2", "fullName": "/CxServer/test2", "parentId": 1},
@@ -193,7 +190,6 @@ func TestAPIClient_GetTeamsResponseBody(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, responseJSON, string(result))
 	})
-
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
 		response := makeBadRequestResponse(ErrorResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
@@ -201,6 +197,36 @@ func TestAPIClient_GetTeamsResponseBody(t *testing.T) {
 		client.Token = mockToken
 
 		result, err := client.GetTeams()
+
+		assert.Error(t, err)
+		assert.Len(t, result, 0)
+	})
+}
+
+func TestAPIClient_GetRoles(t *testing.T) {
+	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
+	t.Run("returns teams response", func(t *testing.T) {
+		responseJSON := `[{"id": 1, "isSystemRole": true, "name": "test1", "description": "test1", permissionIds: []},
+						  {"id": 2, "isSystemRole": true, "name": "test2", "description": "test2", permissionIds: []},
+						  {"id": 3, "isSystemRole": true, "name": "test3", "description": "test3", permissionIds: []}]`
+		response := makeOkResponse(responseJSON)
+		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+		client.Token = mockToken
+
+		result, err := client.GetRoles()
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, responseJSON, string(result))
+	})
+	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
+		response := makeBadRequestResponse(ErrorResponseJSON)
+		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+		client.Token = mockToken
+
+		result, err := client.GetRoles()
 
 		assert.Error(t, err)
 		assert.Len(t, result, 0)
