@@ -267,10 +267,11 @@ func TestFetchUsersData(t *testing.T) {
 		samlMappingsErr := fmt.Errorf("failed to read SAML role mappings")
 		ldapServersErr := fmt.Errorf("failed to read LDAP servers")
 		samlServersErr := fmt.Errorf("failed to read SAML servers")
-		tests := []struct {
+		type fetchTest struct {
 			mockExpects usersExpect
 			expectedErr error
-		}{
+		}
+		tests := []fetchTest{
 			{
 				usersExpect{
 					Users: mockExpectProps{usersErr, 1},
@@ -347,11 +348,12 @@ func TestFetchUsersData(t *testing.T) {
 		samlMappingsErr := fmt.Errorf("failed to write SAML role mappings file")
 		ldapServersErr := fmt.Errorf("failed to write LDAP servers file")
 		samlServersErr := fmt.Errorf("failed to write SAML servers file")
-		tests := []struct {
+		type writeTest struct {
 			fetchMockExpects usersExpect
 			writeMockExpects usersExpect
 			expectedErr      error
-		}{
+		}
+		tests := []writeTest{
 			{
 				fetchMockExpects: usersExpect{
 					Users: mockExpectProps{nil, 1},
@@ -482,10 +484,11 @@ func TestFetchTeamsData(t *testing.T) {
 		samlTeamMappingsErr := fmt.Errorf("failed to read SAML team mappings")
 		ldapServersErr := fmt.Errorf("failed to read LDAP servers")
 		samlServersErr := fmt.Errorf("failed to read SAML servers")
-		tests := []struct {
+		type fetchTest struct {
 			mockExpects teamsExpect
 			expectedErr error
-		}{
+		}
+		tests := []fetchTest{
 			{
 				teamsExpect{
 					Teams: mockExpectProps{teamsErr, 1},
@@ -550,11 +553,12 @@ func TestFetchTeamsData(t *testing.T) {
 		samlTeamMappingsErr := fmt.Errorf("failed to write SAML team mappings file")
 		ldapServersErr := fmt.Errorf("failed to write LDAP servers file")
 		samlServersErr := fmt.Errorf("failed to write SAML servers file")
-		tests := []struct {
+		type writeTest struct {
 			fetchMockExpects teamsExpect
 			writeMockExpects teamsExpect
 			expectedErr      error
-		}{
+		}
+		tests := []writeTest{
 			{
 				fetchMockExpects: teamsExpect{
 					Teams: mockExpectProps{nil, 1},
