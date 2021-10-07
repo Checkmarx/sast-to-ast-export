@@ -769,7 +769,7 @@ func TestGetTriagedScans(t *testing.T) {
 					err:   fmt.Errorf("failed getting result for scanID 2"),
 				},
 			},
-			expectedResult: nil,
+			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
 			expectedErr:    fmt.Errorf("failed getting result for scanID 2"),
 			msg:            "fails if can't get second result",
 		},
@@ -785,9 +785,10 @@ func TestGetTriagedScans(t *testing.T) {
 				MaxTimes(1)
 		}
 		for k, v := range test.resultReturns {
+			result := test.resultReturns[k].value
 			client.EXPECT().
 				GetTriagedResultsByScanID(gomock.Eq(k)).
-				Return(&v.value, v.err). //nolint:gosec
+				Return(&result, v.err). //nolint:gosec
 				MinTimes(1).
 				MaxTimes(1)
 		}
@@ -1141,7 +1142,7 @@ func TestExportResultsToFile(t *testing.T) {
 			MinTimes(1).
 			MaxTimes(1)
 
-		fileName, err := ExportResultsToFile(&args, exporter)
+		fileName, err := exportResultsToFile(&args, exporter)
 
 		assert.NoError(t, err)
 		assert.Equal(t, "/path/to/output/export.zip", fileName)
@@ -1159,7 +1160,7 @@ func TestExportResultsToFile(t *testing.T) {
 			MinTimes(1).
 			MaxTimes(1)
 
-		fileName, err := ExportResultsToFile(&args, exporter)
+		fileName, err := exportResultsToFile(&args, exporter)
 
 		assert.EqualError(t, err, "failed creating export package")
 		assert.Equal(t, "", fileName)

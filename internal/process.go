@@ -118,7 +118,7 @@ func RunExport(args *Args) {
 
 	// export data to file
 	log.Info().Msg("exporting collected data")
-	exportFileName, exportErr := ExportResultsToFile(args, &exportValues)
+	exportFileName, exportErr := exportResultsToFile(args, &exportValues)
 	if exportErr != nil {
 		log.Error().Err(exportErr).Msg("error exporting collected data")
 	}
@@ -126,7 +126,7 @@ func RunExport(args *Args) {
 	log.Info().Msgf("export completed to %s", exportFileName)
 }
 
-func ExportResultsToFile(args *Args, exportValues export.Exporter) (string, error) {
+func exportResultsToFile(args *Args, exportValues export.Exporter) (string, error) {
 	// create export package
 	tmpDir := exportValues.GetTmpDir()
 	if args.Debug {
