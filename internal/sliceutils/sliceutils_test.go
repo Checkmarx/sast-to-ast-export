@@ -21,3 +21,21 @@ func TestUnique(t *testing.T) {
 	expected := []interface{}{"a", "b", "c", "d", "e", "f", "g"}
 	assert.Equal(t, expected, result)
 }
+
+func TestConvertStringToInterface(t *testing.T) {
+	heap := []string{"a", "b", "c"}
+
+	result := ConvertStringToInterface(heap)
+
+	expected := []interface{}{"a", "b", "c"}
+	assert.Equal(t, expected, result)
+}
+
+func TestConvertInterfaceToString(t *testing.T) {
+	heap := []interface{}{"a", "b", "c"}
+
+	result := ConvertInterfaceToString(heap)
+
+	expected := []string{"a", "b", "c"}
+	assert.Equal(t, expected, result)
+}

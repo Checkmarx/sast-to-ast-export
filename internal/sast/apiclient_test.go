@@ -2,6 +2,7 @@ package sast
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -52,7 +53,6 @@ func TestAPIClient_Authenticate(t *testing.T) {
 		expected := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 		assert.Equal(t, client.Token, expected)
 	})
-
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
 		response := makeBadRequestResponse(ErrorResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
@@ -63,7 +63,6 @@ func TestAPIClient_Authenticate(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, client.Token)
 	})
-
 	t.Run("returns error if can't parse response", func(t *testing.T) {
 		response := makeOkResponse(InvalidDataResponseJSON)
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
@@ -73,6 +72,29 @@ func TestAPIClient_Authenticate(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, &AccessToken{}, client.Token)
+	})
+	t.Run("fails if can't connect to server", func(t *testing.T) {
+		response := http.Response{
+			StatusCode: 0,
+			Status:     "Unknown",
+			Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+		}
+		adapter := &HTTPClientMock{DoResponse: response, DoError: fmt.Errorf("can't connect to server")}
+		client, _ := NewSASTClient(BaseURL, adapter)
+
+		err := client.Authenticate("username", "password")
+
+		assert.EqualError(t, err, "authentication error - please confirm you can connect to SAST")
+	})
+	t.Run("fails if credentials are incorrect", func(t *testing.T) {
+		responseJSON := `{"error": "invalid_grant","error_description": "invalid_username_or_password"}`
+		response := makeBadRequestResponse(responseJSON)
+		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		client, _ := NewSASTClient(BaseURL, adapter)
+
+		err := client.Authenticate("username", "password")
+
+		assert.EqualError(t, err, "authentication error - please confirm your user name and password")
 	})
 }
 
