@@ -979,3 +979,150 @@ func TestFetchResultsData(t *testing.T) {
 		assert.NoError(t, result)
 	})
 }
+
+func TestFetchSelectedData(t *testing.T) {
+	t.Run("export users success case", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		args := Args{
+			Export:              []string{"users"},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.NoError(t, result)
+	})
+	t.Run("export users fails if fetch or write fails", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.UsersFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.RolesFileName), gomock.Any()).
+			Return(fmt.Errorf("failed fetching roles"))
+		args := Args{
+			Export:              []string{"users"},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.EqualError(t, result, "failed fetching roles")
+	})
+	t.Run("export users and teams success case", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		args := Args{
+			Export:              []string{"users", "teams"},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.NoError(t, result)
+	})
+	t.Run("export users and teams fail if fetch or write fails", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.UsersFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.RolesFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.LdapRoleMappingsFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.SamlRoleMappingsFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.LdapServersFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.SamlIdpFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.TeamsFileName), gomock.Any()).
+			Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.LdapTeamMappingsFileName), gomock.Any()).
+			Return(fmt.Errorf("failed fetching LDAP team mappings"))
+		args := Args{
+			Export:              []string{"users", "teams"},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.EqualError(t, result, "failed fetching LDAP team mappings")
+	})
+	t.Run("export users, teams and results success case", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		projectPage := []sast.ProjectWithLastScanID{
+			{ID: 1, LastScanID: 1},
+			{ID: 2, LastScanID: 2},
+		}
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Any()).
+			Return(&projectPage, nil)
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(&[]sast.ProjectWithLastScanID{}, nil)
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(1)).
+			Return(&[]sast.TriagedScanResult{{ID: 1}}, nil)
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(2)).
+			Return(&[]sast.TriagedScanResult{{ID: 2}}, nil)
+		client.EXPECT().
+			CreateScanReport(gomock.Any(), gomock.Any()).
+			Return([]byte("test"), nil).
+			AnyTimes()
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		args := Args{
+			Export:              []string{"users", "teams", "results"},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.NoError(t, result)
+	})
+	t.Run("export users, teams and results fails if result processing fails", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Any()).
+			Return(&[]sast.ProjectWithLastScanID{}, fmt.Errorf("failed fetching projects"))
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		args := Args{
+			Export:              []string{"users", "teams", "results"},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.EqualError(t, result, "error searching for results")
+	})
+	t.Run("empty export if no export options selected", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		args := Args{
+			Export:              []string{},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.NoError(t, result)
+	})
+	t.Run("empty export if export options are invalid", func(t *testing.T) {
+		client := sast2.NewMockClient(gomock.NewController(t))
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		args := Args{
+			Export:              []string{"test1", "test2"},
+			ProjectsActiveSince: 100,
+		}
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+
+		assert.NoError(t, result)
+	})
+}
