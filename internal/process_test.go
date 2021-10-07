@@ -1126,3 +1126,42 @@ func TestFetchSelectedData(t *testing.T) {
 		assert.NoError(t, result)
 	})
 }
+
+func TestExportResultsToFile(t *testing.T) {
+	t.Run("success case", func(t *testing.T) {
+		args := Args{
+			Debug:       false,
+			ProductName: "test",
+			OutputPath:  "/path/to/output",
+		}
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
+		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
+			Return("/path/to/output/export.zip", nil).
+			MinTimes(1).
+			MaxTimes(1)
+
+		fileName, err := ExportResultsToFile(&args, exporter)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "/path/to/output/export.zip", fileName)
+	})
+	t.Run("fails if export package creation fails", func(t *testing.T) {
+		args := Args{
+			Debug:       false,
+			ProductName: "test",
+			OutputPath:  "/path/to/output",
+		}
+		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
+		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
+			Return("", fmt.Errorf("failed creating export package")).
+			MinTimes(1).
+			MaxTimes(1)
+
+		fileName, err := ExportResultsToFile(&args, exporter)
+
+		assert.EqualError(t, err, "failed creating export package")
+		assert.Equal(t, "", fileName)
+	})
+}

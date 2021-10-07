@@ -2,15 +2,13 @@ package internal
 
 import (
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	"net/http"
 	"os"
-	"os/exec"
-	"runtime"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
+	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
 	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-cleanhttp"
@@ -125,28 +123,24 @@ func RunExport(args *Args) {
 		log.Error().Err(exportErr).Msg("error exporting collected data")
 	}
 
-	log.Info().Msgf("export completed to %s", *exportFileName)
+	log.Info().Msgf("export completed to %s", exportFileName)
 }
 
-func ExportResultsToFile(args *Args, exportValues export.Exporter) (*string, error) {
+func ExportResultsToFile(args *Args, exportValues export.Exporter) (string, error) {
 	// create export package
 	tmpDir := exportValues.GetTmpDir()
 	if args.Debug {
-		if runtime.GOOS == "windows" {
-			cmdErr := exec.Command(`explorer`, tmpDir).Run() //nolint:gosec
-			// ignore exit status 1, it was being returned even on success
-			if cmdErr != nil && cmdErr.Error() != "exit status 1" {
-				log.Debug().Err(cmdErr).Msg("could not open temporary folder")
-			}
+		if err := OpenPathInExplorer(tmpDir); err != nil {
+			log.Debug().Err(err)
 		}
-		return &tmpDir, nil
+		return tmpDir, nil
 	}
 
 	exportFileName, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
 	if exportErr != nil {
-		return nil, exportErr
+		return exportFileName, exportErr
 	}
-	return &exportFileName, exportErr
+	return exportFileName, exportErr
 }
 
 func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string) error {
