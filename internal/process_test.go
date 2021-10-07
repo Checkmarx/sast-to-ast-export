@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/test/mocks/export"
@@ -814,5 +815,67 @@ func TestProduceReports(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		v := <-reportJobs
 		assert.Equal(t, expected[i], v)
+	}
+}
+
+func TestConsumeReports(t *testing.T) {
+	reportCount := 4
+	reportJobs := make(chan ReportJob, reportCount)
+	reportJobs <- ReportJob{ProjectID: 1, ScanID: 1, ReportType: sast.ScanReportTypeXML}
+	reportJobs <- ReportJob{ProjectID: 2, ScanID: 2, ReportType: sast.ScanReportTypeXML}
+	reportJobs <- ReportJob{ProjectID: 3, ScanID: 3, ReportType: sast.ScanReportTypeXML}
+	reportJobs <- ReportJob{ProjectID: 4, ScanID: 4, ReportType: sast.ScanReportTypeXML}
+	close(reportJobs)
+	client := sast2.NewMockClient(gomock.NewController(t))
+	exporter := export2.NewMockExporter(gomock.NewController(t))
+	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML)).
+		Return([]byte("1"), nil).
+		MinTimes(1).
+		MaxTimes(1)
+	client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML)).
+		Return([]byte{}, fmt.Errorf("failed getting report #2")).
+		MinTimes(1).
+		MaxTimes(3)
+	client.EXPECT().CreateScanReport(gomock.Eq(3), gomock.Eq(sast.ScanReportTypeXML)).
+		Return([]byte("3"), nil).
+		MinTimes(1).
+		MaxTimes(1)
+
+	client.EXPECT().CreateScanReport(gomock.Eq(4), gomock.Eq(sast.ScanReportTypeXML)).
+		Return([]byte("4"), nil).
+		MinTimes(1).
+		MaxTimes(1)
+	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 1)), gomock.Any()).
+		Return(nil).
+		MinTimes(1).
+		MaxTimes(1)
+	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 3)), gomock.Any()).
+		Return(fmt.Errorf("could not write report #3")).
+		MinTimes(1).
+		MaxTimes(1)
+	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 4)), gomock.Any()).
+		Return(nil).
+		MinTimes(1).
+		MaxTimes(1)
+	outputCh := make(chan ReportConsumeOutput, reportCount)
+
+	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond)
+
+	close(outputCh)
+	expected := []ReportConsumeOutput{
+		{Err: nil, ProjectID: 1, ScanID: 1},
+		{Err: fmt.Errorf("failed getting report #2"), ProjectID: 2, ScanID: 2},
+		{Err: fmt.Errorf("could not write report #3"), ProjectID: 3, ScanID: 3},
+		{Err: nil, ProjectID: 4, ScanID: 4},
+	}
+	for i := 0; i < reportCount; i++ {
+		out := <-outputCh
+		if expected[i].Err == nil {
+			assert.NoError(t, out.Err)
+		} else {
+			assert.EqualError(t, out.Err, expected[i].Err.Error())
+		}
+		assert.Equal(t, expected[i].ProjectID, out.ProjectID)
+		assert.Equal(t, expected[i].ScanID, out.ScanID)
 	}
 }

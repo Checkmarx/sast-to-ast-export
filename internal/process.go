@@ -269,7 +269,8 @@ func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProje
 	reportConsumeOutputs := make(chan ReportConsumeOutput, reportCount)
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
-		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs)
+		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs,
+			scanReportCreateAttempts, scanReportCreateMinSleep, scanReportCreateMaxSleep)
 	}
 
 	reportConsumeErrorCount := 0
@@ -357,12 +358,15 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 	close(reportJobs)
 }
 
-func consumeReports(client sast.Client, exporter export.Exporter, worker int, reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput) {
+func consumeReports(client sast.Client, exporter export.Exporter, worker int,
+	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
+	attemptMinSleep, attemptMaxSleep time.Duration,
+) {
 	for reportJob := range reportJobs {
 		// create scan report
 		var reportData []byte
 		var reportCreateErr error
-		for i := 1; i <= scanReportCreateAttempts; i++ {
+		for i := 1; i <= maxAttempts; i++ {
 			reportData, reportCreateErr = client.CreateScanReport(reportJob.ScanID, reportJob.ReportType)
 			if reportCreateErr != nil {
 				log.Debug().Err(reportCreateErr).
@@ -371,7 +375,7 @@ func consumeReports(client sast.Client, exporter export.Exporter, worker int, re
 					Int("worker", worker).
 					Int("attempt", i).
 					Msg("failed creating scan report")
-				time.Sleep(retryablehttp.DefaultBackoff(scanReportCreateMinSleep, scanReportCreateMaxSleep, i, nil))
+				time.Sleep(retryablehttp.DefaultBackoff(attemptMinSleep, attemptMaxSleep, i, nil))
 			} else {
 				break
 			}
