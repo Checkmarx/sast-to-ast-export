@@ -112,7 +112,7 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	fetchErr := fetchSelectedData(client, &exportValues, args)
+	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep, scanReportCreateMaxSleep)
 	if fetchErr != nil {
 		log.Error().Err(fetchErr)
 		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))
@@ -171,7 +171,9 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 	return nil
 }
 
-func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args) error {
+func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args, retryAttempts int,
+	retryMinSleep, retryMaxSleep time.Duration,
+) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
@@ -185,8 +187,7 @@ func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args)
 					return err
 				}
 			case export.ResultsOption:
-				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, scanReportCreateAttempts,
-					scanReportCreateMinSleep, scanReportCreateMaxSleep); err != nil {
+				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep, retryMaxSleep); err != nil {
 					return err
 				}
 			}
