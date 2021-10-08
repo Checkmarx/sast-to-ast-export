@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/utils"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 )
@@ -46,7 +47,7 @@ type Client interface {
 	GetSamlTeamMappings() ([]byte, error)
 	GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error)
 	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
-	CreateScanReport(scanID int, reportType string) ([]byte, error)
+	CreateScanReport(scanID int, reportType string, retry utils.Retry) ([]byte, error)
 }
 
 type RetryableHTTPAdapter interface {
@@ -303,10 +304,7 @@ func (c *APIClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult,
 	return &response.Value, nil
 }
 
-func (c *APIClient) CreateScanReport(scanID int, reportType string) ([]byte, error) {
-	minSleep := 1 * time.Second
-	maxSleep := 5 * time.Minute
-	attempts := 10
+func (c *APIClient) CreateScanReport(scanID int, reportType string, retry utils.Retry) ([]byte, error) {
 	reportBody := &ReportRequest{
 		ReportType: reportType,
 		ScanID:     scanID,
@@ -329,8 +327,8 @@ func (c *APIClient) CreateScanReport(scanID int, reportType string) ([]byte, err
 	if unmarshalErr != nil {
 		return []byte{}, unmarshalErr
 	}
-	for i := 1; i <= attempts; i++ {
-		time.Sleep(retryablehttp.DefaultBackoff(minSleep, maxSleep, i, nil))
+	for i := 1; i <= retry.Attempts; i++ {
+		time.Sleep(retryablehttp.DefaultBackoff(retry.MinSleep, retry.MaxSleep, i, nil))
 		log.Debug().
 			Int("attempt", i).
 			Int("scanID", scanID).
@@ -348,5 +346,5 @@ func (c *APIClient) CreateScanReport(scanID int, reportType string) ([]byte, err
 			return reportData, nil
 		}
 	}
-	return []byte{}, fmt.Errorf("failed getting report after %d attempts", attempts)
+	return []byte{}, fmt.Errorf("failed getting report after %d attempts", retry.Attempts)
 }

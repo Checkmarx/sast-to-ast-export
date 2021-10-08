@@ -51,3 +51,7 @@ run_windows:
 
 debug_windows:
 	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 10 --debug
+
+mocks:
+	mockgen -destination internal/test/mocks/sast/mock_client.go -package sast github.com/checkmarxDev/ast-sast-export/internal/sast Client
+	mockgen -destination internal/test/mocks/export/mock_exporter.go -package export github.com/checkmarxDev/ast-sast-export/internal/export Exporter

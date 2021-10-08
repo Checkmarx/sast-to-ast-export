@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/utils"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
@@ -364,8 +366,13 @@ func consumeReports(client sast.Client, exporter export.Exporter, worker int,
 		// create scan report
 		var reportData []byte
 		var reportCreateErr error
+		retry := utils.Retry{
+			Attempts: 10,
+			MinSleep: 1 * time.Second,
+			MaxSleep: 5 * time.Minute,
+		}
 		for i := 1; i <= maxAttempts; i++ {
-			reportData, reportCreateErr = client.CreateScanReport(reportJob.ScanID, reportJob.ReportType)
+			reportData, reportCreateErr = client.CreateScanReport(reportJob.ScanID, reportJob.ReportType, retry)
 			if reportCreateErr != nil {
 				log.Debug().Err(reportCreateErr).
 					Int("ProjectID", reportJob.ProjectID).

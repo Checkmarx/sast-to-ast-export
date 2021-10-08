@@ -36,7 +36,7 @@ func TestRequests_CreateRequest(t *testing.T) {
 			Status:     "Success",
 			Body:       io.NopCloser(strings.NewReader(responseContent)),
 		}
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		adapter := &HTTPClientMock{DoResponse: &response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
 		err := client.Authenticate(username, password)
@@ -53,7 +53,7 @@ func TestRequests_CreateRequest(t *testing.T) {
 			Status:     "Bad Request",
 			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
 		}
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		adapter := &HTTPClientMock{DoResponse: &response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
 		errAuth := client.Authenticate(username, password)

@@ -833,20 +833,20 @@ func TestConsumeReports(t *testing.T) {
 	close(reportJobs)
 	client := sast2.NewMockClient(gomock.NewController(t))
 	exporter := export2.NewMockExporter(gomock.NewController(t))
-	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML)).
+	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 		Return([]byte("1"), nil).
 		MinTimes(1).
 		MaxTimes(1)
-	client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML)).
+	client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 		Return([]byte{}, fmt.Errorf("failed getting report #2")).
 		MinTimes(1).
 		MaxTimes(3)
-	client.EXPECT().CreateScanReport(gomock.Eq(3), gomock.Eq(sast.ScanReportTypeXML)).
+	client.EXPECT().CreateScanReport(gomock.Eq(3), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 		Return([]byte("3"), nil).
 		MinTimes(1).
 		MaxTimes(1)
 
-	client.EXPECT().CreateScanReport(gomock.Eq(4), gomock.Eq(sast.ScanReportTypeXML)).
+	client.EXPECT().CreateScanReport(gomock.Eq(4), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 		Return([]byte("4"), nil).
 		MinTimes(1).
 		MaxTimes(1)
@@ -908,10 +908,10 @@ func TestFetchResultsData(t *testing.T) {
 			GetTriagedResultsByScanID(gomock.Eq(2)).
 			Return(&[]sast.TriagedScanResult{{ID: 2}}, nil).
 			AnyTimes()
-		client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML)).
+		client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 			Return([]byte("1"), nil).
 			AnyTimes()
-		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML)).
+		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 			Return([]byte("2"), nil).
 			AnyTimes()
 		exporter := export2.NewMockExporter(gomock.NewController(t))
@@ -966,10 +966,10 @@ func TestFetchResultsData(t *testing.T) {
 			GetTriagedResultsByScanID(gomock.Eq(2)).
 			Return(&[]sast.TriagedScanResult{{ID: 2}}, nil).
 			AnyTimes()
-		client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML)).
+		client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 			Return([]byte("1"), nil).
 			AnyTimes()
-		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML)).
+		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 			Return([]byte{}, fmt.Errorf("failed getting report #2")).
 			AnyTimes()
 		exporter := export2.NewMockExporter(gomock.NewController(t))
@@ -1071,7 +1071,7 @@ func TestFetchSelectedData(t *testing.T) {
 			GetTriagedResultsByScanID(gomock.Eq(2)).
 			Return(&[]sast.TriagedScanResult{{ID: 2}}, nil)
 		client.EXPECT().
-			CreateScanReport(gomock.Any(), gomock.Any()).
+			CreateScanReport(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return([]byte("test"), nil).
 			AnyTimes()
 		exporter := export2.NewMockExporter(gomock.NewController(t))

@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	sast "github.com/checkmarxDev/ast-sast-export/internal/sast"
+	utils "github.com/checkmarxDev/ast-sast-export/internal/utils"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -50,18 +51,18 @@ func (mr *MockClientMockRecorder) Authenticate(arg0, arg1 interface{}) *gomock.C
 }
 
 // CreateScanReport mocks base method.
-func (m *MockClient) CreateScanReport(arg0 int, arg1 string) ([]byte, error) {
+func (m *MockClient) CreateScanReport(arg0 int, arg1 string, arg2 utils.Retry) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateScanReport", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateScanReport", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateScanReport indicates an expected call of CreateScanReport.
-func (mr *MockClientMockRecorder) CreateScanReport(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) CreateScanReport(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScanReport", reflect.TypeOf((*MockClient)(nil).CreateScanReport), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScanReport", reflect.TypeOf((*MockClient)(nil).CreateScanReport), arg0, arg1, arg2)
 }
 
 // GetLdapRoleMappings mocks base method.
