@@ -27,8 +27,8 @@ func TestCreateExport(t *testing.T) {
 	assert.Contains(t, export.TmpDir, prefix)
 }
 
-func TestExport_AddFile(t *testing.T) {
-	prefix := "cxsast-add-file"
+func TestExport_GetTmpDir(t *testing.T) {
+	prefix := "cxsast-get-tmp-dir"
 	export, err := CreateExport(prefix)
 	assert.NoError(t, err)
 	defer func() {
@@ -36,20 +36,52 @@ func TestExport_AddFile(t *testing.T) {
 		assert.NoError(t, closeErr)
 	}()
 
-	addErr := export.AddFile("test1.txt", []byte("this is test1"))
-	assert.NoError(t, addErr)
+	result := export.GetTmpDir()
 
-	expectedFileList := []string{"test1.txt"}
-	assert.Equal(t, expectedFileList, export.FileList)
+	assert.DirExists(t, result)
+	assert.Contains(t, result, prefix)
+}
 
-	test1FileName := path.Join(export.TmpDir, "test1.txt")
-	info, statErr := os.Stat(test1FileName)
-	assert.NoError(t, statErr)
-	assert.False(t, info.IsDir())
+func TestExport_AddFileWithDataSource(t *testing.T) {
+	prefix := "cxsast-add-file-with-data-source"
+	t.Run("success case", func(t *testing.T) {
+		export, err := CreateExport(prefix)
+		assert.NoError(t, err)
+		defer func() {
+			closeErr := export.Clean()
+			assert.NoError(t, closeErr)
+		}()
+		dataSource := func() ([]byte, error) {
+			return []byte("this is test1"), nil
+		}
+		addErr := export.AddFileWithDataSource("test1.txt", dataSource)
+		assert.NoError(t, addErr)
 
-	content, ioErr := ioutil.ReadFile(test1FileName)
-	assert.NoError(t, ioErr)
-	assert.Equal(t, "this is test1", string(content))
+		expectedFileList := []string{"test1.txt"}
+		assert.Equal(t, expectedFileList, export.FileList)
+
+		test1FileName := path.Join(export.TmpDir, "test1.txt")
+		info, statErr := os.Stat(test1FileName)
+		assert.NoError(t, statErr)
+		assert.False(t, info.IsDir())
+
+		content, ioErr := ioutil.ReadFile(test1FileName)
+		assert.NoError(t, ioErr)
+		assert.Equal(t, "this is test1", string(content))
+	})
+	t.Run("fails if data source fails", func(t *testing.T) {
+		export, err := CreateExport(prefix)
+		assert.NoError(t, err)
+		defer func() {
+			closeErr := export.Clean()
+			assert.NoError(t, closeErr)
+		}()
+		dataSource := func() ([]byte, error) {
+			return []byte{}, fmt.Errorf("data source error")
+		}
+		addErr := export.AddFileWithDataSource("test1.txt", dataSource)
+		assert.EqualError(t, addErr, "data source error")
+	})
 }
 
 func TestExport_CreateExportPackage(t *testing.T) {
