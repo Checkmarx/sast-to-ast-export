@@ -2,43 +2,82 @@ package logging
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMultiLevelWriter_getWriters(t *testing.T) {
-	var mockConsoleWriter, mockFileWriter *bytes.Buffer
-	t.Run("returns both writers if not verbose and level equal to info", func(t *testing.T) {
+type mockWriter struct {
+	WriteHandler func(p []byte) (n int, err error)
+}
+
+func (e *mockWriter) Write(p []byte) (n int, err error) {
+	return e.WriteHandler(p)
+}
+
+func TestMultiLevelWriter_WriteLevel(t *testing.T) {
+	t.Run("writes debug to file only if not verbose", func(t *testing.T) {
+		mockConsoleWriter := new(bytes.Buffer)
+		mockFileWriter := new(bytes.Buffer)
 		writer := NewMultiLevelWriter(false, zerolog.InfoLevel, mockConsoleWriter, mockFileWriter)
 
-		result := writer.getWriters(zerolog.InfoLevel)
+		result, err := writer.WriteLevel(zerolog.DebugLevel, []byte("test"))
 
-		assert.Len(t, result, 2)
+		assert.NoError(t, err)
+		assert.Equal(t, 4, result)
+		assert.Equal(t, "", mockConsoleWriter.String())
+		assert.Equal(t, "test", mockFileWriter.String())
 	})
-
-	t.Run("returns both writers if not verbose and level above info", func(t *testing.T) {
-		writer := NewMultiLevelWriter(false, zerolog.InfoLevel, mockConsoleWriter, mockFileWriter)
-
-		result := writer.getWriters(zerolog.WarnLevel)
-
-		assert.Len(t, result, 2)
-	})
-
-	t.Run("returns one writer if not verbose and level below info", func(t *testing.T) {
-		writer := NewMultiLevelWriter(false, zerolog.InfoLevel, mockConsoleWriter, mockFileWriter)
-
-		result := writer.getWriters(zerolog.DebugLevel)
-
-		assert.Len(t, result, 1)
-	})
-
-	t.Run("returns both writers if verbose and level below info", func(t *testing.T) {
+	t.Run("writes debug to file and console if verbose", func(t *testing.T) {
+		mockConsoleWriter := new(bytes.Buffer)
+		mockFileWriter := new(bytes.Buffer)
 		writer := NewMultiLevelWriter(true, zerolog.InfoLevel, mockConsoleWriter, mockFileWriter)
 
-		result := writer.getWriters(zerolog.DebugLevel)
+		result, err := writer.WriteLevel(zerolog.DebugLevel, []byte("test"))
 
-		assert.Len(t, result, 2)
+		assert.NoError(t, err)
+		assert.Equal(t, 8, result)
+		assert.Equal(t, "test", mockConsoleWriter.String())
+		assert.Equal(t, "test", mockFileWriter.String())
+	})
+	t.Run("writes info to file and console if not verbose", func(t *testing.T) {
+		mockConsoleWriter := new(bytes.Buffer)
+		mockFileWriter := new(bytes.Buffer)
+		writer := NewMultiLevelWriter(false, zerolog.InfoLevel, mockConsoleWriter, mockFileWriter)
+
+		result, err := writer.WriteLevel(zerolog.InfoLevel, []byte("test"))
+
+		assert.NoError(t, err)
+		assert.Equal(t, 8, result)
+		assert.Equal(t, "test", mockConsoleWriter.String())
+		assert.Equal(t, "test", mockFileWriter.String())
+	})
+	t.Run("fails without writing, if console writer fails to write", func(t *testing.T) {
+		mockConsoleWriter := &mockWriter{WriteHandler: func(p []byte) (n int, err error) {
+			return 0, fmt.Errorf("write error")
+		}}
+		mockFileWriter := new(bytes.Buffer)
+		writer := NewMultiLevelWriter(false, zerolog.InfoLevel, mockConsoleWriter, mockFileWriter)
+
+		result, err := writer.WriteLevel(zerolog.InfoLevel, []byte("test"))
+
+		assert.EqualError(t, err, "write error")
+		assert.Equal(t, 0, result)
+		assert.Equal(t, "", mockFileWriter.String())
+	})
+	t.Run("fails with writing, if file writer fails to write", func(t *testing.T) {
+		mockConsoleWriter := new(bytes.Buffer)
+		mockFileWriter := &mockWriter{WriteHandler: func(p []byte) (n int, err error) {
+			return 0, fmt.Errorf("write error")
+		}}
+		writer := NewMultiLevelWriter(false, zerolog.InfoLevel, mockConsoleWriter, mockFileWriter)
+
+		result, err := writer.WriteLevel(zerolog.InfoLevel, []byte("test"))
+
+		assert.EqualError(t, err, "write error")
+		assert.Equal(t, 4, result)
+		assert.Equal(t, "test", mockConsoleWriter.String())
 	})
 }

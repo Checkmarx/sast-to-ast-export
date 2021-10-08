@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
@@ -53,7 +55,9 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 			panic(flagErr)
 		}
 
-		logFileWriter, err := logging.NewFileWriter(productName)
+		now := time.Now()
+		logFileName := fmt.Sprintf("%s-%s.log", productName, now.Format(export.DateTimeFormat))
+		logFileWriter, err := os.Create(logFileName)
 		if err != nil {
 			panic(err)
 		}
