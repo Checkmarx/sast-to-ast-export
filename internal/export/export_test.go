@@ -234,7 +234,7 @@ func TestCreateZipFile(t *testing.T) {
 		test1CloseErr := test1File.Close()
 		assert.NoError(t, test1CloseErr)
 
-		err := CreateZipFile(zipFile, []string{test1FileName})
+		err := createZipFile(zipFile, []string{test1FileName})
 		assert.NoError(t, err)
 	})
 	t.Run("fails if zip file doesn't exist", func(t *testing.T) {
@@ -252,7 +252,7 @@ func TestCreateZipFile(t *testing.T) {
 		test1CloseErr := test1File.Close()
 		assert.NoError(t, test1CloseErr)
 
-		err := CreateZipFile(nil, []string{test1FileName})
+		err := createZipFile(nil, []string{test1FileName})
 		assert.Error(t, err)
 	})
 	t.Run("fails if zipped file doesn't exist", func(t *testing.T) {
@@ -279,7 +279,32 @@ func TestCreateZipFile(t *testing.T) {
 		test1CloseErr := test1File.Close()
 		assert.NoError(t, test1CloseErr)
 
-		err := CreateZipFile(zipFile, []string{test1FileName, "doesnt-exist.txt"})
+		err := createZipFile(zipFile, []string{test1FileName, "doesnt-exist.txt"})
+		assert.Error(t, err)
+	})
+	t.Run("fails if can't write to zip file", func(t *testing.T) {
+		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		assert.NoError(t, tmpDirErr)
+		defer func(path string) {
+			removeErr := os.RemoveAll(path)
+			assert.NoError(t, removeErr)
+		}(tmpDir)
+
+		zipFileName := filepath.Join(tmpDir, "test.zip")
+		zipFile, zipErr := os.OpenFile(zipFileName, os.O_RDONLY|os.O_CREATE, 0755)
+		assert.NoError(t, zipErr)
+
+		closeErr := zipFile.Close()
+		assert.NoError(t, closeErr)
+
+		test1FileName := filepath.Join(tmpDir, "test1.txt")
+		test1File, test1Err := os.Create(test1FileName)
+		assert.NoError(t, test1Err)
+
+		test1CloseErr := test1File.Close()
+		assert.NoError(t, test1CloseErr)
+
+		err := createZipFile(zipFile, []string{test1FileName})
 		assert.Error(t, err)
 	})
 }

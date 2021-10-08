@@ -104,7 +104,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		}
 	}()
 
-	zipErr := CreateZipFile(tmpZipFile, e.FileList)
+	zipErr := createZipFile(tmpZipFile, e.FileList)
 	if zipErr != nil {
 		return "", zipErr
 	}
@@ -161,7 +161,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		}
 	}()
 
-	exportErr := CreateZipFile(exportFile, []string{EncryptedKeyFileName, EncryptedZipFileName})
+	exportErr := createZipFile(exportFile, []string{EncryptedKeyFileName, EncryptedZipFileName})
 	return exportFileName, exportErr
 }
 
@@ -175,8 +175,8 @@ func CreateExportFileName(prefix string, now time.Time) string {
 	return fmt.Sprintf("%s-%s.zip", prefix, now.Format(DateTimeFormat))
 }
 
-// CreateZipFile zips the list of files and saves into the specified file handle
-func CreateZipFile(zipFile *os.File, fileList []string) error {
+// createZipFile zips the list of files and saves into the specified file handle
+func createZipFile(zipFile *os.File, fileList []string) error {
 	zipWriter := zip.NewWriter(zipFile)
 
 	for _, fileName := range fileList {
