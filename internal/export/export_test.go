@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -86,56 +87,102 @@ func TestExport_AddFileWithDataSource(t *testing.T) {
 
 func TestExport_CreateExportPackage(t *testing.T) {
 	prefix := "cxsast-create-export-package"
-	tmpDir, err := ioutil.TempDir(os.TempDir(), prefix)
-	assert.NoError(t, err)
-	defer func(path string) {
-		removeErr := os.RemoveAll(path)
-		assert.NoError(t, removeErr)
-	}(tmpDir)
+	t.Run("success case", func(t *testing.T) {
+		tmpDir, err := ioutil.TempDir(os.TempDir(), prefix)
+		assert.NoError(t, err)
+		defer func(path string) {
+			removeErr := os.RemoveAll(path)
+			assert.NoError(t, removeErr)
+		}(tmpDir)
 
-	export, err := CreateExport(prefix)
-	assert.NoError(t, err)
-	defer func(export *Export) {
+		export, err := CreateExport(prefix)
+		assert.NoError(t, err)
+		defer func(export *Export) {
+			cleanErr := export.Clean()
+			assert.NoError(t, cleanErr)
+
+			_, statErr := os.Stat(export.TmpDir)
+			assert.Error(t, statErr)
+			assert.True(t, os.IsNotExist(statErr))
+		}(&export)
+
+		addErr1 := export.AddFile("test1.txt", []byte("this is test1"))
+		assert.NoError(t, addErr1)
+
+		addErr2 := export.AddFile("test2.txt", []byte("this is test2"))
+		assert.NoError(t, addErr2)
+
+		exportFileName, exportErr := export.CreateExportPackage(prefix, tmpDir)
+		assert.NoError(t, exportErr)
+
+		info, statErr := os.Stat(exportFileName)
+		assert.NoError(t, statErr)
+		assert.False(t, info.IsDir())
+		assert.Contains(t, exportFileName, prefix)
+
+		zipReader, zipErr := zip.OpenReader(exportFileName)
+		assert.NoError(t, zipErr)
+		defer func(zipReader *zip.ReadCloser) {
+			closeErr := zipReader.Close()
+			assert.NoError(t, closeErr)
+		}(zipReader)
+
+		encryptedKeyFile, zipErr := zipReader.Open(EncryptedKeyFileName)
+		assert.NoError(t, zipErr)
+
+		_, keyStatErr := encryptedKeyFile.Stat()
+		assert.NoError(t, keyStatErr)
+
+		encryptedZipFile, zipErr := zipReader.Open(EncryptedZipFileName)
+		assert.NoError(t, zipErr)
+
+		_, zipStatErr := encryptedZipFile.Stat()
+		assert.NoError(t, zipStatErr)
+	})
+	t.Run("fails if tmp folder doesn't exist", func(t *testing.T) {
+		tmpDir, err := ioutil.TempDir(os.TempDir(), prefix)
+		assert.NoError(t, err)
+		defer func(path string) {
+			removeErr := os.RemoveAll(path)
+			assert.NoError(t, removeErr)
+		}(tmpDir)
+
+		export, err := CreateExport(prefix)
+		assert.NoError(t, err)
+
 		cleanErr := export.Clean()
 		assert.NoError(t, cleanErr)
 
-		_, statErr := os.Stat(export.TmpDir)
-		assert.Error(t, statErr)
-		assert.True(t, os.IsNotExist(statErr))
-	}(&export)
+		exportFileName, exportErr := export.CreateExportPackage(prefix, tmpDir)
 
-	addErr1 := export.AddFile("test1.txt", []byte("this is test1"))
-	assert.NoError(t, addErr1)
+		assert.Error(t, exportErr)
+		assert.Equal(t, "", exportFileName)
+	})
+	t.Run("fails if output folder doesn't exist", func(t *testing.T) {
+		tmpDir := filepath.Join(os.TempDir(), prefix, "does", "not", "exist")
 
-	addErr2 := export.AddFile("test2.txt", []byte("this is test2"))
-	assert.NoError(t, addErr2)
+		export, err := CreateExport(prefix)
+		assert.NoError(t, err)
+		defer func(export *Export) {
+			cleanErr := export.Clean()
+			assert.NoError(t, cleanErr)
 
-	exportFileName, exportErr := export.CreateExportPackage(prefix, tmpDir)
-	assert.NoError(t, exportErr)
+			_, statErr := os.Stat(export.TmpDir)
+			assert.Error(t, statErr)
+			assert.True(t, os.IsNotExist(statErr))
+		}(&export)
 
-	info, statErr := os.Stat(exportFileName)
-	assert.NoError(t, statErr)
-	assert.False(t, info.IsDir())
-	assert.Contains(t, exportFileName, prefix)
+		addErr1 := export.AddFile("test1.txt", []byte("this is test1"))
+		assert.NoError(t, addErr1)
 
-	zipReader, zipErr := zip.OpenReader(exportFileName)
-	assert.NoError(t, zipErr)
-	defer func(zipReader *zip.ReadCloser) {
-		closeErr := zipReader.Close()
-		assert.NoError(t, closeErr)
-	}(zipReader)
+		addErr2 := export.AddFile("test2.txt", []byte("this is test2"))
+		assert.NoError(t, addErr2)
 
-	encryptedKeyFile, zipErr := zipReader.Open(EncryptedKeyFileName)
-	assert.NoError(t, zipErr)
+		exportFileName, exportErr := export.CreateExportPackage(prefix, tmpDir)
 
-	_, keyStatErr := encryptedKeyFile.Stat()
-	assert.NoError(t, keyStatErr)
-
-	encryptedZipFile, zipErr := zipReader.Open(EncryptedZipFileName)
-	assert.NoError(t, zipErr)
-
-	_, zipStatErr := encryptedZipFile.Stat()
-	assert.NoError(t, zipStatErr)
+		assert.Error(t, exportErr)
+		assert.Equal(t, "", exportFileName)
+	})
 }
 
 func TestExport_Clean(t *testing.T) {
@@ -159,4 +206,80 @@ func TestCreateExportFileName(t *testing.T) {
 
 	expected := fmt.Sprintf("%s-2021-08-18-12-27-34.zip", prefix)
 	assert.Equal(t, expected, result)
+}
+
+func TestCreateZipFile(t *testing.T) {
+	prefix := "cxsast-create-zip-file"
+	t.Run("success case", func(t *testing.T) {
+		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		assert.NoError(t, tmpDirErr)
+		defer func(path string) {
+			removeErr := os.RemoveAll(path)
+			assert.NoError(t, removeErr)
+		}(tmpDir)
+
+		zipFileName := filepath.Join(tmpDir, "test.zip")
+		zipFile, zipErr := os.Create(zipFileName)
+		assert.NoError(t, zipErr)
+
+		defer func() {
+			closeErr := zipFile.Close()
+			assert.NoError(t, closeErr)
+		}()
+
+		test1FileName := filepath.Join(tmpDir, "test1.txt")
+		test1File, test1Err := os.Create(test1FileName)
+		assert.NoError(t, test1Err)
+
+		test1CloseErr := test1File.Close()
+		assert.NoError(t, test1CloseErr)
+
+		err := CreateZipFile(zipFile, []string{test1FileName})
+		assert.NoError(t, err)
+	})
+	t.Run("fails if zip file doesn't exist", func(t *testing.T) {
+		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		assert.NoError(t, tmpDirErr)
+		defer func(path string) {
+			removeErr := os.RemoveAll(path)
+			assert.NoError(t, removeErr)
+		}(tmpDir)
+
+		test1FileName := filepath.Join(tmpDir, "test1.txt")
+		test1File, test1Err := os.Create(test1FileName)
+		assert.NoError(t, test1Err)
+
+		test1CloseErr := test1File.Close()
+		assert.NoError(t, test1CloseErr)
+
+		err := CreateZipFile(nil, []string{test1FileName})
+		assert.Error(t, err)
+	})
+	t.Run("fails if zipped file doesn't exist", func(t *testing.T) {
+		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		assert.NoError(t, tmpDirErr)
+		defer func(path string) {
+			removeErr := os.RemoveAll(path)
+			assert.NoError(t, removeErr)
+		}(tmpDir)
+
+		zipFileName := filepath.Join(tmpDir, "test.zip")
+		zipFile, zipErr := os.Create(zipFileName)
+		assert.NoError(t, zipErr)
+
+		defer func() {
+			closeErr := zipFile.Close()
+			assert.NoError(t, closeErr)
+		}()
+
+		test1FileName := filepath.Join(tmpDir, "test1.txt")
+		test1File, test1Err := os.Create(test1FileName)
+		assert.NoError(t, test1Err)
+
+		test1CloseErr := test1File.Close()
+		assert.NoError(t, test1CloseErr)
+
+		err := CreateZipFile(zipFile, []string{test1FileName, "doesnt-exist.txt"})
+		assert.Error(t, err)
+	})
 }
