@@ -1,17 +1,18 @@
-package internal
+package sast
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
-	tokenURL = "/CxRestAPI/auth/identity/connect/token"
+	tokenURL = "/CxRestAPI/auth/identity/connect/token" //nolint:gosec
 	username = "abcd"
 	password = "Cx1234"
 )
@@ -35,7 +36,7 @@ func TestRequests_CreateRequest(t *testing.T) {
 			Status:     "Success",
 			Body:       io.NopCloser(strings.NewReader(responseContent)),
 		}
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		adapter := &HTTPClientMock{DoResponse: &response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
 		err := client.Authenticate(username, password)
@@ -52,7 +53,7 @@ func TestRequests_CreateRequest(t *testing.T) {
 			Status:     "Bad Request",
 			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
 		}
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+		adapter := &HTTPClientMock{DoResponse: &response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
 		errAuth := client.Authenticate(username, password)

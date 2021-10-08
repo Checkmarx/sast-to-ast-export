@@ -3,7 +3,7 @@ PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
 PUBLIC_KEY = $(shell cat public.key)
-LD_FLAGS = -ldflags="-s -w -X github.com/checkmarxDev/ast-sast-export/cmd.productName=$(PRODUCT_NAME) -X github.com/checkmarxDev/ast-sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X github.com/checkmarxDev/ast-sast-export/cmd.productBuild=$(PRODUCT_BUILD) -X github.com/checkmarxDev/ast-sast-export/internal.buildTimeRSAPublicKey=$(PUBLIC_KEY)"
+LD_FLAGS = -ldflags="-s -w -X github.com/checkmarxDev/ast-sast-export/cmd.productName=$(PRODUCT_NAME) -X github.com/checkmarxDev/ast-sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X github.com/checkmarxDev/ast-sast-export/cmd.productBuild=$(PRODUCT_BUILD) -X github.com/checkmarxDev/ast-sast-export/internal/encryption.BuildTimeRSAPublicKey=$(PUBLIC_KEY)"
 
 SAST_EXPORT_USER = '###########'
 SAST_EXPORT_PASS = '###########'
@@ -51,3 +51,7 @@ run_windows:
 
 debug_windows:
 	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 10 --debug
+
+mocks:
+	mockgen -destination internal/test/mocks/sast/mock_client.go -package sast github.com/checkmarxDev/ast-sast-export/internal/sast Client
+	mockgen -destination internal/test/mocks/export/mock_exporter.go -package export github.com/checkmarxDev/ast-sast-export/internal/export Exporter
