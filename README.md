@@ -60,4 +60,3 @@ go run -ldflags "-X sast-export/internal/encryption.BuildTimeRSAPublicKey=$(cat 
 ```
 go test -ldflags "-X sast-export/internal/encryption.BuildTimeRSAPublicKey=$(cat .\public.key)" .\...
 ```
-
