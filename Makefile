@@ -12,7 +12,7 @@ lint:
 	go fmt ./...
 	golangci-lint run
 
-build: windows_amd64 windows_386 linux_amd64 linux_386 darwin_amd64
+build: windows_amd64 windows_386 linux_amd64 linux_386 #darwin_amd64
 
 run: windows_amd64 run_windows
 
@@ -36,8 +36,8 @@ linux_amd64: check_public_key
 linux_386: check_public_key
 	env GOOS=linux GOARCH=386 go build -o $(BUILD_PATH)/linux/386/$(PRODUCT_NAME) $(LD_FLAGS)
 
-darwin_amd64: check_public_key
-	env GOOS=darwin GOARCH=amd64 go build -o $(BUILD_PATH)/darwin/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
+#darwin_amd64: check_public_key
+#	env GOOS=darwin GOARCH=amd64 go build -o $(BUILD_PATH)/darwin/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
 
 public_key:
 	if [ -z $(SAST_EXPORT_KMS_KEY_ID) ]; then echo "Please specify env var SAST_EXPORT_KMS_KEY_ID"; exit 1; fi
