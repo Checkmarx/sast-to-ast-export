@@ -19,7 +19,7 @@ add --debug parameter to bypass the zip and encryption process.
 
 Example for dev environment:
 ```
-make public_key -e SAST_EXPORT_KMS_KEY_ID="cb3052be-1e3a-4a9c-b3f0-84d963c53a06"
+make public_key
 make build
 ```
 
