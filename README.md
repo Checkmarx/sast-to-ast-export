@@ -13,27 +13,21 @@ add --debug parameter to bypass the zip and encryption process.
 # How to build
 
 1. Make sure you have access to AWS KMS
-2. Set KMS key id environment variable
+2. Make sure that the KMS key exists with the alias sast-migration-key in the eu-west-1 region
 3. Make public key file
 4. Build
 
 Example for dev environment:
 ```
-make public_key -e SAST_EXPORT_KMS_KEY_ID="cb3052be-1e3a-4a9c-b3f0-84d963c53a06"
+make public_key
 make build
 ```
 
 ## Troubleshooting
 
-### -z was unexpected at this time
+### No such file or directory
 
 Examples:
-```
-> make public_key
-if [ -z cb3052be-1e3a-4a9c-b3f0-84d963c53a06 ]; then echo "Please specify env var SAST_EXPORT_KMS_KEY_ID"; exit 1; fi
--z was unexpected at this time.
-make: *** [Makefile:43: public_key] Error 255
-```
 
 ```
 > make build

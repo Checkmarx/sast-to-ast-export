@@ -40,8 +40,7 @@ linux_386: check_public_key
 #	env GOOS=darwin GOARCH=amd64 go build -o $(BUILD_PATH)/darwin/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
 
 public_key:
-	if [ -z $(SAST_EXPORT_KMS_KEY_ID) ]; then echo "Please specify env var SAST_EXPORT_KMS_KEY_ID"; exit 1; fi
-	aws kms get-public-key --key-id $(SAST_EXPORT_KMS_KEY_ID) | jq -r .PublicKey > public.key
+	aws kms get-public-key --key-id alias/sast-migration-key --region eu-west-1 | jq -r .PublicKey > public.key
 
 check_public_key:
 	if [ -z $(PUBLIC_KEY) ]; then echo "Please run: make public_key"; exit 1; fi
