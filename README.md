@@ -14,7 +14,7 @@ add --debug parameter to bypass the zip and encryption process.
 
 1. Make sure you have access to AWS KMS
 2. Make sure that the KMS key exists with the alias sast-migration-key in the eu-west-1 region
-2. Make public key file
+3. Make public key file
 4. Build
 
 Example for dev environment:
