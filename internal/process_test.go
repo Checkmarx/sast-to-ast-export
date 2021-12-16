@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -824,6 +825,8 @@ func TestProduceReports(t *testing.T) {
 }
 
 func TestConsumeReports(t *testing.T) {
+	report1, ioErr := ioutil.ReadFile("../test/data/process/report1_raw.xml")
+	assert.NoError(t, ioErr)
 	reportCount := 4
 	reportJobs := make(chan ReportJob, reportCount)
 	reportJobs <- ReportJob{ProjectID: 1, ScanID: 1, ReportType: sast.ScanReportTypeXML}
@@ -834,7 +837,7 @@ func TestConsumeReports(t *testing.T) {
 	client := sast2.NewMockClient(gomock.NewController(t))
 	exporter := export2.NewMockExporter(gomock.NewController(t))
 	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
-		Return([]byte("1"), nil).
+		Return(report1, nil).
 		MinTimes(1).
 		MaxTimes(1)
 	client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
@@ -845,13 +848,15 @@ func TestConsumeReports(t *testing.T) {
 		Return([]byte("3"), nil).
 		MinTimes(1).
 		MaxTimes(1)
-
 	client.EXPECT().CreateScanReport(gomock.Eq(4), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 		Return([]byte("4"), nil).
 		MinTimes(1).
 		MaxTimes(1)
-	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 1)), gomock.Any()).
-		Return(nil).
+	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 1)), report1).
+		DoAndReturn(func(_ string, data []byte) error {
+			assert.Equal(t, string(report1), string(data))
+			return nil
+		}).
 		MinTimes(1).
 		MaxTimes(1)
 	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 3)), gomock.Any()).
