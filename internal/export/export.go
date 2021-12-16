@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/encryption"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -51,7 +51,7 @@ type Export struct {
 // when it's done with the ExportProducer
 func CreateExport(prefix string) (Export, error) {
 	tmpDir := os.TempDir()
-	tmpExportDir, err := ioutil.TempDir(tmpDir, prefix)
+	tmpExportDir, err := os.MkdirTemp(tmpDir, prefix)
 	return Export{TmpDir: tmpExportDir, FileList: []string{}}, err
 }
 
@@ -65,7 +65,7 @@ func (e *Export) AddFile(fileName string, data []byte) error {
 	e.FileList = append(e.FileList, fileName)
 
 	filePath := path.Join(e.TmpDir, fileName)
-	return ioutil.WriteFile(filePath, data, filePerm)
+	return os.WriteFile(filePath, data, filePerm)
 }
 
 // AddFileWithDataSource creates the specified file with content provided by dataSource
@@ -78,9 +78,9 @@ func (e *Export) AddFileWithDataSource(fileName string, dataSource func() ([]byt
 }
 
 // CreateExportPackage compresses and encrypts all files added so far
-//nolint:funlen
+// nolint:funlen,gocyclo
 func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) {
-	tmpZipFile, err := ioutil.TempFile(e.TmpDir, fmt.Sprintf("%s.*.zip", prefix))
+	tmpZipFile, err := os.CreateTemp(e.TmpDir, fmt.Sprintf("%s.*.zip", prefix))
 	if err != nil {
 		return "", err
 	}
@@ -111,49 +111,52 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	tmpZipFileName := tmpZipFile.Name()
 
 	// encrypt zip and key
-	zipContents, err := ioutil.ReadFile(tmpZipFileName)
+	zipTmp, err := os.Open(tmpZipFileName)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to open tmp zip file")
 	}
+	defer zipTmp.Close()
+	zipOut, err := os.Create(EncryptedZipFileName)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create enc zip file")
+	}
+	defer zipOut.Close()
 
 	symmetricKey, keyErr := encryption.CreateSymmetricKey(symmetricKeySize)
 	if keyErr != nil {
-		return "", keyErr
+		return "", errors.Wrap(keyErr, "failed to create key for aes")
 	}
 
-	zipCiphertext, aesErr := encryption.EncryptSymmetric(symmetricKey, zipContents)
+	aesErr := encryption.EncryptSymmetric(zipTmp, zipOut, symmetricKey)
 	if aesErr != nil {
-		return "", aesErr
+		return "", errors.Wrap(aesErr, "failed to encrypt data")
 	}
 
 	keyBytes, decodeErr := base64.StdEncoding.DecodeString(encryption.BuildTimeRSAPublicKey)
 	if decodeErr != nil {
-		return "", decodeErr
+		return "", errors.Wrap(decodeErr, "failed to base64 decode RSA public key")
 	}
 
 	publicKey, keyErr := encryption.CreatePublicKeyFromKeyBytes(keyBytes)
 	if keyErr != nil {
-		return "", keyErr
+		return "", errors.Wrap(keyErr, "failed to encrypt key")
 	}
 
 	symmetricKeyCiphertext, rsaErr := encryption.EncryptAsymmetric(publicKey, symmetricKey)
 	if rsaErr != nil {
-		return "", rsaErr
+		return "", errors.Wrap(rsaErr, "rsa encryption failed on key")
 	}
 
 	// write encrypted zip and key to files
-	if ioErr := ioutil.WriteFile(EncryptedKeyFileName, symmetricKeyCiphertext, filePerm); ioErr != nil {
-		return "", ioErr
-	}
-	if ioErr := ioutil.WriteFile(EncryptedZipFileName, zipCiphertext, filePerm); ioErr != nil {
-		return "", ioErr
+	if ioErr := os.WriteFile(EncryptedKeyFileName, symmetricKeyCiphertext, filePerm); ioErr != nil {
+		return "", errors.Wrap(ioErr, "failed to write key to FS")
 	}
 
 	// create final zip with encrypted files
 	exportFileName := path.Join(outputPath, CreateExportFileName(prefix, time.Now()))
 	exportFile, ioErr := os.Create(exportFileName)
 	if ioErr != nil {
-		return "", ioErr
+		return "", errors.Wrap(ioErr, "failed to create file for encrypted data")
 	}
 	defer func() {
 		if closeErr := exportFile.Close(); closeErr != nil {

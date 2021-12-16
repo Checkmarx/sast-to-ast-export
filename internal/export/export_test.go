@@ -3,7 +3,6 @@ package export
 import (
 	"archive/zip"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -66,7 +65,7 @@ func TestExport_AddFileWithDataSource(t *testing.T) {
 		assert.NoError(t, statErr)
 		assert.False(t, info.IsDir())
 
-		content, ioErr := ioutil.ReadFile(test1FileName)
+		content, ioErr := os.ReadFile(test1FileName)
 		assert.NoError(t, ioErr)
 		assert.Equal(t, "this is test1", string(content))
 	})
@@ -88,7 +87,7 @@ func TestExport_AddFileWithDataSource(t *testing.T) {
 func TestExport_CreateExportPackage(t *testing.T) {
 	prefix := "cxsast-create-export-package"
 	t.Run("success case", func(t *testing.T) {
-		tmpDir, err := ioutil.TempDir(os.TempDir(), prefix)
+		tmpDir, err := os.MkdirTemp(os.TempDir(), prefix)
 		assert.NoError(t, err)
 		defer func(path string) {
 			removeErr := os.RemoveAll(path)
@@ -140,7 +139,7 @@ func TestExport_CreateExportPackage(t *testing.T) {
 		assert.NoError(t, zipStatErr)
 	})
 	t.Run("fails if tmp folder doesn't exist", func(t *testing.T) {
-		tmpDir, err := ioutil.TempDir(os.TempDir(), prefix)
+		tmpDir, err := os.MkdirTemp(os.TempDir(), prefix)
 		assert.NoError(t, err)
 		defer func(path string) {
 			removeErr := os.RemoveAll(path)
@@ -211,7 +210,7 @@ func TestCreateExportFileName(t *testing.T) {
 func TestCreateZipFile(t *testing.T) {
 	prefix := "cxsast-create-zip-file"
 	t.Run("success case", func(t *testing.T) {
-		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		tmpDir, tmpDirErr := os.MkdirTemp(os.TempDir(), prefix)
 		assert.NoError(t, tmpDirErr)
 		defer func(path string) {
 			removeErr := os.RemoveAll(path)
@@ -238,7 +237,7 @@ func TestCreateZipFile(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("fails if zip file doesn't exist", func(t *testing.T) {
-		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		tmpDir, tmpDirErr := os.MkdirTemp(os.TempDir(), prefix)
 		assert.NoError(t, tmpDirErr)
 		defer func(path string) {
 			removeErr := os.RemoveAll(path)
@@ -256,7 +255,7 @@ func TestCreateZipFile(t *testing.T) {
 		assert.Error(t, err)
 	})
 	t.Run("fails if zipped file doesn't exist", func(t *testing.T) {
-		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		tmpDir, tmpDirErr := os.MkdirTemp(os.TempDir(), prefix)
 		assert.NoError(t, tmpDirErr)
 		defer func(path string) {
 			removeErr := os.RemoveAll(path)
@@ -283,7 +282,7 @@ func TestCreateZipFile(t *testing.T) {
 		assert.Error(t, err)
 	})
 	t.Run("fails if can't write to zip file", func(t *testing.T) {
-		tmpDir, tmpDirErr := ioutil.TempDir(os.TempDir(), prefix)
+		tmpDir, tmpDirErr := os.MkdirTemp(os.TempDir(), prefix)
 		assert.NoError(t, tmpDirErr)
 		defer func(path string) {
 			removeErr := os.RemoveAll(path)
