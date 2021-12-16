@@ -43,5 +43,10 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 		panic(err)
 	}
 
+	args.DBConnectionString, err = cmd.Flags().GetString(dbConnectionString)
+	if err != nil {
+		panic(err)
+	}
+
 	return args
 }

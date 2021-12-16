@@ -22,6 +22,7 @@ const (
 	projectsActiveSinceArg = "projects-active-since"
 	debugArg               = "debug"
 	verboseArg             = "verbose"
+	dbConnectionString     = "db"
 
 	projectsActiveSinceDefaultValue = 180
 )
@@ -41,7 +42,7 @@ var rootCmd = &cobra.Command{
 	Short: "Exports SAST data for importing in AST",
 	Long: `Exports encrypted SAST data for importing in AST. Example usage:
 
-cxsast_exporter --user username --pass password --url http://localhost
+cxsast_exporter --user username --pass password --url http://localhost --db sqlserver://dbuser:dbpass@127.0.0.1:61286?database=CxDB
 
 Produces a zip file containing the encrypted SAST data, e.g. cxsast_exporter-2021-09-10-15-42-35.zip
 Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-09-10-15-42-35.log
@@ -106,6 +107,7 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
+	rootCmd.Flags().StringP(dbConnectionString, "", "", "SAST db connection string")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
@@ -118,6 +120,9 @@ func init() {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagRequired(urlArg); err != nil {
+		panic(err)
+	}
+	if err := rootCmd.MarkFlagRequired(dbConnectionString); err != nil {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagCustom(projectsActiveSinceArg, projectsActiveSinceUsage); err != nil {
