@@ -1,14 +1,14 @@
 package encryption
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
 	"io"
+
+	"github.com/checkmarxDev/ast-sast-export/pkg/aesctr"
 )
 
 // BuildTimeRSAPublicKey is a base64-encoded RSA public key initialized during build
@@ -35,27 +35,10 @@ func EncryptAsymmetric(key *rsa.PublicKey, plaintext []byte) ([]byte, error) {
 	return rsa.EncryptOAEP(sha256.New(), rand.Reader, key, plaintext, []byte{})
 }
 
-// EncryptSymmetric does AES-GCM
-func EncryptSymmetric(key, plaintext []byte) ([]byte, error) {
-	c, err := aes.NewCipher(key)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	nonce := make([]byte, gcm.NonceSize())
-
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		return []byte{}, err
-	}
-
-	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
-
-	return ciphertext, nil
+// EncryptSymmetric uses AES-CRT with HMAC inside
+// using single key for both
+func EncryptSymmetric(in io.Reader, out io.Writer, key []byte) error {
+	return aesctr.Encrypt(in, out, key, key)
 }
 
 // CreateSymmetricKey creates a cryptographically secure random key of the specified length

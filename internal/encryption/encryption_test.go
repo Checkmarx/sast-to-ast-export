@@ -1,14 +1,14 @@
 package encryption
 
 import (
-	aes2 "crypto/aes"
-	"crypto/cipher"
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/pkg/aesctr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,23 +53,18 @@ func TestEncryptSymmetric(t *testing.T) {
 	assert.NoError(t, keyErr)
 
 	// encrypt
-	ciphertext, encryptErr := EncryptSymmetric(key, []byte(plaintext))
-	assert.NoError(t, encryptErr)
+	plain := bytes.NewReader([]byte(plaintext))
+	enc := bytes.NewBuffer([]byte{})
+	err := EncryptSymmetric(plain, enc, key)
+	assert.NoError(t, err)
 
 	// decrypt
-	block, blockErr := aes2.NewCipher(key)
-	assert.NoError(t, blockErr)
-
-	gcm, cipherErr := cipher.NewGCM(block)
-	assert.NoError(t, cipherErr)
-
-	nonceSize := gcm.NonceSize()
-	nonce, actualCiphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
-	result, decryptErr := gcm.Open(nil, nonce, actualCiphertext, nil)
-	assert.NoError(t, decryptErr)
+	decr := bytes.NewBuffer([]byte{})
+	err = aesctr.Decrypt(enc, decr, key, key)
+	assert.NoError(t, err)
 
 	// check decrypted matches plaintext
-	assert.Equal(t, plaintext, string(result))
+	assert.Equal(t, plaintext, decr.String())
 }
 
 func TestCreateSymmetricKey(t *testing.T) {
