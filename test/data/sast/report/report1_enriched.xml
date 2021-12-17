@@ -2,7 +2,7 @@
 <CxXMLResults InitiatorName="Constantino Antunes" Owner="admin" ScanId="1000002" ProjectId="3" ProjectName="Goatlin" TeamFullPathOnReportDate="CxServer" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3" ScanStart="Wednesday, September 15, 2021 3:05:20 PM" Preset="Checkmarx Default" ScanTime="00h:01m:35s" LinesOfCodeScanned="2056" FilesScanned="61" ReportCreationTime="Thursday, December 16, 2021 11:50:18 AM" Team="CxServer" CheckmarxVersion="9.3.0.1139" ScanComments="" ScanType="Full" SourceOrigin="LocalPath" Visibility="Public">
     <Query id="6300" cweId="89" name="SQL_Injection" group="Kotlin_High_Risk" Severity="High" Language="Kotlin" LanguageHash="0185196830802044" LanguageChangeDate="2021-03-02T00:00:00.0000000" SeverityIndex="3" QueryPath="Kotlin\Cx\Kotlin High Risk\SQL Injection Version:1" QueryVersionCode="132879452">
         <Result NodeId="10000020002" FileName="Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt" Status="New" Line="83" Column="78" FalsePositive="False" Severity="High" AssignToUser="" state="0" Remark="Constantino Antunes Goatlin, [Wednesday, September 15, 2021 3:09:16 PM]: Changed status to To Verify" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3&amp;pathid=2" SeverityIndex="3" DetectionDate="9/15/2021 3:06:51 PM">
-            <Path ResultId="1000002" PathId="2" SimilarityId="-748694192" NewSimilarityId="1234">
+            <Path ResultId="1000002" PathId="2" SimilarityId="-748694192" NewSimilarityId="12000000">
                 <PathNode>
                     <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt</FileName>
                     <Line>83</Line>
@@ -51,7 +51,7 @@
             </Path>
         </Result>
         <Result NodeId="10000020003" FileName="Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt" Status="New" Line="84" Column="82" FalsePositive="False" Severity="High" AssignToUser="" state="0" Remark="Constantino Antunes Goatlin, [Wednesday, September 15, 2021 3:09:16 PM]: Changed status to To Verify" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3&amp;pathid=3" SeverityIndex="3" DetectionDate="9/15/2021 3:06:51 PM">
-            <Path ResultId="1000002" PathId="3" SimilarityId="1325895920" NewSimilarityId="1234">
+            <Path ResultId="1000002" PathId="3" SimilarityId="1325895920" NewSimilarityId="34000000">
                 <PathNode>
                     <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt</FileName>
                     <Line>84</Line>
@@ -132,7 +132,7 @@
     </Query>
     <Query id="3922" cweId="352" name="Potentially_Vulnerable_To_Xsrf" group="JavaScript_Server_Side_Vulnerabilities" Severity="Low" Language="JavaScript" LanguageHash="1681617171013993" LanguageChangeDate="2021-03-02T00:00:00.0000000" SeverityIndex="1" QueryPath="JavaScript\Cx\JavaScript Server Side Vulnerabilities\Potentially Vulnerable To Xsrf Version:1" QueryVersionCode="96941927">
         <Result NodeId="10000020006" FileName="Goatlin-develop/packages/services/api/src/app.js" Status="New" Line="11" Column="7" FalsePositive="False" Severity="Low" AssignToUser="" state="0" Remark="Constantino Antunes Goatlin, [Wednesday, September 15, 2021 3:09:16 PM]: Changed status to To Verify" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3&amp;pathid=6" SeverityIndex="1" DetectionDate="9/15/2021 3:06:52 PM">
-            <Path ResultId="1000002" PathId="6" SimilarityId="-1465516664" NewSimilarityId="1234">
+            <Path ResultId="1000002" PathId="6" SimilarityId="-1465516664" NewSimilarityId="55000000">
                 <PathNode>
                     <FileName>Goatlin-develop/packages/services/api/src/app.js</FileName>
                     <Line>11</Line>

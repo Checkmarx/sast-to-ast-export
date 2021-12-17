@@ -1,4 +1,4 @@
-package report
+package sast
 
 import (
 	"os/exec"

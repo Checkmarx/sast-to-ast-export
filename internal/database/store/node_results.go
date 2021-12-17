@@ -13,8 +13,8 @@ type NodeResults struct {
 	db *gorm.DB
 }
 
-func NewNodeResults(db *gorm.DB) (*NodeResults, error) {
-	return &NodeResults{db: db}, nil
+func NewNodeResults(db *gorm.DB) *NodeResults {
+	return &NodeResults{db: db}
 }
 
 func (e *NodeResults) GetByResultPathAndNode(resultID, pathID string, nodeID int) (*database.NodeResult, error) {

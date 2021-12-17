@@ -13,8 +13,8 @@ type ComponentConfiguration struct {
 	db *gorm.DB
 }
 
-func NewComponentConfigurationStore(db *gorm.DB) (*ComponentConfiguration, error) {
-	return &ComponentConfiguration{db: db}, nil
+func NewComponentConfigurationStore(db *gorm.DB) *ComponentConfiguration {
+	return &ComponentConfiguration{db: db}
 }
 
 func (e *ComponentConfiguration) GetByKey(key string) (*database.ComponentConfiguration, error) {

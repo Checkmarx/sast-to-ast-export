@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/checkmarxDev/ast-sast-export/internal/sast"
-	export2 "github.com/checkmarxDev/ast-sast-export/internal/test/mocks/export"
-	sast2 "github.com/checkmarxDev/ast-sast-export/internal/test/mocks/sast"
-	"github.com/golang/mock/gomock"
-
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/sast"
+	export2 "github.com/checkmarxDev/ast-sast-export/test/mocks/export"
+	sast2 "github.com/checkmarxDev/ast-sast-export/test/mocks/sast"
+	mock_report "github.com/checkmarxDev/ast-sast-export/test/mocks/sast/report"
 	"github.com/golang-jwt/jwt"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -825,7 +825,7 @@ func TestProduceReports(t *testing.T) {
 }
 
 func TestConsumeReports(t *testing.T) {
-	report1, ioErr := ioutil.ReadFile("../test/data/process/report1_raw.xml")
+	report1, ioErr := ioutil.ReadFile("../test/data/process/report1.xml")
 	assert.NoError(t, ioErr)
 	reportCount := 4
 	reportJobs := make(chan ReportJob, reportCount)
@@ -834,8 +834,9 @@ func TestConsumeReports(t *testing.T) {
 	reportJobs <- ReportJob{ProjectID: 3, ScanID: 3, ReportType: sast.ScanReportTypeXML}
 	reportJobs <- ReportJob{ProjectID: 4, ScanID: 4, ReportType: sast.ScanReportTypeXML}
 	close(reportJobs)
-	client := sast2.NewMockClient(gomock.NewController(t))
-	exporter := export2.NewMockExporter(gomock.NewController(t))
+	ctrl := gomock.NewController(t)
+	client := sast2.NewMockClient(ctrl)
+	exporter := export2.NewMockExporter(ctrl)
 	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 		Return(report1, nil).
 		MinTimes(1).
@@ -867,9 +868,13 @@ func TestConsumeReports(t *testing.T) {
 		Return(nil).
 		MinTimes(1).
 		MaxTimes(1)
+	enricher := mock_report.NewMockEnricher(ctrl)
+	enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
+	enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
+	enricher.EXPECT().Marshal().Return(report1, nil).MinTimes(1)
 	outputCh := make(chan ReportConsumeOutput, reportCount)
 
-	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond)
+	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, enricher)
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
@@ -896,7 +901,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		client := sast2.NewMockClient(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Eq(resultsPageLimit)).
 			Return(&projectPage, nil).
@@ -919,10 +925,14 @@ func TestFetchResultsData(t *testing.T) {
 		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 			Return([]byte("2"), nil).
 			AnyTimes()
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		enricher := mock_report.NewMockEnricher(ctrl)
+		enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
+		enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
+		enricher.EXPECT().Marshal().Return([]byte("test"), nil).MinTimes(1)
 
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond)
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.NoError(t, result)
 	})
@@ -931,7 +941,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		client := sast2.NewMockClient(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Eq(resultsPageLimit)).
 			Return(&projectPage, nil).
@@ -944,8 +955,9 @@ func TestFetchResultsData(t *testing.T) {
 			GetTriagedResultsByScanID(gomock.Eq(1)).
 			Return(nil, fmt.Errorf("failed getting triaged scan")).
 			AnyTimes()
-		exporter := export2.NewMockExporter(gomock.NewController(t))
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond)
+		exporter := export2.NewMockExporter(ctrl)
+		enricher := mock_report.NewMockEnricher(ctrl)
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.EqualError(t, result, "failed getting triaged scan")
 	})
@@ -954,7 +966,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		client := sast2.NewMockClient(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Eq(resultsPageLimit)).
 			Return(&projectPage, nil).
@@ -977,10 +990,14 @@ func TestFetchResultsData(t *testing.T) {
 		client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
 			Return([]byte{}, fmt.Errorf("failed getting report #2")).
 			AnyTimes()
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		enricher := mock_report.NewMockEnricher(ctrl)
+		enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
+		enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
+		enricher.EXPECT().Marshal().Return([]byte("test"), nil).MinTimes(1)
 
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond)
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.NoError(t, result)
 	})
@@ -988,21 +1005,24 @@ func TestFetchResultsData(t *testing.T) {
 
 func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users success case", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users fails if fetch or write fails", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.UsersFileName), gomock.Any()).
 			Return(nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.RolesFileName), gomock.Any()).
@@ -1011,27 +1031,31 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.EqualError(t, result, "failed fetching roles")
 	})
 	t.Run("export users and teams success case", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users and teams fail if fetch or write fails", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.UsersFileName), gomock.Any()).
 			Return(nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.RolesFileName), gomock.Any()).
@@ -1052,13 +1076,15 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.EqualError(t, result, "failed fetching LDAP team mappings")
 	})
 	t.Run("export users, teams and results success case", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
 		projectPage := []sast.ProjectWithLastScanID{
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
@@ -1079,55 +1105,65 @@ func TestFetchSelectedData(t *testing.T) {
 			CreateScanReport(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return([]byte("test"), nil).
 			AnyTimes()
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
 			Export:              []string{"users", "teams", "results"},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
+		enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
+		enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
+		enricher.EXPECT().Marshal().Return([]byte("test"), nil).MinTimes(1)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users, teams and results fails if result processing fails", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Any()).
 			Return(&[]sast.ProjectWithLastScanID{}, fmt.Errorf("failed fetching projects"))
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
 			Export:              []string{"users", "teams", "results"},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.EqualError(t, result, "error searching for results")
 	})
 	t.Run("empty export if no export options selected", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
+		exporter := export2.NewMockExporter(ctrl)
 		args := Args{
 			Export:              []string{},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.NoError(t, result)
 	})
 	t.Run("empty export if export options are invalid", func(t *testing.T) {
-		client := sast2.NewMockClient(gomock.NewController(t))
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		client := sast2.NewMockClient(ctrl)
+		exporter := export2.NewMockExporter(ctrl)
 		args := Args{
 			Export:              []string{"test1", "test2"},
 			ProjectsActiveSince: 100,
 		}
+		enricher := mock_report.NewMockEnricher(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
 
 		assert.NoError(t, result)
 	})
@@ -1140,7 +1176,8 @@ func TestExportResultsToFile(t *testing.T) {
 			ProductName: "test",
 			OutputPath:  "/path/to/output",
 		}
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
 		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
 			Return("/path/to/output/export.zip", nil).
@@ -1158,7 +1195,8 @@ func TestExportResultsToFile(t *testing.T) {
 			ProductName: "test",
 			OutputPath:  "/path/to/output",
 		}
-		exporter := export2.NewMockExporter(gomock.NewController(t))
+		ctrl := gomock.NewController(t)
+		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
 		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
 			Return("", fmt.Errorf("failed creating export package")).

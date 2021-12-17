@@ -13,11 +13,11 @@ type TaskScans struct {
 	db *gorm.DB
 }
 
-func NewTaskScans(db *gorm.DB) (*TaskScans, error) {
-	return &TaskScans{db: db}, nil
+func NewTaskScans(db *gorm.DB) *TaskScans {
+	return &TaskScans{db: db}
 }
 
-func (e *NodeResults) GetByID(scanID string) (*database.TaskScan, error) {
+func (e *TaskScans) GetByID(scanID string) (*database.TaskScan, error) {
 	m := database.TaskScan{}
 	tx := e.db.Model(&m).Table("TaskScans").Where("[Id] = ?", scanID).First(&m)
 	if tx.Error != nil {

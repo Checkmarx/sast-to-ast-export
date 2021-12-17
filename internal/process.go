@@ -6,12 +6,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/checkmarxDev/ast-sast-export/internal/utils"
-
+	"github.com/checkmarxDev/ast-sast-export/internal/database"
+	"github.com/checkmarxDev/ast-sast-export/internal/database/store"
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
+	"github.com/checkmarxDev/ast-sast-export/internal/sast/report"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
+	"github.com/checkmarxDev/ast-sast-export/internal/utils"
 	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
@@ -46,6 +48,22 @@ func RunExport(args *Args) {
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
+
+	// create db connection
+	db, dbErr := database.Connect(args.DBConnectionString)
+	if dbErr != nil {
+		log.Error().Err(dbErr)
+		panic(dbErr)
+	}
+
+	reportEnricher := report.NewReport(
+		report.NewSource(
+			store.NewComponentConfigurationStore(db),
+			store.NewTaskScans(db),
+		),
+		store.NewNodeResults(db),
+		sast.NewSimilarity(),
+	)
 
 	// create api client
 	client, err := sast.NewSASTClient(args.URL, &retryablehttp.Client{
@@ -112,7 +130,8 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep, scanReportCreateMaxSleep)
+	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
+		scanReportCreateMaxSleep, reportEnricher)
 	if fetchErr != nil {
 		log.Error().Err(fetchErr)
 		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))
@@ -168,7 +187,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 }
 
 func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args, retryAttempts int,
-	retryMinSleep, retryMaxSleep time.Duration,
+	retryMinSleep, retryMaxSleep time.Duration, reportEnricher report.Enricher,
 ) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
@@ -183,7 +202,8 @@ func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args,
 					return err
 				}
 			case export.ResultsOption:
-				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep, retryMaxSleep); err != nil {
+				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
+					retryMaxSleep, reportEnricher); err != nil {
 					return err
 				}
 			}
@@ -244,7 +264,7 @@ func fetchTeamsData(client sast.Client, exporter export.Exporter) error {
 }
 
 func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProjectActiveSince int,
-	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration,
+	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, reportEnricher report.Enricher,
 ) error {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
@@ -270,7 +290,7 @@ func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProje
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
 		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs,
-			retryAttempts, retryMinSleep, retryMaxSleep)
+			retryAttempts, retryMinSleep, retryMaxSleep, reportEnricher)
 	}
 
 	reportConsumeErrorCount := 0
@@ -360,7 +380,7 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 
 func consumeReports(client sast.Client, exporter export.Exporter, worker int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
-	attemptMinSleep, attemptMaxSleep time.Duration,
+	attemptMinSleep, attemptMaxSleep time.Duration, reportEnricher report.Enricher,
 ) {
 	for reportJob := range reportJobs {
 		// create scan report
@@ -394,8 +414,19 @@ func consumeReports(client sast.Client, exporter export.Exporter, worker int,
 			done <- ReportConsumeOutput{Err: reportCreateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
-		// export scan report
-		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), reportData)
+		parseErr := reportEnricher.Parse(reportData)
+		if parseErr != nil {
+			done <- ReportConsumeOutput{Err: parseErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+		}
+		similarityErr := reportEnricher.AddSimilarity()
+		if similarityErr != nil {
+			done <- ReportConsumeOutput{Err: similarityErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+		}
+		enrichedReportData, marshalErr := reportEnricher.Marshal()
+		if marshalErr != nil {
+			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+		}
+		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), enrichedReportData)
 		if exportErr != nil {
 			log.Debug().Err(exportErr).
 				Int("ProjectID", reportJob.ProjectID).
