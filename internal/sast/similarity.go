@@ -1,14 +1,16 @@
 package sast
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
 const (
-	similarityCalculatorCmd = "C:\\source\\SimilarityCalculator\\SimilarityCalculator\\bin\\Debug\\netcoreapp3.1\\SimilarityCalculator.exe"
+	similarityCalculatorCmd = "SimilarityCalculator.exe"
 )
 
 type SimilarityCalculator interface {
@@ -19,10 +21,18 @@ type SimilarityCalculator interface {
 	) (string, error)
 }
 
-type Similarity struct{}
+type Similarity struct {
+	calculatorCmd string
+}
 
-func NewSimilarity() *Similarity {
-	return &Similarity{}
+func NewSimilarity() (*Similarity, error) {
+	executableFilename, executableErr := os.Executable()
+	if executableErr != nil {
+		return nil, executableErr
+	}
+	executablePath := filepath.Dir(executableFilename)
+	calculatorCmd := filepath.Join(executablePath, similarityCalculatorCmd)
+	return &Similarity{calculatorCmd: calculatorCmd}, nil
 }
 
 func (e *Similarity) Calculate(
@@ -30,8 +40,8 @@ func (e *Similarity) Calculate(
 	filename2, name2, line2, column2, methodLine2,
 	queryID string,
 ) (string, error) {
-	command := exec.Command(
-		similarityCalculatorCmd,
+	command := exec.Command( //nolint:gosec
+		e.calculatorCmd,
 		filename1, name1, line1, column1, methodLine1,
 		filename2, name2, line2, column2, methodLine2,
 		queryID,

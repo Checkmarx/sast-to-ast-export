@@ -56,13 +56,19 @@ func RunExport(args *Args) {
 		panic(dbErr)
 	}
 
+	similarityCalculator, similarityCalculatorErr := sast.NewSimilarity()
+	if similarityCalculatorErr != nil {
+		log.Error().Err(similarityCalculatorErr)
+		panic(similarityCalculatorErr)
+	}
+
 	reportEnricher := report.NewReport(
 		report.NewSource(
 			store.NewComponentConfigurationStore(db),
 			store.NewTaskScans(db),
 		),
 		store.NewNodeResults(db),
-		sast.NewSimilarity(),
+		similarityCalculator,
 	)
 
 	// create api client
@@ -416,15 +422,32 @@ func consumeReports(client sast.Client, exporter export.Exporter, worker int,
 		}
 		parseErr := reportEnricher.Parse(reportData)
 		if parseErr != nil {
+			log.Debug().Err(parseErr).
+				Int("ProjectID", reportJob.ProjectID).
+				Int("ScanID", reportJob.ScanID).
+				Int("worker", worker).
+				Msg("failed parsing report")
 			done <- ReportConsumeOutput{Err: parseErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 		}
 		similarityErr := reportEnricher.AddSimilarity()
 		if similarityErr != nil {
+			log.Debug().Err(similarityErr).
+				Int("ProjectID", reportJob.ProjectID).
+				Int("ScanID", reportJob.ScanID).
+				Int("worker", worker).
+				Msg("failed adding new similarity id to report")
 			done <- ReportConsumeOutput{Err: similarityErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
 		}
 		enrichedReportData, marshalErr := reportEnricher.Marshal()
 		if marshalErr != nil {
+			log.Debug().Err(marshalErr).
+				Int("ProjectID", reportJob.ProjectID).
+				Int("ScanID", reportJob.ScanID).
+				Int("worker", worker).
+				Msg("failed marshaling enriched report")
 			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
 		}
 		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), enrichedReportData)
 		if exportErr != nil {
