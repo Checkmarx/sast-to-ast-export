@@ -1,28 +1,28 @@
 package database
 
 type ComponentConfiguration struct {
-	ID    int
-	Key   string
-	Value string
+	ID    int    `gorm:"primaryKey;column:Id"`
+	Key   string `gorm:"primaryKey;column:Key"`
+	Value string `gorm:"primaryKey;column:Value"`
 }
 
 type NodeResult struct {
-	ResultID   int    `gorm:"ResultId"`
-	PathID     int    `gorm:"Path_Id"`
-	NodeID     int    `gorm:"Node_Id"`
-	FullName   string `gorm:"Full_Name"`
-	ShortName  string `gorm:"Short_Name"`
-	FileName   string `gorm:"File_Name"`
-	Line       int    `gorm:"Line"`
-	Col        int    `gorm:"Col"`
-	Length     int    `gorm:"Length"`
-	DomID      int    `gorm:"DOM_Id"`
-	MethodLine int    `gorm:"Method_Line"`
+	ResultID   int    `gorm:"primaryKey;autoIncrement:false;column:ResultId"`
+	PathID     int    `gorm:"primaryKey;autoIncrement:false;column:Path_Id"`
+	NodeID     int    `gorm:"primaryKey;autoIncrement:false;column:Node_Id"`
+	FullName   string `gorm:"column:Full_Name"`
+	ShortName  string `gorm:"column:Short_Name"`
+	FileName   string `gorm:"column:File_Name"`
+	Line       int    `gorm:"column:Line"`
+	Col        int    `gorm:"column:Col"`
+	Length     int    `gorm:"column:Length"`
+	DomID      int    `gorm:"column:DOM_Id"`
+	MethodLine int    `gorm:"column:Method_Line"`
 }
 
 type TaskScan struct {
-	ID          int    `gorm:"Id"`
-	ProjectID   int    `gorm:"ProjectId"`
-	VersionDate string `gorm:"VersionDate"`
-	SourceID    string `gorm:"SourceId"`
+	ID          int    `gorm:"column:Id"`
+	ProjectID   int    `gorm:"column:ProjectId"`
+	VersionDate string `gorm:"column:VersionDate"`
+	SourceID    string `gorm:"column:SourceId"`
 }
