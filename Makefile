@@ -12,7 +12,7 @@ lint:
 	go fmt ./...
 	golangci-lint run
 
-build: windows_amd64 windows_386 linux_amd64 linux_386 #darwin_amd64
+build: windows_amd64 #windows_386 linux_amd64 linux_386 darwin_amd64
 
 run: windows_amd64 run_windows
 
@@ -26,15 +26,16 @@ clean:
 
 windows_amd64: check_public_key
 	env GOOS=windows GOARCH=amd64 go build -o $(BUILD_PATH)/windows/amd64/$(PRODUCT_NAME).exe $(LD_FLAGS)
+	cp -r external/similarity/windows/amd64/SimilarityCalculator.exe $(BUILD_PATH)/windows/amd64
 
-windows_386: check_public_key
-	env GOOS=windows GOARCH=386 go build -o $(BUILD_PATH)/windows/386/$(PRODUCT_NAME).exe $(LD_FLAGS)
+#windows_386: check_public_key
+#	env GOOS=windows GOARCH=386 go build -o $(BUILD_PATH)/windows/386/$(PRODUCT_NAME).exe $(LD_FLAGS)
 
-linux_amd64: check_public_key
-	env GOOS=linux GOARCH=amd64 go build -o $(BUILD_PATH)/linux/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
+#linux_amd64: check_public_key
+#	env GOOS=linux GOARCH=amd64 go build -o $(BUILD_PATH)/linux/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
 
-linux_386: check_public_key
-	env GOOS=linux GOARCH=386 go build -o $(BUILD_PATH)/linux/386/$(PRODUCT_NAME) $(LD_FLAGS)
+#linux_386: check_public_key
+#	env GOOS=linux GOARCH=386 go build -o $(BUILD_PATH)/linux/386/$(PRODUCT_NAME) $(LD_FLAGS)
 
 #darwin_amd64: check_public_key
 #	env GOOS=darwin GOARCH=amd64 go build -o $(BUILD_PATH)/darwin/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
@@ -52,5 +53,11 @@ debug_windows:
 	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 10 --debug
 
 mocks:
-	mockgen -destination internal/test/mocks/sast/mock_client.go -package sast github.com/checkmarxDev/ast-sast-export/internal/sast Client
-	mockgen -destination internal/test/mocks/export/mock_exporter.go -package export github.com/checkmarxDev/ast-sast-export/internal/export Exporter
+	mockgen -destination test/mocks/sast/mock_client.go -package mock_sast github.com/checkmarxDev/ast-sast-export/internal/sast Client
+	mockgen -destination test/mocks/export/mock_exporter.go -package mock_export github.com/checkmarxDev/ast-sast-export/internal/export Exporter
+	mockgen -destination test/mocks/sast/report/enricher_mock.go -package mock_report github.com/checkmarxDev/ast-sast-export/internal/sast/report Enricher
+	mockgen -destination test/mocks/sast/similarity_mock.go -package mock_sast github.com/checkmarxDev/ast-sast-export/internal/sast SimilarityCalculator
+	mockgen -destination test/mocks/sast/report/source_mock.go -package mock_report github.com/checkmarxDev/ast-sast-export/internal/sast/report SourceProvider
+	mockgen -destination test/mocks/database/store/task_scans_mock.go -package mock_store github.com/checkmarxDev/ast-sast-export/internal/database/store TaskScansStore
+	mockgen -destination test/mocks/database/store/component_configuration_mock.go -package mock_store github.com/checkmarxDev/ast-sast-export/internal/database/store CxComponentConfigurationStore
+	mockgen -destination test/mocks/database/store/node_results_mock.go -package mock_store github.com/checkmarxDev/ast-sast-export/internal/database/store NodeResultsStore

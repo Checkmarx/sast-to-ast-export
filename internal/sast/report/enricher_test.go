@@ -6,6 +6,7 @@ import (
 
 	"github.com/checkmarxDev/ast-sast-export/internal/database"
 	mock_store "github.com/checkmarxDev/ast-sast-export/test/mocks/database/store"
+	mock_sast "github.com/checkmarxDev/ast-sast-export/test/mocks/sast"
 	mock_report "github.com/checkmarxDev/ast-sast-export/test/mocks/sast/report"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,7 @@ func TestReport_Parse(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	sourceMock := mock_report.NewMockSourceProvider(ctrl)
 	nodeResultsMock := mock_store.NewMockNodeResultsStore(ctrl)
-	similarityCalculatorMock := mock_report.NewMockSimilarityCalculator(ctrl)
+	similarityCalculatorMock := mock_sast.NewMockSimilarityCalculator(ctrl)
 
 	parser := NewReport(sourceMock, nodeResultsMock, similarityCalculatorMock)
 	parseErr := parser.Parse(report1)
@@ -33,7 +34,7 @@ func TestReport_Marshal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	sourceMock := mock_report.NewMockSourceProvider(ctrl)
 	nodeResultsMock := mock_store.NewMockNodeResultsStore(ctrl)
-	similarityCalculatorMock := mock_report.NewMockSimilarityCalculator(ctrl)
+	similarityCalculatorMock := mock_sast.NewMockSimilarityCalculator(ctrl)
 
 	parser := NewReport(sourceMock, nodeResultsMock, similarityCalculatorMock)
 	parseErr := parser.Parse(report1)
@@ -58,7 +59,7 @@ func TestReport_AddSimilarity(t *testing.T) {
 	nodeResultsMock.EXPECT().GetByResultPathAndNode("1000002", "3", 1).Return(&database.NodeResult{MethodLine: 3}, nil).AnyTimes()
 	nodeResultsMock.EXPECT().GetByResultPathAndNode("1000002", "3", 5).Return(&database.NodeResult{MethodLine: 4}, nil).AnyTimes()
 	nodeResultsMock.EXPECT().GetByResultPathAndNode("1000002", "6", 1).Return(&database.NodeResult{MethodLine: 5}, nil).AnyTimes()
-	similarityCalculatorMock := mock_report.NewMockSimilarityCalculator(ctrl)
+	similarityCalculatorMock := mock_sast.NewMockSimilarityCalculator(ctrl)
 	similarityCalculatorMock.EXPECT().Calculate(
 		"C:\\source\\Goatlin-develop\\packages\\clients\\android\\app\\src\\main\\java\\com\\cx\\goatlin\\EditNoteActivity.kt", gomock.Any(), gomock.Any(), gomock.Any(), "1", //nolint:lll
 		"C:\\source\\Goatlin-develop\\packages\\clients\\android\\app\\src\\main\\java\\com\\cx\\goatlin\\helpers\\DatabaseHelper.kt", gomock.Any(), gomock.Any(), gomock.Any(), "2", //nolint:lll
