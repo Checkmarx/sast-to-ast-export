@@ -163,7 +163,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 				}
 				errChan <- nil
 			}()
-			// pipe reader will get the DEFLATEd content from pipe writer, encrypt it and send
+			// EncryptSymmetric will get the DEFLATEd content from pipe reader, encrypt it and send
 			// to zipFileWriter, which will apply DEFLATE again and write bytes inside the zip archive
 			err = encryption.EncryptSymmetric(pr, zipFileWriter, symmetricKey)
 			if err != nil {
