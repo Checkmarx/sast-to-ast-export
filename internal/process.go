@@ -1,13 +1,13 @@
 package internal
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/checkmarxDev/ast-sast-export/internal/database"
-	"github.com/checkmarxDev/ast-sast-export/internal/database/store"
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	scansFileName    = "%d.xml"
-	resultsPageLimit = 10000
-	httpRetryWaitMin = 1 * time.Second
-	httpRetryWaitMax = 30 * time.Second
-	httpRetryMax     = 4
+	scansFileName         = "%d.xml"
+	scansMetadataFileName = "%d.json"
+	resultsPageLimit      = 10000
+	httpRetryWaitMin      = 1 * time.Second
+	httpRetryWaitMax      = 30 * time.Second
+	httpRetryMax          = 4
 
 	scanReportCreateAttempts = 10
 	scanReportCreateMinSleep = 1 * time.Second
@@ -49,27 +50,30 @@ func RunExport(args *Args) {
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
-	// create db connection
-	db, dbErr := database.Connect(args.DBConnectionString)
-	if dbErr != nil {
-		log.Error().Err(dbErr)
-		panic(dbErr)
-	}
+	/*	// create db connection
+		db, dbErr := database.Connect(args.DBConnectionString)
+		if dbErr != nil {
+			log.Error().Err(dbErr)
+			panic(dbErr)
+		}
 
-	similarityCalculator, similarityCalculatorErr := sast.NewSimilarity()
-	if similarityCalculatorErr != nil {
-		log.Error().Err(similarityCalculatorErr)
-		panic(similarityCalculatorErr)
-	}
 
-	reportEnricher := report.NewReport(
-		report.NewSource(
-			store.NewComponentConfigurationStore(db),
-			store.NewTaskScans(db),
-		),
-		store.NewNodeResults(db),
-		similarityCalculator,
-	)
+
+		reportEnricher := report.NewReport(
+			report.NewSource(
+				store.NewComponentConfigurationStore(db),
+				store.NewTaskScans(db),
+			),
+			store.NewNodeResults(db),
+			similarityCalculator,
+		)*/
+	/*
+		similarityCalculator, similarityCalculatorErr := sast.NewSimilarityIDCalculator()
+		if similarityCalculatorErr != nil {
+			log.Error().Err(similarityCalculatorErr)
+			panic(similarityCalculatorErr)
+		}
+	*/
 
 	// create api client
 	client, err := sast.NewSASTClient(args.URL, &retryablehttp.Client{
@@ -136,8 +140,9 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
+	// FIXME
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
-		scanReportCreateMaxSleep, reportEnricher)
+		scanReportCreateMaxSleep, export.NewMetadataSource(nil, nil, nil, ""))
 	if fetchErr != nil {
 		log.Error().Err(fetchErr)
 		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))
@@ -193,7 +198,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 }
 
 func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args, retryAttempts int,
-	retryMinSleep, retryMaxSleep time.Duration, reportEnricher report.Enricher,
+	retryMinSleep, retryMaxSleep time.Duration, metadataProvider export.MetadataProvider,
 ) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export.GetOptions() {
@@ -209,7 +214,7 @@ func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args,
 				}
 			case export.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
-					retryMaxSleep, reportEnricher); err != nil {
+					retryMaxSleep, metadataProvider); err != nil {
 					return err
 				}
 			}
@@ -270,7 +275,7 @@ func fetchTeamsData(client sast.Client, exporter export.Exporter) error {
 }
 
 func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProjectActiveSince int,
-	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, reportEnricher report.Enricher,
+	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider export.MetadataProvider,
 ) error {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
@@ -296,7 +301,7 @@ func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProje
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
 		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs,
-			retryAttempts, retryMinSleep, retryMaxSleep, reportEnricher)
+			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider)
 	}
 
 	reportConsumeErrorCount := 0
@@ -386,8 +391,10 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 
 func consumeReports(client sast.Client, exporter export.Exporter, worker int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
-	attemptMinSleep, attemptMaxSleep time.Duration, reportEnricher report.Enricher,
+	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider export.MetadataProvider,
 ) {
+	var resultMetadata []export.MetadataRecord
+
 	for reportJob := range reportJobs {
 		// create scan report
 		var reportData []byte
@@ -420,36 +427,60 @@ func consumeReports(client sast.Client, exporter export.Exporter, worker int,
 			done <- ReportConsumeOutput{Err: reportCreateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
-		parseErr := reportEnricher.Parse(reportData)
-		if parseErr != nil {
-			log.Debug().Err(parseErr).
-				Int("ProjectID", reportJob.ProjectID).
-				Int("ScanID", reportJob.ScanID).
-				Int("worker", worker).
-				Msg("failed parsing report")
-			done <- ReportConsumeOutput{Err: parseErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-		}
-		similarityErr := reportEnricher.AddSimilarity()
-		if similarityErr != nil {
-			log.Debug().Err(similarityErr).
-				Int("ProjectID", reportJob.ProjectID).
-				Int("ScanID", reportJob.ScanID).
-				Int("worker", worker).
-				Msg("failed adding new similarity id to report")
-			done <- ReportConsumeOutput{Err: similarityErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+		// generate metadata json
+		var reportReader report.CxXMLResults
+		unmarshalErr := xml.Unmarshal(reportData, &reportReader)
+		if unmarshalErr != nil {
+			done <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
-		enrichedReportData, marshalErr := reportEnricher.Marshal()
-		if marshalErr != nil {
-			log.Debug().Err(marshalErr).
-				Int("ProjectID", reportJob.ProjectID).
-				Int("ScanID", reportJob.ScanID).
-				Int("worker", worker).
-				Msg("failed marshaling enriched report")
-			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
+		for i := 0; i < len(reportReader.Queries); i++ {
+			for j := 0; j < len(reportReader.Queries[i].Results); j++ {
+				for k := 0; k < len(reportReader.Queries[i].Results[j].Paths); k++ {
+					query := reportReader.Queries[i]
+					path := reportReader.Queries[i].Results[j].Paths[k]
+					firstPathNode := path.PathNodes[0]
+					lastPathNode := path.PathNodes[len(path.PathNodes)-1]
+					metaQuery := &export.MetadataQuery{
+						QueryID:  query.ID,
+						Name:     query.Name,
+						Language: query.Language,
+						Group:    query.Group,
+					}
+					metaResult := &export.MetadataResult{
+						ResultID: path.ResultID,
+						PathID:   path.PathID,
+						FirstNode: export.MetadataNode{
+							FileName: firstPathNode.FileName,
+							Name:     firstPathNode.Name,
+							Line:     firstPathNode.Line,
+							Column:   firstPathNode.Column,
+						},
+						LastNode: export.MetadataNode{
+							FileName: lastPathNode.FileName,
+							Name:     lastPathNode.Name,
+							Line:     lastPathNode.Line,
+							Column:   lastPathNode.Column,
+						},
+					}
+					metadata, metadataErr := metadataProvider.GetMetadataForQueryAndResult(reportReader.ScanID, metaQuery, metaResult)
+					if metadataErr != nil {
+						panic(metadataErr) //FIXME
+					}
+					resultMetadata = append(resultMetadata, *metadata)
+				}
+			}
 		}
-		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), enrichedReportData)
+		resultMetadataJSON, resultMetadataJSONErr := json.Marshal(resultMetadata)
+		if resultMetadataJSONErr != nil {
+			panic(resultMetadataJSONErr) // FIXME
+		}
+		exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), resultMetadataJSON)
+		if exportMetadataErr != nil {
+			panic(exportMetadataErr) // FIXME
+		}
+		// export report
+		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), reportData)
 		if exportErr != nil {
 			log.Debug().Err(exportErr).
 				Int("ProjectID", reportJob.ProjectID).

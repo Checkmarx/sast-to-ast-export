@@ -10,7 +10,6 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	export2 "github.com/checkmarxDev/ast-sast-export/test/mocks/export"
 	sast2 "github.com/checkmarxDev/ast-sast-export/test/mocks/sast"
-	mock_report "github.com/checkmarxDev/ast-sast-export/test/mocks/sast/report"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -850,9 +849,10 @@ func TestConsumeReports(t *testing.T) {
 		MinTimes(1).
 		MaxTimes(1)
 	client.EXPECT().CreateScanReport(gomock.Eq(4), gomock.Eq(sast.ScanReportTypeXML), gomock.Any()).
-		Return([]byte("4"), nil).
+		Return(report1, nil).
 		MinTimes(1).
 		MaxTimes(1)
+	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 1), gomock.Any()).Return(nil)
 	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 1)), report1).
 		DoAndReturn(func(_ string, data []byte) error {
 			assert.Equal(t, string(report1), string(data))
@@ -864,23 +864,27 @@ func TestConsumeReports(t *testing.T) {
 		Return(fmt.Errorf("could not write report #3")).
 		MinTimes(1).
 		MaxTimes(1)
+	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 4), gomock.Any()).Return(nil)
 	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 4)), gomock.Any()).
 		Return(nil).
 		MinTimes(1).
 		MaxTimes(1)
-	enricher := mock_report.NewMockEnricher(ctrl)
-	enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
-	enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
-	enricher.EXPECT().Marshal().Return(report1, nil).MinTimes(1)
+	metadataProvider := export2.NewMockMetadataProvider(ctrl)
+	metadataProvider.EXPECT().GetMetadataForQueryAndResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(&export.MetadataRecord{
+		QueryID:      "1",
+		PathID:       "1",
+		ResultID:     "1",
+		SimilarityID: "1",
+	}, nil).AnyTimes()
 	outputCh := make(chan ReportConsumeOutput, reportCount)
 
-	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, enricher)
+	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
 		{Err: nil, ProjectID: 1, ScanID: 1},
 		{Err: fmt.Errorf("failed getting report #2"), ProjectID: 2, ScanID: 2},
-		{Err: fmt.Errorf("could not write report #3"), ProjectID: 3, ScanID: 3},
+		{Err: fmt.Errorf("EOF"), ProjectID: 3, ScanID: 3},
 		{Err: nil, ProjectID: 4, ScanID: 4},
 	}
 	for i := 0; i < reportCount; i++ {
@@ -927,12 +931,9 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		enricher := mock_report.NewMockEnricher(ctrl)
-		enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
-		enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
-		enricher.EXPECT().Marshal().Return([]byte("test"), nil).MinTimes(1)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.NoError(t, result)
 	})
@@ -956,8 +957,8 @@ func TestFetchResultsData(t *testing.T) {
 			Return(nil, fmt.Errorf("failed getting triaged scan")).
 			AnyTimes()
 		exporter := export2.NewMockExporter(ctrl)
-		enricher := mock_report.NewMockEnricher(ctrl)
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, enricher)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.EqualError(t, result, "failed getting triaged scan")
 	})
@@ -992,12 +993,9 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := export2.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		enricher := mock_report.NewMockEnricher(ctrl)
-		enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
-		enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
-		enricher.EXPECT().Marshal().Return([]byte("test"), nil).MinTimes(1)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.NoError(t, result)
 	})
@@ -1013,9 +1011,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.NoError(t, result)
 	})
@@ -1031,9 +1029,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.EqualError(t, result, "failed fetching roles")
 	})
@@ -1046,9 +1044,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.NoError(t, result)
 	})
@@ -1076,9 +1074,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.EqualError(t, result, "failed fetching LDAP team mappings")
 	})
@@ -1112,12 +1110,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams", "results"},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
-		enricher.EXPECT().Parse(gomock.Any()).Return(nil).MinTimes(1)
-		enricher.EXPECT().AddSimilarity().Return(nil).MinTimes(1)
-		enricher.EXPECT().Marshal().Return([]byte("test"), nil).MinTimes(1)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.NoError(t, result)
 	})
@@ -1133,9 +1128,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams", "results"},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.EqualError(t, result, "error searching for results")
 	})
@@ -1147,9 +1142,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.NoError(t, result)
 	})
@@ -1161,9 +1156,9 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"test1", "test2"},
 			ProjectsActiveSince: 100,
 		}
-		enricher := mock_report.NewMockEnricher(ctrl)
+		metadataProvider := export2.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, enricher)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
 
 		assert.NoError(t, result)
 	})
