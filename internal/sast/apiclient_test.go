@@ -71,6 +71,7 @@ func TestAPIClient_Authenticate(t *testing.T) {
 	})
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
 		response := makeBadRequestResponse(ErrorResponseJSON)
+		defer response.Body.Close()
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 
@@ -159,6 +160,7 @@ func TestAPIClient_doRequest(t *testing.T) {
 	})
 }
 
+// nolint:dupl
 func TestAPIClient_GetUsers(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	t.Run("returns users response", func(t *testing.T) {
@@ -178,6 +180,7 @@ func TestAPIClient_GetUsers(t *testing.T) {
 	})
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
 		response := makeBadRequestResponse(ErrorResponseJSON)
+		defer response.Body.Close()
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
@@ -189,6 +192,7 @@ func TestAPIClient_GetUsers(t *testing.T) {
 	})
 }
 
+// nolint:dupl
 func TestAPIClient_GetTeams(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	t.Run("returns teams response", func(t *testing.T) {
@@ -208,6 +212,7 @@ func TestAPIClient_GetTeams(t *testing.T) {
 	})
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
 		response := makeBadRequestResponse(ErrorResponseJSON)
+		defer response.Body.Close()
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
@@ -219,6 +224,7 @@ func TestAPIClient_GetTeams(t *testing.T) {
 	})
 }
 
+// nolint:dupl
 func TestAPIClient_GetRoles(t *testing.T) {
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	t.Run("returns teams response", func(t *testing.T) {
@@ -238,6 +244,7 @@ func TestAPIClient_GetRoles(t *testing.T) {
 	})
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
 		response := makeBadRequestResponse(ErrorResponseJSON)
+		defer response.Body.Close()
 		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
 		client.Token = mockToken
@@ -283,7 +290,9 @@ func TestAPIClient_GetTriagedResultsByScanID(t *testing.T) {
 	]
 }`
 	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
-	adapter := &HTTPClientMock{DoResponse: makeOkResponse(odataResponse), DoError: nil}
+	response := makeOkResponse(odataResponse)
+	defer response.Body.Close()
+	adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
 	client, _ := NewSASTClient(BaseURL, adapter)
 	client.Token = mockToken
 
@@ -297,10 +306,12 @@ func TestAPIClient_GetTriagedResultsByScanID(t *testing.T) {
 	assert.Equal(t, expected, *result)
 }
 
+// nolint:funlen
 func TestAPIClient_CreateScanReport(t *testing.T) {
 	retry := utils.Retry{Attempts: 3, MinSleep: time.Millisecond, MaxSleep: time.Millisecond}
 	t.Run("success case", func(t *testing.T) {
 		scanID := 1000000
+		// nolint:goconst
 		postReportURL := "/CxRestAPI/help/reports/sastScan"
 		getReportStatusURL := "/CxRestAPI/help/reports/sastScan/1250/status"
 		getReportURL := "/CxRestAPI/help/reports/sastScan/1250"
@@ -316,6 +327,7 @@ func TestAPIClient_CreateScanReport(t *testing.T) {
 					"contentType": "application/xml",
 					"status": {"id": 2,"value": "In progress"}
 				}`
+		// nolint:goconst
 		reportStatusJSON2 := `{
 					"link": {"rel": "content","uri": "/reports/sastScan/1250"},
 					"contentType": "application/xml",
@@ -340,14 +352,14 @@ func TestAPIClient_CreateScanReport(t *testing.T) {
 </CxXMLResults>`
 		responses := map[string][]DoResponse{
 			postReportURL: {
-				{Response: makeResponse(202, "Created", reportCreateJSON)},
+				{Response: makeResponse(202, "Created", reportCreateJSON)}, //nolint:bodyclose
 			},
 			getReportStatusURL: {
-				{Response: makeOkResponse(reportStatusJSON1)},
-				{Response: makeOkResponse(reportStatusJSON2)},
+				{Response: makeOkResponse(reportStatusJSON1)}, //nolint:bodyclose
+				{Response: makeOkResponse(reportStatusJSON2)}, //nolint:bodyclose
 			},
 			getReportURL: {
-				{Response: makeOkResponse(reportXML)},
+				{Response: makeOkResponse(reportXML)}, //nolint:bodyclose
 			},
 		}
 		client := makeCreateReportClient(responses)
@@ -364,7 +376,7 @@ func TestAPIClient_CreateScanReport(t *testing.T) {
 		getReportURL := "/CxRestAPI/help/reports/sastScan/1251"
 		responses := map[string][]DoResponse{
 			postReportURL: {
-				{Response: makeResponse(500, "Internal error", "")},
+				{Response: makeResponse(500, "Internal error", "")}, //nolint:bodyclose
 			},
 			getReportStatusURL: {},
 			getReportURL:       {},
@@ -390,10 +402,10 @@ func TestAPIClient_CreateScanReport(t *testing.T) {
 				}`
 		responses := map[string][]DoResponse{
 			postReportURL: {
-				{Response: makeResponse(202, "Created", reportCreateJSON)},
+				{Response: makeResponse(202, "Created", reportCreateJSON)}, //nolint:bodyclose
 			},
 			getReportStatusURL: {
-				{Response: makeResponse(500, "Internal error", "")},
+				{Response: makeResponse(500, "Internal error", "")}, //nolint:bodyclose
 			},
 			getReportURL: {},
 		}
@@ -423,12 +435,12 @@ func TestAPIClient_CreateScanReport(t *testing.T) {
 				}`
 		responses := map[string][]DoResponse{
 			postReportURL: {
-				{Response: makeResponse(202, "Created", reportCreateJSON)},
+				{Response: makeResponse(202, "Created", reportCreateJSON)}, //nolint:bodyclose
 			},
 			getReportStatusURL: {
-				{Response: makeOkResponse(reportStatusJSON)},
-				{Response: makeOkResponse(reportStatusJSON)},
-				{Response: makeOkResponse(reportStatusJSON)},
+				{Response: makeOkResponse(reportStatusJSON)}, //nolint:bodyclose
+				{Response: makeOkResponse(reportStatusJSON)}, //nolint:bodyclose
+				{Response: makeOkResponse(reportStatusJSON)}, //nolint:bodyclose
 			},
 			getReportURL: {},
 		}
@@ -457,13 +469,13 @@ func TestAPIClient_CreateScanReport(t *testing.T) {
 				}`
 		responses := map[string][]DoResponse{
 			postReportURL: {
-				{Response: makeResponse(202, "Created", reportCreateJSON)},
+				{Response: makeResponse(202, "Created", reportCreateJSON)}, //nolint:bodyclose
 			},
 			getReportStatusURL: {
-				{Response: makeOkResponse(reportStatusJSON)},
+				{Response: makeOkResponse(reportStatusJSON)}, //nolint:bodyclose
 			},
 			getReportURL: {
-				{Response: makeResponse(500, "Internal error", "")},
+				{Response: makeResponse(500, "Internal error", "")}, //nolint:bodyclose
 			},
 		}
 		client := makeCreateReportClient(responses)
@@ -501,7 +513,7 @@ func makeResponse(statusCode int, status, body string) *http.Response {
 
 func makeCreateReportClient(responses map[string][]DoResponse) *APIClient {
 	requestCounter := make(map[string]int, len(responses))
-	for k, _ := range responses {
+	for k := range responses {
 		requestCounter[k] = 0
 	}
 	adapter := &HTTPClientMock2{DoHandler: func(request *retryablehttp.Request) (*http.Response, error) {

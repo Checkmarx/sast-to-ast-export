@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	Accept                    = "Accept"
-	ContentType               = "Content-Type"
-	Authorization             = "Authorization"
-	JSONContentType           = "application/json;v=1.0"
-	FormURLEncodedContentType = "application/x-www-form-urlencoded"
+	accept                    = "Accept"
+	contentType               = "Content-Type"
+	authorization             = "Authorization"
+	jsonContentType           = "application/json;v=1.0"
+	formURLEncodedContentType = "application/x-www-form-urlencoded"
 )
 
 func CreateAccessTokenRequest(baseURL, username, password string) (*retryablehttp.Request, error) {
@@ -30,8 +30,8 @@ func CreateAccessTokenRequest(baseURL, username, password string) (*retryablehtt
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add(ContentType, FormURLEncodedContentType)
-	req.Header.Add(Accept, FormURLEncodedContentType)
+	req.Header.Add(contentType, formURLEncodedContentType)
+	req.Header.Add(accept, formURLEncodedContentType)
 	return req, nil
 }
 
@@ -41,9 +41,9 @@ func CreateRequest(httpMethod, requestURL string, requestBody io.Reader, token *
 		return nil, err
 	}
 
-	resp.Header.Add(ContentType, JSONContentType)
+	resp.Header.Add(contentType, jsonContentType)
 	if token != nil {
-		resp.Header.Add(Authorization, fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
+		resp.Header.Add(authorization, fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
 	}
 	return resp, nil
 }

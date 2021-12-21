@@ -126,13 +126,13 @@ func TestExport_CreateExportPackage(t *testing.T) {
 			assert.NoError(t, closeErr)
 		}(zipReader)
 
-		encryptedKeyFile, zipErr := zipReader.Open(EncryptedKeyFileName)
+		encryptedKeyFile, zipErr := zipReader.Open(encryptedKeyFileName)
 		assert.NoError(t, zipErr)
 
 		_, keyStatErr := encryptedKeyFile.Stat()
 		assert.NoError(t, keyStatErr)
 
-		encryptedZipFile, zipErr := zipReader.Open(EncryptedZipFileName)
+		encryptedZipFile, zipErr := zipReader.Open(encryptedZipFileName)
 		assert.NoError(t, zipErr)
 
 		_, zipStatErr := encryptedZipFile.Stat()

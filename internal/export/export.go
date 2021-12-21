@@ -15,18 +15,28 @@ import (
 )
 
 const (
-	UsersFileName            = "users.json"
-	RolesFileName            = "roles.json"
-	LdapServersFileName      = "ldap_servers.json"
+	// UsersFileName name of the file with user info
+	UsersFileName = "users.json"
+	// RolesFileName name of the file with roles info
+	RolesFileName = "roles.json"
+	// LdapServersFileName name of the file with ldap servers
+	LdapServersFileName = "ldap_servers.json"
+	// LdapRoleMappingsFileName name of the file with ldap role mapping
 	LdapRoleMappingsFileName = "ldap_role_mappings.json"
+	// LdapTeamMappingsFileName name of the file with ldap team mappingj
 	LdapTeamMappingsFileName = "ldap_team_mappings.json"
-	SamlIdpFileName          = "saml_identity_providers.json"
+	// SamlIdpFileName name of the file about saml idp
+	SamlIdpFileName = "saml_identity_providers.json"
+	// SamlRoleMappingsFileName saml roles mapping file
 	SamlRoleMappingsFileName = "saml_role_mappings.json"
+	// SamlTeamMappingsFileName salm teams mapping file
 	SamlTeamMappingsFileName = "saml_team_mappings.json"
-	TeamsFileName            = "teams.json"
-	EncryptedKeyFileName     = "key.enc.bin"
-	EncryptedZipFileName     = "zip.enc.bin"
+	// TeamsFileName teams file
+	TeamsFileName        = "teams.json"
+	encryptedKeyFileName = "key.enc.bin"
+	encryptedZipFileName = "zip.enc.bin"
 
+	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"
 
 	symmetricKeySize = 32
@@ -116,7 +126,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		return "", errors.Wrap(err, "failed to open tmp zip file")
 	}
 	defer zipTmp.Close()
-	zipOut, err := os.Create(EncryptedZipFileName)
+	zipOut, err := os.Create(encryptedZipFileName)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create enc zip file")
 	}
@@ -148,7 +158,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	}
 
 	// write encrypted zip and key to files
-	if ioErr := os.WriteFile(EncryptedKeyFileName, symmetricKeyCiphertext, filePerm); ioErr != nil {
+	if ioErr := os.WriteFile(encryptedKeyFileName, symmetricKeyCiphertext, filePerm); ioErr != nil {
 		return "", errors.Wrap(ioErr, "failed to write key to FS")
 	}
 
@@ -164,7 +174,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		}
 	}()
 
-	exportErr := createZipFile(exportFile, []string{EncryptedKeyFileName, EncryptedZipFileName})
+	exportErr := createZipFile(exportFile, []string{encryptedKeyFileName, encryptedZipFileName})
 	return exportFileName, exportErr
 }
 
@@ -206,9 +216,5 @@ func createZipFile(zipFile *os.File, fileList []string) error {
 		}
 	}
 
-	if zipCloseErr := zipWriter.Close(); zipCloseErr != nil {
-		return zipCloseErr
-	}
-
-	return nil
+	return zipWriter.Close()
 }

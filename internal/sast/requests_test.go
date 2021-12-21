@@ -28,7 +28,6 @@ func TestRequests_CreateAccessTokenRequest(t *testing.T) {
 }
 
 func TestRequests_CreateRequest(t *testing.T) {
-
 	t.Run("create request successfully", func(t *testing.T) {
 		responseContent := "{\"access_token\": \"eyJhbGcOiJ...YRfzdQ\",\"expires_in\": 86400,\"token_type\": \"Bearer\"}"
 		response := http.Response{
@@ -40,6 +39,7 @@ func TestRequests_CreateRequest(t *testing.T) {
 		client, _ := NewSASTClient(BaseURL, adapter)
 
 		err := client.Authenticate(username, password)
+		assert.NoError(t, err)
 
 		request, err := CreateRequest(http.MethodGet, BaseURL, nil, client.Token)
 		assert.NoError(t, err)

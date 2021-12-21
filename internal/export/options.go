@@ -1,8 +1,11 @@
 package export
 
 const (
-	UsersOption   = "users"
-	TeamsOption   = "teams"
+	// UsersOption represent users
+	UsersOption = "users"
+	// TeamsOption represent teams (groups)
+	TeamsOption = "teams"
+	// ResultsOption represent results (projects & data)
 	ResultsOption = "results"
 )
 
