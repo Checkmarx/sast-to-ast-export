@@ -148,9 +148,11 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 				flateWriter, ferr := flate.NewWriter(pw, flate.DefaultCompression)
 				if ferr != nil {
 					errChan <- err
+					return
 				}
 				if _, err = io.Copy(flateWriter, file); err != nil {
 					errChan <- err
+					return
 				}
 				errChan <- nil
 			}()
