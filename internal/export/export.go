@@ -124,6 +124,10 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 		return "", errors.Wrap(err, "failed to write to zip key file")
 	}
 
+	// chain deflate and encryption and then deflate of the zip archive itself
+	// the first deflate is needed to reduce the encrypted file size
+	// otherwise if file is encrypted and then deflated, the deflate won't be able to reduce the size
+	// because of the chaoric bytes of encrypted data
 	for _, fileName := range e.fileList {
 		err = func() error {
 			// files are added to the tmp
@@ -138,13 +142,16 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 				return errors.Wrapf(zerr, "failed to open zip writer for file %s", fileName)
 			}
 
-			// chain deflate and encryption and then deflate of the zip archive itself
-			// the "double" deflate is needed to reduce the size of the encrypted data
+			// create pipe (bytes written to pw go to pr)
 			pr, pw := io.Pipe()
 			// errChan needs to be buffered to not block the pipe
 			errChan := make(chan error, 1)
 			go func() {
+				// operations with pipe writer need to be in a separate goroutine
+				// writer needs to be closed for reader to stop "waiting" for new bytes
 				defer pw.Close()
+				// apply first DEFLATE to original content (which will come to pipe writer from file)
+				// this will send DEFLATEd content down the pipe to the reader
 				flateWriter, ferr := flate.NewWriter(pw, flate.DefaultCompression)
 				if ferr != nil {
 					errChan <- err
@@ -156,6 +163,8 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 				}
 				errChan <- nil
 			}()
+			// pipe reader will get the DEFLATEd content from pipe writer, encrypt it and send
+			// to zipFileWriter, which will apply DEFLATE again and write bytes inside the zip archive
 			err = encryption.EncryptSymmetric(pr, zipFileWriter, symmetricKey)
 			if err != nil {
 				return errors.Wrap(err, "failed to encrypt data")
