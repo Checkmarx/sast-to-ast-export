@@ -66,17 +66,17 @@ func (e *MetadataSource) GetMetadataForQueryAndResult(
 		if sourceErr != nil {
 			return nil, errors.Wrap(sourceErr, "could not get source code")
 		}
-		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent
-		firstFileSource = sourceContent[0].CxWSResponseSourceContent.Source
-		lastFileSource = sourceContent[0].CxWSResponseSourceContent.Source
+		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent.CxWSResponseSourceContents
+		firstFileSource = sourceContent[0].Source
+		lastFileSource = sourceContent[0].Source
 	} else {
 		sourceResponse, sourceErr := e.soapAdapter.GetSourcesByScanID(scanID, []string{result.FirstNode.FileName, result.LastNode.FileName})
 		if sourceErr != nil {
 			return nil, errors.Wrap(sourceErr, "could not get source code")
 		}
-		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent
-		firstFileSource = sourceContent[0].CxWSResponseSourceContent.Source
-		lastFileSource = sourceContent[1].CxWSResponseSourceContent.Source
+		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent.CxWSResponseSourceContents
+		firstFileSource = sourceContent[0].Source
+		lastFileSource = sourceContent[1].Source
 	}
 	firstFileErr := createFileAndPath(firstFileName, []byte(firstFileSource), 0600, 0700)
 	if firstFileErr != nil {

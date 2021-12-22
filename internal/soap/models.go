@@ -81,20 +81,19 @@ type (
 	}
 
 	GetSourcesByScanIDResult struct {
-		XMLName                    xml.Name `xml:"GetSourcesByScanIDResult"`
-		IsSuccessful               bool
-		ErrorMessage               string                       `xml:"ErrorMessage"`
-		CxWSResponseSourcesContent []CxWSResponseSourcesContent `xml:"cxWSResponseSourcesContent"`
+		XMLName                    xml.Name                   `xml:"GetSourcesByScanIDResult"`
+		IsSuccessful               bool                       `xml:"IsSuccesfull"`
+		ErrorMessage               string                     `xml:"ErrorMessage"`
+		CxWSResponseSourcesContent cxWSResponseSourcesContent `xml:"cxWSResponseSourcesContent"`
 	}
 
-	CxWSResponseSourcesContent struct {
-		XMLName                   xml.Name `xml:"cxWSResponseSourcesContent"`
-		CxWSResponseSourceContent CxWSResponseSourceContent
+	cxWSResponseSourcesContent struct {
+		XMLName                    xml.Name                    `xml:"cxWSResponseSourcesContent"`
+		CxWSResponseSourceContents []CxWSResponseSourceContent `xml:"CxWSResponseSourceContent"`
 	}
 
 	CxWSResponseSourceContent struct {
-		XMLName      xml.Name `xml:"CxWSResponseSourceContent"`
-		IsSuccessful bool     `xml:"IsSuccesfull"`
-		Source       string
+		XMLName xml.Name `xml:"CxWSResponseSourceContent"`
+		Source  string   `xml:"Source"`
 	}
 )

@@ -3,13 +3,13 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const (
