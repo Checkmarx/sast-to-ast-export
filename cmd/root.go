@@ -89,7 +89,11 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 
 		// start export
 		allArgs := GetArgs(cmd, productName)
-		internal.RunExport(&allArgs)
+		exportErr := internal.RunExport(&allArgs)
+		if exportErr != nil {
+			log.Error().Err(exportErr)
+			panic(exportErr)
+		}
 	},
 }
 

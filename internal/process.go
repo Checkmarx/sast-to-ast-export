@@ -4,21 +4,22 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/ast"
-	"github.com/checkmarxDev/ast-sast-export/internal/soap"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/ast"
 	"github.com/checkmarxDev/ast-sast-export/internal/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	"github.com/checkmarxDev/ast-sast-export/internal/sast/report"
 	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
+	"github.com/checkmarxDev/ast-sast-export/internal/soap"
 	"github.com/checkmarxDev/ast-sast-export/internal/utils"
 	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -41,7 +42,7 @@ type ReportConsumeOutput struct {
 	ScanID    int
 }
 
-func RunExport(args *Args) {
+func RunExport(args *Args) error {
 	consumerCount := GetNumCPU()
 
 	log.Debug().
@@ -51,31 +52,6 @@ func RunExport(args *Args) {
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
-
-	/*	// create db connection
-		db, dbErr := database.Connect(args.DBConnectionString)
-		if dbErr != nil {
-			log.Error().Err(dbErr)
-			panic(dbErr)
-		}
-
-
-
-		reportEnricher := report.NewReport(
-			report.NewSource(
-				store.NewComponentConfigurationStore(db),
-				store.NewTaskScans(db),
-			),
-			store.NewNodeResults(db),
-			similarityCalculator,
-		)*/
-	/*
-		similarityCalculator, similarityCalculatorErr := sast.NewSimilarityIDCalculator()
-		if similarityCalculatorErr != nil {
-			log.Error().Err(similarityCalculatorErr)
-			panic(similarityCalculatorErr)
-		}
-	*/
 
 	// create api client
 	client, err := sast.NewSASTClient(args.URL, &retryablehttp.Client{
@@ -102,23 +78,20 @@ func RunExport(args *Args) {
 		},
 	})
 	if err != nil {
-		log.Error().Err(err)
-		panic(err)
+		return errors.Wrap(err, "could not create REST client")
 	}
 
 	// authenticate
 	log.Info().Msg("connecting to SAST")
 	if authErr := client.Authenticate(args.Username, args.Password); authErr != nil {
-		log.Error().Err(authErr)
-		panic(authErr)
+		return errors.Wrap(authErr, "could not authenticate with SAST API")
 	}
 
 	// validate permissions
 	jwtClaims := jwt.MapClaims{}
 	_, _, jwtErr := new(jwt.Parser).ParseUnverified(client.Token.AccessToken, jwtClaims)
 	if jwtErr != nil {
-		log.Error().Err(jwtErr)
-		panic(fmt.Errorf("permissions error - could not parse token"))
+		return errors.Wrap(jwtErr, "permissions error - could not parse token")
 	}
 	permissionsValidateErr := validatePermissions(jwtClaims, args.Export)
 	if permissionsValidateErr != nil {
@@ -129,8 +102,7 @@ func RunExport(args *Args) {
 	log.Info().Msg("collecting data from SAST")
 	exportValues, exportCreateErr := export.CreateExport(args.ProductName)
 	if exportCreateErr != nil {
-		log.Error().Err(exportCreateErr)
-		panic(exportCreateErr)
+		return errors.Wrap(exportCreateErr, "could not create export package")
 	}
 
 	if !args.Debug {
@@ -144,24 +116,24 @@ func RunExport(args *Args) {
 
 	astQueryIDRepo, astQueryIDRepoErr := ast.NewQueryIDRepo(ast.AllQueries)
 	if astQueryIDRepoErr != nil {
-		log.Error().Err(astQueryIDRepoErr)
-		panic(astQueryIDRepoErr)
+		return errors.Wrap(astQueryIDRepoErr, "could not create AST query id repo")
 	}
 
 	similarityIDCalculator, similarityIDCalculatorErr := sast.NewSimilarityIDCalculator()
 	if similarityIDCalculatorErr != nil {
-		log.Error().Err(similarityIDCalculatorErr)
-		panic(similarityIDCalculatorErr)
+		return errors.Wrap(similarityIDCalculatorErr, "could not create similarity id calculator")
 	}
 
 	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
 
-	metadataTempDir := os.TempDir()
+	metadataTempDir, metadataTempDirErr := os.MkdirTemp("", args.ProductName)
+	if metadataTempDirErr != nil {
+		return errors.Wrap(metadataTempDirErr, "could not create metadata temporary folder")
+	}
 	defer func() {
 		metadataTempDirRemoveErr := os.RemoveAll(metadataTempDir)
 		if metadataTempDirRemoveErr != nil {
 			log.Error().Err(metadataTempDirRemoveErr)
-			panic(metadataTempDirRemoveErr)
 		}
 	}()
 
@@ -170,8 +142,7 @@ func RunExport(args *Args) {
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource)
 	if fetchErr != nil {
-		log.Error().Err(fetchErr)
-		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))
+		return errors.Wrap(fetchErr, "could not fetch selected data")
 	}
 
 	// export data to file
@@ -182,6 +153,7 @@ func RunExport(args *Args) {
 	}
 
 	log.Info().Msgf("export completed to %s", exportFileName)
+	return nil
 }
 
 func exportResultsToFile(args *Args, exportValues export.Exporter) (string, error) {
