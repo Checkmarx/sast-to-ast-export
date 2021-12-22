@@ -84,10 +84,10 @@ type (
 		XMLName                    xml.Name                   `xml:"GetSourcesByScanIDResult"`
 		IsSuccessful               bool                       `xml:"IsSuccesfull"`
 		ErrorMessage               string                     `xml:"ErrorMessage"`
-		CxWSResponseSourcesContent cxWSResponseSourcesContent `xml:"cxWSResponseSourcesContent"`
+		CxWSResponseSourcesContent CxWSResponseSourcesContent `xml:"cxWSResponseSourcesContent"`
 	}
 
-	cxWSResponseSourcesContent struct {
+	CxWSResponseSourcesContent struct {
 		XMLName                    xml.Name                    `xml:"cxWSResponseSourcesContent"`
 		CxWSResponseSourceContents []CxWSResponseSourceContent `xml:"CxWSResponseSourceContent"`
 	}

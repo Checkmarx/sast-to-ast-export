@@ -56,27 +56,35 @@ func TestMetadataSource_GetMetadataForQueryAndResult(t *testing.T) {
 		[]string{metaResult.FirstNode.FileName, metaResult.LastNode.FileName},
 	).Return(&soap.GetSourcesByScanIDResponse{
 		GetSourcesByScanIDResult: soap.GetSourcesByScanIDResult{
-			CxWSResponseSourcesContent: []soap.CxWSResponseSourcesContent{
-				{CxWSResponseSourceContent: soap.CxWSResponseSourceContent{Source: "echo \"hello world 1\""}},
-				{CxWSResponseSourceContent: soap.CxWSResponseSourceContent{Source: "echo \"hello world 2\""}},
+			CxWSResponseSourcesContent: soap.CxWSResponseSourcesContent{
+				CxWSResponseSourceContents: []soap.CxWSResponseSourceContent{
+					{Source: "echo \"hello world 1\""},
+					{Source: "echo \"hello world 2\""},
+				},
 			},
 		},
 	}, nil)
 	soapAdapterMock.EXPECT().GetResultPathsForQuery(scanID, metaQuery.QueryID).Return(&soap.GetResultPathsForQueryResponse{
 		GetResultPathsForQueryResult: soap.GetResultPathsForQueryResult{
-			Paths: []soap.ResultPath{
-				{
-					PathID: metaResult.PathID,
-					Nodes: []soap.ResultPathNode{
-						{MethodLine: firstMethodLine},
-						{MethodLine: "2"},
-						{MethodLine: "3"},
-						{MethodLine: lastMethodLine},
+			Paths: soap.Paths{
+				Paths: []soap.ResultPath{
+					{
+						PathID: metaResult.PathID,
+						Node: soap.Node{
+							Nodes: []soap.ResultPathNode{
+								{MethodLine: firstMethodLine},
+								{MethodLine: "2"},
+								{MethodLine: "3"},
+								{MethodLine: lastMethodLine},
+							},
+						},
 					},
-				},
-				{
-					PathID: "3",
-					Nodes:  []soap.ResultPathNode{{MethodLine: "10"}, {MethodLine: "20"}, {MethodLine: "30"}},
+					{
+						PathID: "3",
+						Node: soap.Node{
+							Nodes: []soap.ResultPathNode{{MethodLine: "10"}, {MethodLine: "20"}, {MethodLine: "30"}},
+						},
+					},
 				},
 			},
 		},
