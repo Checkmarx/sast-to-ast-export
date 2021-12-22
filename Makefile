@@ -26,7 +26,6 @@ clean:
 
 windows_amd64: check_public_key
 	env GOOS=windows GOARCH=amd64 go build -o $(BUILD_PATH)/windows/amd64/$(PRODUCT_NAME).exe $(LD_FLAGS)
-	cp -r external/similarity/windows/amd64/SimilarityCalculator.exe $(BUILD_PATH)/windows/amd64
 
 #windows_386: check_public_key
 #	env GOOS=windows GOARCH=386 go build -o $(BUILD_PATH)/windows/386/$(PRODUCT_NAME).exe $(LD_FLAGS)
