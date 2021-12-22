@@ -157,6 +157,7 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 					errChan <- err
 					return
 				}
+				defer flateWriter.Close()
 				if _, err = io.Copy(flateWriter, file); err != nil {
 					errChan <- err
 					return
