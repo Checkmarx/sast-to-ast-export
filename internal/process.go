@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/checkmarxDev/ast-sast-export/internal/ast"
+	"github.com/checkmarxDev/ast-sast-export/internal/soap"
 	"net/http"
 	"os"
 	"time"
@@ -140,9 +142,33 @@ func RunExport(args *Args) {
 		}(&exportValues)
 	}
 
-	// FIXME
+	astQueryIDRepo, astQueryIDRepoErr := ast.NewQueryIDRepo(ast.AllQueries)
+	if astQueryIDRepoErr != nil {
+		log.Error().Err(astQueryIDRepoErr)
+		panic(astQueryIDRepoErr)
+	}
+
+	similarityIDCalculator, similarityIDCalculatorErr := sast.NewSimilarityIDCalculator()
+	if similarityIDCalculatorErr != nil {
+		log.Error().Err(similarityIDCalculatorErr)
+		panic(similarityIDCalculatorErr)
+	}
+
+	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
+
+	metadataTempDir := os.TempDir()
+	defer func() {
+		metadataTempDirRemoveErr := os.RemoveAll(metadataTempDir)
+		if metadataTempDirRemoveErr != nil {
+			log.Error().Err(metadataTempDirRemoveErr)
+			panic(metadataTempDirRemoveErr)
+		}
+	}()
+
+	metadataSource := export.NewMetadataSource(astQueryIDRepo, similarityIDCalculator, soapClient, metadataTempDir)
+
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
-		scanReportCreateMaxSleep, export.NewMetadataSource(nil, nil, nil, ""))
+		scanReportCreateMaxSleep, metadataSource)
 	if fetchErr != nil {
 		log.Error().Err(fetchErr)
 		panic(fmt.Errorf("fetch error - %s", fetchErr.Error()))

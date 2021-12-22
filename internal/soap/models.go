@@ -3,10 +3,76 @@ package soap
 import "encoding/xml"
 
 type (
+	// SOAP types
+
+	Envelope struct {
+		XMLName struct{} `xml:"Envelope"`
+		Header  Header
+		Body    Body
+	}
+
+	Header struct {
+		XMLName  struct{} `xml:"Header"`
+		Contents []byte   `xml:",innerxml"`
+	}
+
+	Body struct {
+		XMLName  struct{} `xml:"Body"`
+		Contents []byte   `xml:",innerxml"`
+	}
+
+	// GetResultPathsForQuery request types
+
+	GetResultPathsForQueryRequest struct {
+		XMLName xml.Name `xml:"chec:GetResultPathsForQuery"`
+		ScanID  string   `xml:"chec:scanId"`
+		QueryID string   `xml:"chec:queryId"`
+	}
+
+	GetResultPathsForQueryResponse struct {
+		XMLName                      xml.Name `xml:"GetResultPathsForQueryResponse"`
+		GetResultPathsForQueryResult GetResultPathsForQueryResult
+	}
+
+	GetResultPathsForQueryResult struct {
+		XMLName      xml.Name `xml:"GetResultPathsForQueryResult"`
+		IsSuccessful bool     `xml:"IsSuccesfull"`
+		ErrorMessage string   `xml:"ErrorMessage"`
+		Paths        Paths    `xml:"Paths"`
+	}
+
+	Paths struct {
+		XMLName xml.Name     `xml:"Paths"`
+		Paths   []ResultPath `xml:"CxWSResultPath"`
+	}
+
+	ResultPath struct {
+		XMLName xml.Name `xml:"CxWSResultPath"`
+		PathID  string   `xml:"PathId"`
+		Node    Node     `xml:"Nodes"`
+	}
+
+	Node struct {
+		XMLName xml.Name         `xml:"Nodes"`
+		Nodes   []ResultPathNode `xml:"CxWSPathNode"`
+	}
+
+	ResultPathNode struct {
+		XMLName    xml.Name `xml:"CxWSPathNode"`
+		MethodLine string
+	}
+
+	// GetSourcesByScanID request types
+
 	GetSourcesByScanIDRequest struct {
-		XMLName         xml.Name `xml:"GetSourcesByScanIDRequest"`
-		ScanID          string   `xml:"scanID"`
-		FilesToRetrieve []string `xml:"filesToRetreive"`
+		XMLName         xml.Name                  `xml:"chec:GetSourcesByScanID"`
+		ScanID          string                    `xml:"chec:scanID"`
+		FilesToRetrieve GetSourcesFilesToRetrieve `xml:"chec:filesToRetreive"`
+	}
+
+	GetSourcesFilesToRetrieve struct {
+		XMLName xml.Name `xml:"chec:filesToRetreive"`
+		Strings []string `xml:"chec:string"`
 	}
 
 	GetSourcesByScanIDResponse struct {
@@ -17,6 +83,7 @@ type (
 	GetSourcesByScanIDResult struct {
 		XMLName                    xml.Name `xml:"GetSourcesByScanIDResult"`
 		IsSuccessful               bool
+		ErrorMessage               string                       `xml:"ErrorMessage"`
 		CxWSResponseSourcesContent []CxWSResponseSourcesContent `xml:"cxWSResponseSourcesContent"`
 	}
 
@@ -29,33 +96,5 @@ type (
 		XMLName      xml.Name `xml:"CxWSResponseSourceContent"`
 		IsSuccessful bool     `xml:"IsSuccesfull"`
 		Source       string
-	}
-
-	GetResultPathsForQueryRequest struct {
-		XMLName xml.Name `xml:"GetResultPathsForQueryRequest"`
-		ScanID  string   `xml:"scanId"`
-		QueryID string   `xml:"queryId"`
-	}
-
-	GetResultPathsForQueryResponse struct {
-		XMLName                      xml.Name `xml:"GetResultPathsForQueryResponse"`
-		GetResultPathsForQueryResult GetResultPathsForQueryResult
-	}
-
-	GetResultPathsForQueryResult struct {
-		XMLName      xml.Name `xml:"GetResultPathsForQueryResult"`
-		IsSuccessful bool     `xml:"IsSuccesfull"`
-		Paths        []ResultPath
-	}
-
-	ResultPath struct {
-		XMLName xml.Name `xml:"CxWSResultPath"`
-		PathID  string   `xml:"pathId"`
-		Nodes   []ResultPathNode
-	}
-
-	ResultPathNode struct {
-		XMLName    xml.Name `xml:"CxWSPathNode"`
-		MethodLine string
 	}
 )

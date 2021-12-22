@@ -48,31 +48,43 @@ func (e *MetadataSource) GetMetadataForQueryAndResult(
 		return nil, errors.Wrap(resultPathErr, "could not get result paths")
 	}
 	var firstMethodLine, lastMethodLine string
-	for _, resultPath := range resultPaths.GetResultPathsForQueryResult.Paths {
+	for _, resultPath := range resultPaths.GetResultPathsForQueryResult.Paths.Paths {
 		if resultPath.PathID == result.PathID {
-			firstMethodLine = resultPath.Nodes[0].MethodLine
-			lastMethodLine = resultPath.Nodes[len(resultPath.Nodes)-1].MethodLine
+			firstMethodLine = resultPath.Node.Nodes[0].MethodLine
+			lastMethodLine = resultPath.Node.Nodes[len(resultPath.Node.Nodes)-1].MethodLine
+			break
 		}
 	}
 	if firstMethodLine == "" || lastMethodLine == "" {
 		return nil, fmt.Errorf("could not get method lines")
 	}
-	sourceResponse, sourceErr := e.soapAdapter.GetSourcesByScanID(scanID, []string{result.FirstNode.FileName, result.LastNode.FileName})
-	if sourceErr != nil {
-		return nil, errors.Wrap(sourceErr, "could not get source code")
-	}
-	sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent
 	firstFileName := filepath.Join(e.tmpDir, result.FirstNode.FileName)
-	firstFileSource := sourceContent[0].CxWSResponseSourceContent.Source
 	lastFileName := filepath.Join(e.tmpDir, result.LastNode.FileName)
-	lastFileSource := sourceContent[1].CxWSResponseSourceContent.Source
+	var firstFileSource, lastFileSource string
+	if result.FirstNode.FileName == result.LastNode.FileName {
+		sourceResponse, sourceErr := e.soapAdapter.GetSourcesByScanID(scanID, []string{result.FirstNode.FileName})
+		if sourceErr != nil {
+			return nil, errors.Wrap(sourceErr, "could not get source code")
+		}
+		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent
+		firstFileSource = sourceContent[0].CxWSResponseSourceContent.Source
+		lastFileSource = sourceContent[0].CxWSResponseSourceContent.Source
+	} else {
+		sourceResponse, sourceErr := e.soapAdapter.GetSourcesByScanID(scanID, []string{result.FirstNode.FileName, result.LastNode.FileName})
+		if sourceErr != nil {
+			return nil, errors.Wrap(sourceErr, "could not get source code")
+		}
+		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent
+		firstFileSource = sourceContent[0].CxWSResponseSourceContent.Source
+		lastFileSource = sourceContent[1].CxWSResponseSourceContent.Source
+	}
 	firstFileErr := createFileAndPath(firstFileName, []byte(firstFileSource), 0600, 0700)
 	if firstFileErr != nil {
-		return nil, errors.Wrap(sourceErr, "could not create first file")
+		return nil, errors.Wrap(firstFileErr, "could not create first file")
 	}
 	lastFileErr := createFileAndPath(lastFileName, []byte(lastFileSource), 0600, 0700)
 	if lastFileErr != nil {
-		return nil, errors.Wrap(sourceErr, "could not create last file")
+		return nil, errors.Wrap(lastFileErr, "could not create last file")
 	}
 	similarityID, similarityIDErr := e.similarityIDProvider.Calculate(
 		firstFileName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, firstMethodLine,
@@ -80,7 +92,7 @@ func (e *MetadataSource) GetMetadataForQueryAndResult(
 		astQueryID,
 	)
 	if similarityIDErr != nil {
-		return nil, errors.Wrap(sourceErr, "could not calculate similarity id")
+		return nil, errors.Wrap(similarityIDErr, "could not calculate similarity id")
 	}
 	return &MetadataRecord{
 		QueryID:      query.QueryID,
