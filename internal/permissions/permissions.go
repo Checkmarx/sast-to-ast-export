@@ -13,6 +13,7 @@ const (
 	generateScanReportPermission = "generate-scan-report"
 	manageAuthProviderPermission = "manage-authentication-providers"
 	manageRolesPermission        = "manage-roles"
+	viewResults                  = "view-results"
 )
 
 var permissionDescription = map[interface{}]string{
@@ -27,7 +28,7 @@ func GetFromExportOptions(exportOptions []string) []interface{} {
 
 	usersPermissions := []string{manageAuthProviderPermission, manageRolesPermission}
 	teamsPermissions := []string{manageAuthProviderPermission}
-	resultsPermissions := []string{useOdataPermission, generateScanReportPermission}
+	resultsPermissions := []string{useOdataPermission, generateScanReportPermission, viewResults}
 
 	for _, exportOption := range exportOptions {
 		if exportOption == export.UsersOption {

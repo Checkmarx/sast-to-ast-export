@@ -230,7 +230,7 @@ func TestValidatePermissions(t *testing.T) {
 		},
 		{
 			jwt.MapClaims{
-				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report"},
+				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results"},
 				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
 			},
 			[]string{export.UsersOption, export.ResultsOption},
