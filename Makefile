@@ -55,8 +55,6 @@ debug_windows:
 mocks:
 	mockgen -destination test/mocks/sast/mock_client.go -package mock_sast github.com/checkmarxDev/ast-sast-export/internal/sast Client
 	mockgen -destination test/mocks/export/mock_exporter.go -package mock_export github.com/checkmarxDev/ast-sast-export/internal/export Exporter
-	#mockgen -destination test/mocks/sast/report/enricher_mock.go -package mock_report github.com/checkmarxDev/ast-sast-export/internal/sast/report Enricher
-	#mockgen -destination test/mocks/sast/report/source_mock.go -package mock_report github.com/checkmarxDev/ast-sast-export/internal/sast/report SourceProvider
 	#mockgen -destination test/mocks/database/store/task_scans_mock.go -package mock_store github.com/checkmarxDev/ast-sast-export/internal/database/store TaskScansStore
 	#mockgen -destination test/mocks/database/store/component_configuration_mock.go -package mock_store github.com/checkmarxDev/ast-sast-export/internal/database/store CxComponentConfigurationStore
 	#mockgen -destination test/mocks/database/store/node_results_mock.go -package mock_store github.com/checkmarxDev/ast-sast-export/internal/database/store NodeResultsStore
