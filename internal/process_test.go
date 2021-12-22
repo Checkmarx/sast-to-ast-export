@@ -324,6 +324,7 @@ func TestFetchUsersData(t *testing.T) {
 				samlServersErr,
 			},
 		}
+		// nolint:dupl
 		for _, test := range tests {
 			exporter := export2.NewMockExporter(gomock.NewController(t))
 			client := sast2.NewMockClient(gomock.NewController(t))
@@ -530,6 +531,7 @@ func TestFetchTeamsData(t *testing.T) {
 				samlServersErr,
 			},
 		}
+		// nolint:dupl
 		for _, test := range tests {
 			exporter := export2.NewMockExporter(gomock.NewController(t))
 			client := sast2.NewMockClient(gomock.NewController(t))

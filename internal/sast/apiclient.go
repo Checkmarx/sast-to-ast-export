@@ -15,20 +15,21 @@ import (
 )
 
 const (
-	UsersEndpoint = "/CxRestAPI/auth/Users"
-	TeamsEndpoint = "/CxRestAPI/auth/Teams"
-	RolesEndpoint = "/CxRestAPI/auth/Roles"
+	usersEndpoint = "/CxRestAPI/auth/Users"
+	teamsEndpoint = "/CxRestAPI/auth/Teams"
+	rolesEndpoint = "/CxRestAPI/auth/Roles"
 
-	LdapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
-	LdapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
-	LdapTeamMappingsEndpoint      = "/CxRestAPI/auth/LDAPTeamMappings"
-	SamlIdentityProvidersEndpoint = "/CxRestAPI/auth/SamlIdentityProviders"
-	SamlRoleMappingsEndpoint      = "/CxRestAPI/auth/SamlRoleMappings"
-	TeamMappingsEndpoint          = "/CxRestAPI/auth/SamlTeamMappings"
-	ReportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
-	ReportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
-	CreateReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
+	ldapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
+	ldapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
+	ldapTeamMappingsEndpoint      = "/CxRestAPI/auth/LDAPTeamMappings"
+	samlIdentityProvidersEndpoint = "/CxRestAPI/auth/SamlIdentityProviders"
+	samlRoleMappingsEndpoint      = "/CxRestAPI/auth/SamlRoleMappings"
+	teamMappingsEndpoint          = "/CxRestAPI/auth/SamlTeamMappings"
+	reportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
+	reportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
+	createReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
 
+	// ScanReportTypeXML defines SAST report type XML
 	ScanReportTypeXML = "XML"
 )
 
@@ -211,51 +212,51 @@ func (c *APIClient) getReportStatusResponse(report ReportResponse) (*StatusRespo
 }
 
 func (c *APIClient) GetUsers() ([]byte, error) {
-	return c.GetResponseBody(UsersEndpoint)
+	return c.GetResponseBody(usersEndpoint)
 }
 
 func (c *APIClient) GetRoles() ([]byte, error) {
-	return c.GetResponseBody(RolesEndpoint)
+	return c.GetResponseBody(rolesEndpoint)
 }
 
 func (c *APIClient) GetTeams() ([]byte, error) {
-	return c.GetResponseBody(TeamsEndpoint)
+	return c.GetResponseBody(teamsEndpoint)
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {
-	return c.GetResponseBody(LdapServersEndpoint)
+	return c.GetResponseBody(ldapServersEndpoint)
 }
 
 func (c *APIClient) GetLdapRoleMappings() ([]byte, error) {
-	return c.GetResponseBody(LdapRoleMappingsEndpoint)
+	return c.GetResponseBody(ldapRoleMappingsEndpoint)
 }
 
 func (c *APIClient) GetLdapTeamMappings() ([]byte, error) {
-	return c.GetResponseBody(LdapTeamMappingsEndpoint)
+	return c.GetResponseBody(ldapTeamMappingsEndpoint)
 }
 
 func (c *APIClient) GetSamlIdentityProviders() ([]byte, error) {
-	return c.GetResponseBody(SamlIdentityProvidersEndpoint)
+	return c.GetResponseBody(samlIdentityProvidersEndpoint)
 }
 
 func (c *APIClient) GetSamlRoleMappings() ([]byte, error) {
-	return c.GetResponseBody(SamlRoleMappingsEndpoint)
+	return c.GetResponseBody(samlRoleMappingsEndpoint)
 }
 
 func (c *APIClient) GetSamlTeamMappings() ([]byte, error) {
-	return c.GetResponseBody(TeamMappingsEndpoint)
+	return c.GetResponseBody(teamMappingsEndpoint)
 }
 
 func (c *APIClient) getReportIDStatus(reportID int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsCheckStatusEndpoint, reportID))
+	return c.GetResponseBody(fmt.Sprintf(reportsCheckStatusEndpoint, reportID))
 }
 
 func (c *APIClient) getReportResult(reportID int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(ReportsResultEndpoint, reportID))
+	return c.GetResponseBody(fmt.Sprintf(reportsResultEndpoint, reportID))
 }
 
 func (c *APIClient) postReportID(body io.Reader) ([]byte, error) {
-	return c.PostResponseBody(CreateReportIDEndpoint, body)
+	return c.PostResponseBody(createReportIDEndpoint, body)
 }
 
 func (c *APIClient) GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error) {
