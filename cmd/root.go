@@ -22,7 +22,6 @@ const (
 	projectsActiveSinceArg = "projects-active-since"
 	debugArg               = "debug"
 	verboseArg             = "verbose"
-	dbConnectionString     = "db"
 
 	projectsActiveSinceDefaultValue = 180
 )
@@ -107,7 +106,6 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
-	rootCmd.Flags().StringP(dbConnectionString, "", "", "SAST db connection string")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
@@ -120,9 +118,6 @@ func init() {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagRequired(urlArg); err != nil {
-		panic(err)
-	}
-	if err := rootCmd.MarkFlagRequired(dbConnectionString); err != nil {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagCustom(projectsActiveSinceArg, projectsActiveSinceUsage); err != nil {
