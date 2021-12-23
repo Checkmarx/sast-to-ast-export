@@ -7,6 +7,7 @@ import (
 	mock_ast "github.com/checkmarxDev/ast-sast-export/test/mocks/ast"
 	mock_sast "github.com/checkmarxDev/ast-sast-export/test/mocks/sast"
 	mock_soap "github.com/checkmarxDev/ast-sast-export/test/mocks/soap"
+	mock_soap_repo "github.com/checkmarxDev/ast-sast-export/test/mocks/soap/repo"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
@@ -51,19 +52,6 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 		astQueryID,
 	).Return(similarityID, nil)
 	soapAdapterMock := mock_soap.NewMockAdapter(ctrl)
-	soapAdapterMock.EXPECT().GetSourcesByScanID(
-		scanID,
-		[]string{metaResult.FirstNode.FileName, metaResult.LastNode.FileName},
-	).Return(&soap.GetSourcesByScanIDResponse{
-		GetSourcesByScanIDResult: soap.GetSourcesByScanIDResult{
-			CxWSResponseSourcesContent: soap.CxWSResponseSourcesContent{
-				CxWSResponseSourceContents: []soap.CxWSResponseSourceContent{
-					{Source: "echo \"hello world 1\""},
-					{Source: "echo \"hello world 2\""},
-				},
-			},
-		},
-	}, nil)
 	soapAdapterMock.EXPECT().GetResultPathsForQuery(scanID, metaQuery.QueryID).Return(&soap.GetResultPathsForQueryResponse{
 		GetResultPathsForQueryResult: soap.GetResultPathsForQueryResult{
 			Paths: soap.Paths{
@@ -89,7 +77,21 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 			},
 		},
 	}, nil)
-	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, soapAdapterMock, tmpDir)
+	sourceProviderMock := mock_soap_repo.NewMockSourceProvider(ctrl)
+	sourceProviderMock.EXPECT().
+		DownloadSourceFiles(scanID, gomock.Any()).
+		DoAndReturn(
+			func(_ string, files map[string]string) error {
+				expectedFiles := []string{metaResult.FirstNode.FileName, metaResult.LastNode.FileName}
+				var result []string
+				for k := range files {
+					result = append(result, k)
+				}
+				assert.ElementsMatch(t, expectedFiles, result)
+				return nil
+			},
+		)
+	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, soapAdapterMock, sourceProviderMock, tmpDir)
 
 	result, err := metadata.GetMetadataForQueryAndResult(scanID, metaQuery, metaResult)
 	assert.NoError(t, err)

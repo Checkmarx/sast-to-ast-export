@@ -2,12 +2,12 @@ package export
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/ast"
 	"github.com/checkmarxDev/ast-sast-export/internal/sast"
 	"github.com/checkmarxDev/ast-sast-export/internal/soap"
+	"github.com/checkmarxDev/ast-sast-export/internal/soap/repo"
 	"github.com/pkg/errors"
 )
 
@@ -19,6 +19,7 @@ type MetadataFactory struct {
 	astQueryIDProvider   ast.QueryIDProvider
 	similarityIDProvider sast.SimilarityIDProvider
 	soapAdapter          soap.Adapter
+	sourceProvider       repo.SourceProvider
 	tmpDir               string
 }
 
@@ -26,12 +27,14 @@ func NewMetadataFactory(
 	astQueryIDProvider ast.QueryIDProvider,
 	similarityIDProvider sast.SimilarityIDProvider,
 	soapAdapter soap.Adapter,
+	sourceProvider repo.SourceProvider,
 	tmpDir string,
 ) *MetadataFactory {
 	return &MetadataFactory{
 		astQueryIDProvider,
 		similarityIDProvider,
 		soapAdapter,
+		sourceProvider,
 		tmpDir,
 	}
 }
@@ -60,31 +63,13 @@ func (e *MetadataFactory) GetMetadataForQueryAndResult(
 	}
 	firstFileName := filepath.Join(e.tmpDir, result.FirstNode.FileName)
 	lastFileName := filepath.Join(e.tmpDir, result.LastNode.FileName)
-	var firstFileSource, lastFileSource string
-	if result.FirstNode.FileName == result.LastNode.FileName {
-		sourceResponse, sourceErr := e.soapAdapter.GetSourcesByScanID(scanID, []string{result.FirstNode.FileName})
-		if sourceErr != nil {
-			return nil, errors.Wrap(sourceErr, "could not get source code")
-		}
-		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent.CxWSResponseSourceContents
-		firstFileSource = sourceContent[0].Source
-		lastFileSource = sourceContent[0].Source
-	} else {
-		sourceResponse, sourceErr := e.soapAdapter.GetSourcesByScanID(scanID, []string{result.FirstNode.FileName, result.LastNode.FileName})
-		if sourceErr != nil {
-			return nil, errors.Wrap(sourceErr, "could not get source code")
-		}
-		sourceContent := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent.CxWSResponseSourceContents
-		firstFileSource = sourceContent[0].Source
-		lastFileSource = sourceContent[1].Source
+	filesToDownload := map[string]string{
+		result.FirstNode.FileName: firstFileName,
+		result.LastNode.FileName:  lastFileName,
 	}
-	firstFileErr := createFileAndPath(firstFileName, []byte(firstFileSource), 0600, 0700)
-	if firstFileErr != nil {
-		return nil, errors.Wrap(firstFileErr, "could not create first file")
-	}
-	lastFileErr := createFileAndPath(lastFileName, []byte(lastFileSource), 0600, 0700)
-	if lastFileErr != nil {
-		return nil, errors.Wrap(lastFileErr, "could not create last file")
+	downloadErr := e.sourceProvider.DownloadSourceFiles(scanID, filesToDownload)
+	if downloadErr != nil {
+		return nil, errors.Wrap(downloadErr, "could not download source code")
 	}
 	similarityID, similarityIDErr := e.similarityIDProvider.Calculate(
 		firstFileName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, firstMethodLine,
@@ -100,12 +85,4 @@ func (e *MetadataFactory) GetMetadataForQueryAndResult(
 		PathID:       result.PathID,
 		ResultID:     result.ResultID,
 	}, nil
-}
-
-func createFileAndPath(filename string, content []byte, filePerm, dirPerm os.FileMode) error {
-	pathErr := os.MkdirAll(filepath.Dir(filename), dirPerm)
-	if pathErr != nil {
-		return pathErr
-	}
-	return os.WriteFile(filename, content, filePerm)
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/checkmarxDev/ast-sast-export/internal/soap/repo"
 	"net/http"
 	"os"
 	"time"
@@ -125,6 +126,7 @@ func RunExport(args *Args) error {
 	}
 
 	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
+	sourceRepo := repo.NewSourceRepo(soapClient)
 
 	metadataTempDir, metadataTempDirErr := os.MkdirTemp("", args.ProductName)
 	if metadataTempDirErr != nil {
@@ -137,7 +139,7 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := export.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, soapClient, metadataTempDir)
+	metadataSource := export.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, soapClient, sourceRepo, metadataTempDir)
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource)

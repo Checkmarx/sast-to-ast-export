@@ -57,4 +57,5 @@ mocks:
 	mockgen -destination test/mocks/export/mock_metadata_provider.go -package mock_export github.com/checkmarxDev/ast-sast-export/internal/export MetadataProvider
 	mockgen -destination test/mocks/ast/query_id_provider_mock.go -package mock_ast github.com/checkmarxDev/ast-sast-export/internal/ast QueryIDProvider
 	mockgen -destination test/mocks/sast/similarity_id_provider_mock.go -package mock_sast github.com/checkmarxDev/ast-sast-export/internal/sast SimilarityIDProvider
-	mockgen -destination test/mocks/soap/adapter_mock.go -package mock_soap github.com/checkmarxDev/ast-sast-export/internal/soap Adapter
+	mockgen -destination test/mocks/soap/mock_adapter.go -package mock_soap github.com/checkmarxDev/ast-sast-export/internal/soap Adapter
+	mockgen -destination test/mocks/soap/repo/mock_source_provider.go -package mock_soap_repo github.com/checkmarxDev/ast-sast-export/internal/soap/repo SourceProvider
