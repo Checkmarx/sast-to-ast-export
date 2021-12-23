@@ -1,6 +1,7 @@
 package method_line
 
 import (
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	"github.com/pkg/errors"
 )
@@ -29,21 +30,22 @@ func (e *Repo) GetMethodLines(scanID, queryID, pathID string) ([]string, error) 
 	return output, nil
 }
 
-func (e *Repo) GetMethodLinesByPath(scanID, queryID string) (map[string][]string, error) {
+func (e *Repo) GetMethodLinesByPath(scanID, queryID string) ([]*interfaces.ResultPath, error) {
 	resultPaths, resultPathErr := e.soapClient.GetResultPathsForQuery(scanID, queryID)
 	if resultPathErr != nil {
 		return nil, errors.Wrap(resultPathErr, "could not get result paths")
 	}
-	output := map[string][]string{}
+	var output []*interfaces.ResultPath
 	for _, resultPath := range resultPaths.GetResultPathsForQueryResult.Paths.Paths {
-		for _, v := range resultPath.Node.Nodes {
-			methodLines, ok := output[resultPath.PathID]
-			if !ok {
-				methodLines = []string{}
-			}
-			methodLines = append(methodLines, v.MethodLine)
-			output[resultPath.PathID] = methodLines
+		methodLine := interfaces.ResultPath{
+			PathID:      resultPath.PathID,
+			MethodLines: []string{},
 		}
+		for _, v := range resultPath.Node.Nodes {
+			methodLine.MethodLines = append(methodLine.MethodLines, v.MethodLine)
+
+		}
+		output = append(output, &methodLine)
 	}
 	return output, nil
 }

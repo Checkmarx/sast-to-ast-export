@@ -1,6 +1,7 @@
 package method_line
 
 import (
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	"testing"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
@@ -58,9 +59,9 @@ func TestRepo_GetMethodLinesByPath(t *testing.T) {
 
 	result, err := instance.GetMethodLinesByPath(scanID, queryID)
 	assert.NoError(t, err)
-	expected := map[string][]string{
-		"3": {"1", "2", "3"},
-		"4": {"10", "20", "30"},
+	expected := []*interfaces.ResultPath{
+		{PathID: "3", MethodLines: []string{"1", "2", "3"}},
+		{PathID: "4", MethodLines: []string{"10", "20", "30"}},
 	}
 	assert.Equal(t, expected, result)
 }

@@ -7,6 +7,7 @@ package mock_app_method_line
 import (
 	reflect "reflect"
 
+	interfaces "github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -49,10 +50,10 @@ func (mr *MockMethodLineRepoMockRecorder) GetMethodLines(arg0, arg1, arg2 interf
 }
 
 // GetMethodLinesByPath mocks base method.
-func (m *MockMethodLineRepo) GetMethodLinesByPath(arg0, arg1 string) (map[string][]string, error) {
+func (m *MockMethodLineRepo) GetMethodLinesByPath(arg0, arg1 string) ([]*interfaces.ResultPath, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMethodLinesByPath", arg0, arg1)
-	ret0, _ := ret[0].(map[string][]string)
+	ret0, _ := ret[0].([]*interfaces.ResultPath)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

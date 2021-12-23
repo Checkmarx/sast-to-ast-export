@@ -75,7 +75,7 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 		for _, result := range query.Results {
 			firstSourceFile := findSourceFile(result.FirstNode.FileName, filesToDownload)
 			lastSourceFile := findSourceFile(result.LastNode.FileName, filesToDownload)
-			methodLines := methodLinesByPath[result.PathID]
+			methodLines := findResultPath(result.PathID, methodLinesByPath).MethodLines
 			similarityCalculationJobs <- SimilarityCalculationJob{
 				firstSourceFile.LocalName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
 				lastSourceFile.LocalName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
@@ -123,6 +123,15 @@ func findSourceFile(remoteName string, sourceFiles []interfaces.SourceFile) *int
 	for _, v := range sourceFiles {
 		if v.RemoteName == remoteName {
 			return &v
+		}
+	}
+	return nil
+}
+
+func findResultPath(pathID string, methodLines []*interfaces.ResultPath) *interfaces.ResultPath {
+	for _, v := range methodLines {
+		if v.PathID == pathID {
+			return v
 		}
 	}
 	return nil

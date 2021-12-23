@@ -106,9 +106,9 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 			},
 		)
 	methodLineProvider := mock_app_method_line.NewMockMethodLineRepo(ctrl)
-	methodLinesResult := map[string][]string{
-		metaResult1.PathID: metaResult1Data.MethodLines,
-		metaResult2.PathID: metaResult2Data.MethodLines,
+	methodLinesResult := []*interfaces.ResultPath{
+		{PathID: metaResult1.PathID, MethodLines: metaResult1Data.MethodLines},
+		{PathID: metaResult2.PathID, MethodLines: metaResult2Data.MethodLines},
 	}
 	methodLineProvider.EXPECT().
 		GetMethodLinesByPath(scanID, metaQuery.QueryID).
