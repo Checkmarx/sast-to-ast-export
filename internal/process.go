@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/method_line"
 
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
@@ -48,7 +50,7 @@ type ReportConsumeOutput struct {
 }
 
 func RunExport(args *Args) error {
-	consumerCount := GetNumCPU()
+	consumerCount := worker.GetNumCPU()
 
 	log.Debug().
 		Str("url", args.URL).
@@ -282,7 +284,7 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
 	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
 ) error {
-	consumerCount := GetNumCPU()
+	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
 	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())

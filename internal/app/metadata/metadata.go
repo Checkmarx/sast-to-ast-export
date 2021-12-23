@@ -3,6 +3,8 @@ package metadata
 import (
 	"path/filepath"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/ast_query_id"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/method_line"
@@ -61,21 +63,50 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 		return nil, errors.Wrap(downloadErr, "could not download source code")
 	}
 	var output []*Record
+
+	// produce calculation jobs
+	similarityCalculationJobs := make(chan SimilarityCalculationJob)
+	go func() {
+		for _, result := range query.Results {
+			firstFileName := filesToDownload[result.FirstNode.FileName]
+			lastFileName := filesToDownload[result.LastNode.FileName]
+			methodLines := methodLinesByPath[result.PathID]
+			similarityCalculationJobs <- SimilarityCalculationJob{
+				firstFileName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
+				lastFileName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
+				astQueryID,
+			}
+		}
+		close(similarityCalculationJobs)
+	}()
+
+	// consume calculation jobs
+	similarityCalculationResults := make(chan SimilarityCalculationResult, len(query.Results))
+	for consumerID := 1; consumerID <= worker.GetNumCPU(); consumerID++ {
+		go func() {
+			for job := range similarityCalculationJobs {
+				similarityID, similarityIDErr := e.similarityIDProvider.Calculate(
+					job.Filename1, job.Name1, job.Line1, job.Column1, job.MethodLine1,
+					job.Filename2, job.Name2, job.Line2, job.Column2, job.MethodLine2,
+					job.QueryID,
+				)
+				similarityCalculationResults <- SimilarityCalculationResult{
+					SimilarityID: similarityID,
+					Err:          similarityIDErr,
+				}
+			}
+		}()
+	}
+
+	// handle calculation results
 	for _, result := range query.Results {
-		firstFileName := filesToDownload[result.FirstNode.FileName]
-		lastFileName := filesToDownload[result.LastNode.FileName]
-		methodLines := methodLinesByPath[result.PathID]
-		similarityID, similarityIDErr := e.similarityIDProvider.Calculate(
-			firstFileName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
-			lastFileName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
-			astQueryID,
-		)
-		if similarityIDErr != nil {
-			return nil, errors.Wrap(similarityIDErr, "could not calculate similarity id")
+		r := <-similarityCalculationResults
+		if r.Err != nil {
+			return nil, r.Err
 		}
 		output = append(output, &Record{
 			QueryID:      query.QueryID,
-			SimilarityID: similarityID,
+			SimilarityID: r.SimilarityID,
 			PathID:       result.PathID,
 			ResultID:     result.ResultID,
 		})
