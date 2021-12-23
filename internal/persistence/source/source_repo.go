@@ -11,6 +11,7 @@ import (
 const (
 	metadataFilePerm   = 0600
 	metadataFolderPerm = 0700
+	filesPerBatch      = 10
 )
 
 type SourceProvider interface {
@@ -26,23 +27,31 @@ func NewSourceRepo(soapClient soap.Adapter) *SourceRepo {
 }
 
 func (e *SourceRepo) DownloadSourceFiles(scanID string, sourceFiles map[string]string) error {
-	var remoteFiles []string
-	var localFiles []string
+	var batches []Batch
+	currentBatch := 0
 	for k, v := range sourceFiles {
+		if len(batches) < currentBatch+1 {
+			batches = append(batches, Batch{LocalFiles: []string{}, RemoteFiles: []string{}})
+		}
 		if _, statErr := os.Stat(v); errors.Is(statErr, os.ErrNotExist) {
-			remoteFiles = append(remoteFiles, k)
-			localFiles = append(localFiles, v)
+			batches[currentBatch].RemoteFiles = append(batches[currentBatch].RemoteFiles, k)
+			batches[currentBatch].LocalFiles = append(batches[currentBatch].LocalFiles, v)
+		}
+		if len(batches[currentBatch].RemoteFiles) > filesPerBatch {
+			currentBatch++
 		}
 	}
-	sourceResponse, sourceErr := e.soapClient.GetSourcesByScanID(scanID, remoteFiles)
-	if sourceErr != nil {
-		return errors.Wrap(sourceErr, "could not fetch sources")
-	}
-	contents := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent.CxWSResponseSourceContents
-	for i, file := range contents {
-		createErr := createFileAndPath(localFiles[i], []byte(file.Source), metadataFilePerm, metadataFolderPerm)
-		if createErr != nil {
-			return errors.Wrap(createErr, "could not create file")
+	for _, batch := range batches {
+		sourceResponse, sourceErr := e.soapClient.GetSourcesByScanID(scanID, batch.RemoteFiles)
+		if sourceErr != nil {
+			return errors.Wrap(sourceErr, "could not fetch sources")
+		}
+		contents := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent.CxWSResponseSourceContents
+		for i, file := range contents {
+			createErr := createFileAndPath(batch.LocalFiles[i], []byte(file.Source), metadataFilePerm, metadataFolderPerm)
+			if createErr != nil {
+				return errors.Wrap(createErr, "could not create file")
+			}
 		}
 	}
 	return nil
