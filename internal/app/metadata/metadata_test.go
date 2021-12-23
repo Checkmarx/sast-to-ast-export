@@ -1,12 +1,12 @@
 package metadata
 
 import (
-	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
-	mock_integration_similarity "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/similarity"
-	mock_integration_soap "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/soap"
-	mock_persistence_ast_query_id "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/ast_query_id"
-	mock_persistence_source "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/source"
 	"testing"
+
+	mock_integration_similarity "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/similarity"
+	mock_persistence_ast_query_id "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/ast_query_id"
+	mock_persistence_method_line "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/method_line"
+	mock_persistence_source "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/source"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -51,32 +51,6 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 		gomock.Any(), metaResult.LastNode.Name, metaResult.LastNode.Line, metaResult.LastNode.Column, lastMethodLine,
 		astQueryID,
 	).Return(similarityID, nil)
-	soapAdapterMock := mock_integration_soap.NewMockAdapter(ctrl)
-	soapAdapterMock.EXPECT().GetResultPathsForQuery(scanID, metaQuery.QueryID).Return(&soap.GetResultPathsForQueryResponse{
-		GetResultPathsForQueryResult: soap.GetResultPathsForQueryResult{
-			Paths: soap.Paths{
-				Paths: []soap.ResultPath{
-					{
-						PathID: metaResult.PathID,
-						Node: soap.Node{
-							Nodes: []soap.ResultPathNode{
-								{MethodLine: firstMethodLine},
-								{MethodLine: "2"},
-								{MethodLine: "3"},
-								{MethodLine: lastMethodLine},
-							},
-						},
-					},
-					{
-						PathID: "3",
-						Node: soap.Node{
-							Nodes: []soap.ResultPathNode{{MethodLine: "10"}, {MethodLine: "20"}, {MethodLine: "30"}},
-						},
-					},
-				},
-			},
-		},
-	}, nil)
 	sourceProviderMock := mock_persistence_source.NewMockSourceProvider(ctrl)
 	sourceProviderMock.EXPECT().
 		DownloadSourceFiles(scanID, gomock.Any()).
@@ -91,7 +65,11 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 				return nil
 			},
 		)
-	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, soapAdapterMock, sourceProviderMock, tmpDir)
+	methodLineProvider := mock_persistence_method_line.NewMockProvider(ctrl)
+	methodLineProvider.EXPECT().
+		GetMethodLines(scanID, metaQuery.QueryID, metaResult.PathID).
+		Return([]string{firstMethodLine, "2", "3", lastMethodLine}, nil)
+	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir)
 
 	result, err := metadata.GetMetadataForQueryAndResult(scanID, metaQuery, metaResult)
 	assert.NoError(t, err)

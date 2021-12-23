@@ -58,5 +58,6 @@ mocks:
 	mockgen -package mock_integration_similarity -destination test/mocks/integration/similarity/provider_mock.go github.com/checkmarxDev/ast-sast-export/internal/integration/similarity SimilarityIDProvider
 	mockgen -package mock_persistence_ast_query_id -destination test/mocks/persistence/ast_query_id/provider_mock.go github.com/checkmarxDev/ast-sast-export/internal/persistence/ast_query_id QueryIDProvider
 	mockgen -package mock_persistence_source -destination test/mocks/persistence/source/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/persistence/source SourceProvider
+	mockgen -package mock_persistence_method_line -destination test/mocks/persistence/method_line/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/persistence/method_line Provider
 	mockgen -package mock_app_export -destination test/mocks/app/export/mock_exporter.go github.com/checkmarxDev/ast-sast-export/internal/app/export Exporter
 	mockgen -package mock_app_metadata -destination test/mocks/app/metadata/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/metadata MetadataProvider

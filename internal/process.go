@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/method_line"
+
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/permissions"
@@ -129,6 +131,7 @@ func RunExport(args *Args) error {
 
 	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
 	sourceRepo := source.NewSourceRepo(soapClient)
+	methodLineRepo := method_line.NewRepo(soapClient)
 
 	metadataTempDir, metadataTempDirErr := os.MkdirTemp("", args.ProductName)
 	if metadataTempDirErr != nil {
@@ -141,7 +144,7 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := metadata.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, soapClient, sourceRepo, metadataTempDir)
+	metadataSource := metadata.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource)
