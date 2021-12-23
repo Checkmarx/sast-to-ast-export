@@ -137,7 +137,7 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := export.NewMetadataSource(astQueryIDRepo, similarityIDCalculator, soapClient, metadataTempDir)
+	metadataSource := export.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, soapClient, metadataTempDir)
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource)

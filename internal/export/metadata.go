@@ -15,20 +15,20 @@ type MetadataProvider interface {
 	GetMetadataForQueryAndResult(scanID string, query *MetadataQuery, result *MetadataResult) (*MetadataRecord, error)
 }
 
-type MetadataSource struct {
+type MetadataFactory struct {
 	astQueryIDProvider   ast.QueryIDProvider
 	similarityIDProvider sast.SimilarityIDProvider
 	soapAdapter          soap.Adapter
 	tmpDir               string
 }
 
-func NewMetadataSource(
+func NewMetadataFactory(
 	astQueryIDProvider ast.QueryIDProvider,
 	similarityIDProvider sast.SimilarityIDProvider,
 	soapAdapter soap.Adapter,
 	tmpDir string,
-) *MetadataSource {
-	return &MetadataSource{
+) *MetadataFactory {
+	return &MetadataFactory{
 		astQueryIDProvider,
 		similarityIDProvider,
 		soapAdapter,
@@ -36,7 +36,7 @@ func NewMetadataSource(
 	}
 }
 
-func (e *MetadataSource) GetMetadataForQueryAndResult(
+func (e *MetadataFactory) GetMetadataForQueryAndResult(
 	scanID string, query *MetadataQuery, result *MetadataResult,
 ) (*MetadataRecord, error) {
 	astQueryID, astQueryIDErr := e.astQueryIDProvider.GetQueryID(query.Language, query.Name, query.Group)

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMetadataSource_GetMetadataForQueryAndResult(t *testing.T) {
+func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	astQueryID := "12532796926860742976"
 	firstMethodLine := "100"
 	lastMethodLine := "101"
@@ -89,7 +89,7 @@ func TestMetadataSource_GetMetadataForQueryAndResult(t *testing.T) {
 			},
 		},
 	}, nil)
-	metadata := NewMetadataSource(astQueryIDProviderMock, similarityIDProviderMock, soapAdapterMock, tmpDir)
+	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, soapAdapterMock, tmpDir)
 
 	result, err := metadata.GetMetadataForQueryAndResult(scanID, metaQuery, metaResult)
 	assert.NoError(t, err)
