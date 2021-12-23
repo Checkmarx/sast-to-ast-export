@@ -398,6 +398,12 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 	var resultMetadata []metadata.MetadataRecord
 
 	for reportJob := range reportJobs {
+		l := log.With().
+			Int("ProjectID", reportJob.ProjectID).
+			Int("ScanID", reportJob.ScanID).
+			Int("worker", worker).
+			Logger()
+
 		// create scan report
 		var reportData []byte
 		var reportCreateErr error
@@ -409,10 +415,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 		for i := 1; i <= maxAttempts; i++ {
 			reportData, reportCreateErr = client.CreateScanReport(reportJob.ScanID, reportJob.ReportType, retry)
 			if reportCreateErr != nil {
-				log.Debug().Err(reportCreateErr).
-					Int("ProjectID", reportJob.ProjectID).
-					Int("ScanID", reportJob.ScanID).
-					Int("worker", worker).
+				l.Debug().Err(reportCreateErr).
 					Int("attempt", i).
 					Msg("failed creating scan report")
 				time.Sleep(retryablehttp.DefaultBackoff(attemptMinSleep, attemptMaxSleep, i, nil))
@@ -421,11 +424,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 			}
 		}
 		if len(reportData) == 0 {
-			log.Debug().Err(reportCreateErr).
-				Int("ProjectID", reportJob.ProjectID).
-				Int("ScanID", reportJob.ScanID).
-				Int("worker", worker).
-				Msgf("failed creating scan report after %d attempts", scanReportCreateAttempts)
+			l.Debug().Err(reportCreateErr).Msgf("failed creating scan report after %d attempts", scanReportCreateAttempts)
 			done <- ReportConsumeOutput{Err: reportCreateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
@@ -436,6 +435,8 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 			done <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
+		var metadataRecord *metadata.MetadataRecord
+		var metadataRecordErr error
 		for i := 0; i < len(reportReader.Queries); i++ {
 			for j := 0; j < len(reportReader.Queries[i].Results); j++ {
 				for k := 0; k < len(reportReader.Queries[i].Results[j].Paths); k++ {
@@ -465,30 +466,36 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 							Column:   lastPathNode.Column,
 						},
 					}
-					metadataRecord, metadataRecordErr := metadataProvider.GetMetadataForQueryAndResult(reportReader.ScanID, metaQuery, metaResult)
+					metadataRecord, metadataRecordErr = metadataProvider.GetMetadataForQueryAndResult(reportReader.ScanID, metaQuery, metaResult)
 					if metadataRecordErr != nil {
-						panic(metadataRecordErr) //FIXME
+						break
 					}
 					resultMetadata = append(resultMetadata, *metadataRecord)
 				}
 			}
 		}
-		resultMetadataJSON, resultMetadataJSONErr := json.Marshal(resultMetadata)
-		if resultMetadataJSONErr != nil {
-			panic(resultMetadataJSONErr) // FIXME
-		}
-		exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), resultMetadataJSON)
-		if exportMetadataErr != nil {
-			panic(exportMetadataErr) // FIXME
+		if metadataRecordErr != nil {
+			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		} else {
+			resultMetadataJSON, resultMetadataJSONErr := json.Marshal(resultMetadata)
+			if resultMetadataJSONErr != nil {
+				l.Debug().Err(resultMetadataJSONErr).Msg("failed marshaling metadata")
+				done <- ReportConsumeOutput{Err: resultMetadataJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+			exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), resultMetadataJSON)
+			if exportMetadataErr != nil {
+				l.Debug().Err(resultMetadataJSONErr).Msg("failed saving metadata")
+				done <- ReportConsumeOutput{Err: resultMetadataJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
 		}
 		// export report
 		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), reportData)
 		if exportErr != nil {
-			log.Debug().Err(exportErr).
-				Int("ProjectID", reportJob.ProjectID).
-				Int("ScanID", reportJob.ScanID).
-				Int("worker", worker).
-				Msg("failed saving result")
+			l.Debug().Err(exportErr).Msg("failed saving result")
 			done <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 		} else {
 			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
