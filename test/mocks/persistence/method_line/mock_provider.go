@@ -47,3 +47,18 @@ func (mr *MockProviderMockRecorder) GetMethodLines(arg0, arg1, arg2 interface{})
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMethodLines", reflect.TypeOf((*MockProvider)(nil).GetMethodLines), arg0, arg1, arg2)
 }
+
+// GetMethodLinesByPath mocks base method.
+func (m *MockProvider) GetMethodLinesByPath(arg0, arg1 string) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMethodLinesByPath", arg0, arg1)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMethodLinesByPath indicates an expected call of GetMethodLinesByPath.
+func (mr *MockProviderMockRecorder) GetMethodLinesByPath(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMethodLinesByPath", reflect.TypeOf((*MockProvider)(nil).GetMethodLinesByPath), arg0, arg1)
+}

@@ -34,17 +34,17 @@ func (m *MockMetadataProvider) EXPECT() *MockMetadataProviderMockRecorder {
 	return m.recorder
 }
 
-// GetMetadataForQueryAndResult mocks base method.
-func (m *MockMetadataProvider) GetMetadataForQueryAndResult(arg0 string, arg1 *metadata.MetadataQuery, arg2 *metadata.MetadataResult) (*metadata.MetadataRecord, error) {
+// GetMetadataRecords mocks base method.
+func (m *MockMetadataProvider) GetMetadataRecords(arg0 string, arg1 *metadata.Query) ([]*metadata.Record, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetadataForQueryAndResult", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*metadata.MetadataRecord)
+	ret := m.ctrl.Call(m, "GetMetadataRecords", arg0, arg1)
+	ret0, _ := ret[0].([]*metadata.Record)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetMetadataForQueryAndResult indicates an expected call of GetMetadataForQueryAndResult.
-func (mr *MockMetadataProviderMockRecorder) GetMetadataForQueryAndResult(arg0, arg1, arg2 interface{}) *gomock.Call {
+// GetMetadataRecords indicates an expected call of GetMetadataRecords.
+func (mr *MockMetadataProviderMockRecorder) GetMetadataRecords(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadataForQueryAndResult", reflect.TypeOf((*MockMetadataProvider)(nil).GetMetadataForQueryAndResult), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadataRecords", reflect.TypeOf((*MockMetadataProvider)(nil).GetMetadataRecords), arg0, arg1)
 }

@@ -1,28 +1,29 @@
 package metadata
 
 type (
-	MetadataRecord struct {
+	Record struct {
 		QueryID      string `json:"queryId"`
 		ResultID     string `json:"resultId"`
 		PathID       string `json:"pathId"`
 		SimilarityID string `json:"similarityId"`
 	}
 
-	MetadataQuery struct {
+	Query struct {
 		QueryID  string
 		Language string
 		Name     string
 		Group    string
+		Results  []*Result
 	}
 
-	MetadataResult struct {
+	Result struct {
 		PathID    string
 		ResultID  string
-		FirstNode MetadataNode
-		LastNode  MetadataNode
+		FirstNode Node
+		LastNode  Node
 	}
 
-	MetadataNode struct {
+	Node struct {
 		FileName string
 		Name     string
 		Line     string

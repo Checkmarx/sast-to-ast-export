@@ -398,7 +398,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
 	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
 ) {
-	var resultMetadata []metadata.MetadataRecord
+	var resultMetadata []*metadata.Record
 
 	for reportJob := range reportJobs {
 		l := log.With().
@@ -438,44 +438,44 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 			done <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
-		var metadataRecord *metadata.MetadataRecord
+		var metadataRecords []*metadata.Record
 		var metadataRecordErr error
 		for i := 0; i < len(reportReader.Queries); i++ {
+			query := reportReader.Queries[i]
+			metaQuery := &metadata.Query{
+				QueryID:  query.ID,
+				Name:     query.Name,
+				Language: query.Language,
+				Group:    query.Group,
+			}
 			for j := 0; j < len(reportReader.Queries[i].Results); j++ {
 				for k := 0; k < len(reportReader.Queries[i].Results[j].Paths); k++ {
-					query := reportReader.Queries[i]
 					path := reportReader.Queries[i].Results[j].Paths[k]
 					firstPathNode := path.PathNodes[0]
 					lastPathNode := path.PathNodes[len(path.PathNodes)-1]
-					metaQuery := &metadata.MetadataQuery{
-						QueryID:  query.ID,
-						Name:     query.Name,
-						Language: query.Language,
-						Group:    query.Group,
-					}
-					metaResult := &metadata.MetadataResult{
+					metaQuery.Results = append(metaQuery.Results, &metadata.Result{
 						ResultID: path.ResultID,
 						PathID:   path.PathID,
-						FirstNode: metadata.MetadataNode{
+						FirstNode: metadata.Node{
 							FileName: firstPathNode.FileName,
 							Name:     firstPathNode.Name,
 							Line:     firstPathNode.Line,
 							Column:   firstPathNode.Column,
 						},
-						LastNode: metadata.MetadataNode{
+						LastNode: metadata.Node{
 							FileName: lastPathNode.FileName,
 							Name:     lastPathNode.Name,
 							Line:     lastPathNode.Line,
 							Column:   lastPathNode.Column,
 						},
-					}
-					metadataRecord, metadataRecordErr = metadataProvider.GetMetadataForQueryAndResult(reportReader.ScanID, metaQuery, metaResult)
-					if metadataRecordErr != nil {
-						break
-					}
-					resultMetadata = append(resultMetadata, *metadataRecord)
+					})
 				}
 			}
+			metadataRecords, metadataRecordErr = metadataProvider.GetMetadataRecords(reportReader.ScanID, metaQuery)
+			if metadataRecordErr != nil {
+				break
+			}
+			resultMetadata = append(resultMetadata, metadataRecords...)
 		}
 		if metadataRecordErr != nil {
 			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")

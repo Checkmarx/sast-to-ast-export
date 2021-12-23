@@ -7,12 +7,11 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/ast_query_id"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/method_line"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/source"
-
 	"github.com/pkg/errors"
 )
 
 type MetadataProvider interface {
-	GetMetadataForQueryAndResult(scanID string, query *MetadataQuery, result *MetadataResult) (*MetadataRecord, error)
+	GetMetadataRecords(scanID string, query *Query) ([]*Record, error)
 }
 
 type MetadataFactory struct {
@@ -39,39 +38,47 @@ func NewMetadataFactory(
 	}
 }
 
-func (e *MetadataFactory) GetMetadataForQueryAndResult(
-	scanID string, query *MetadataQuery, result *MetadataResult,
-) (*MetadataRecord, error) {
+func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Record, error) {
 	astQueryID, astQueryIDErr := e.astQueryIDProvider.GetQueryID(query.Language, query.Name, query.Group)
 	if astQueryIDErr != nil {
 		return nil, errors.Wrap(astQueryIDErr, "could not get AST query id")
 	}
-	methodLines, methodLineErr := e.methodLineProvider.GetMethodLines(scanID, query.QueryID, result.PathID)
+	methodLinesByPath, methodLineErr := e.methodLineProvider.GetMethodLinesByPath(scanID, query.QueryID)
 	if methodLineErr != nil {
 		return nil, errors.Wrap(methodLineErr, "could not get method lines")
 	}
-	firstFileName := filepath.Join(e.tmpDir, result.FirstNode.FileName)
-	lastFileName := filepath.Join(e.tmpDir, result.LastNode.FileName)
-	filesToDownload := map[string]string{
-		result.FirstNode.FileName: firstFileName,
-		result.LastNode.FileName:  lastFileName,
+	filesToDownload := map[string]string{}
+	for _, result := range query.Results {
+		if _, ok1 := filesToDownload[result.FirstNode.FileName]; !ok1 {
+			filesToDownload[result.FirstNode.FileName] = filepath.Join(e.tmpDir, result.FirstNode.FileName)
+		}
+		if _, ok2 := filesToDownload[result.LastNode.FileName]; !ok2 {
+			filesToDownload[result.LastNode.FileName] = filepath.Join(e.tmpDir, result.LastNode.FileName)
+		}
 	}
 	downloadErr := e.sourceProvider.DownloadSourceFiles(scanID, filesToDownload)
 	if downloadErr != nil {
 		return nil, errors.Wrap(downloadErr, "could not download source code")
 	}
-	similarityID, similarityIDErr := e.similarityIDProvider.Calculate(
-		firstFileName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
-		lastFileName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
-		astQueryID,
-	)
-	if similarityIDErr != nil {
-		return nil, errors.Wrap(similarityIDErr, "could not calculate similarity id")
+	var output []*Record
+	for _, result := range query.Results {
+		firstFileName := filesToDownload[result.FirstNode.FileName]
+		lastFileName := filesToDownload[result.LastNode.FileName]
+		methodLines := methodLinesByPath[result.PathID]
+		similarityID, similarityIDErr := e.similarityIDProvider.Calculate(
+			firstFileName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
+			lastFileName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
+			astQueryID,
+		)
+		if similarityIDErr != nil {
+			return nil, errors.Wrap(similarityIDErr, "could not calculate similarity id")
+		}
+		output = append(output, &Record{
+			QueryID:      query.QueryID,
+			SimilarityID: similarityID,
+			PathID:       result.PathID,
+			ResultID:     result.ResultID,
+		})
 	}
-	return &MetadataRecord{
-		QueryID:      query.QueryID,
-		SimilarityID: similarityID,
-		PathID:       result.PathID,
-		ResultID:     result.ResultID,
-	}, nil
+	return output, nil
 }

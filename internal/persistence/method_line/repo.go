@@ -7,6 +7,7 @@ import (
 
 type Provider interface {
 	GetMethodLines(scanID, queryID, pathID string) ([]string, error)
+	GetMethodLinesByPath(scanID, queryID string) (map[string][]string, error)
 }
 
 type Repo struct {
@@ -28,6 +29,25 @@ func (e *Repo) GetMethodLines(scanID, queryID, pathID string) ([]string, error) 
 			for _, v := range resultPath.Node.Nodes {
 				output = append(output, v.MethodLine)
 			}
+		}
+	}
+	return output, nil
+}
+
+func (e *Repo) GetMethodLinesByPath(scanID, queryID string) (map[string][]string, error) {
+	resultPaths, resultPathErr := e.soapClient.GetResultPathsForQuery(scanID, queryID)
+	if resultPathErr != nil {
+		return nil, errors.Wrap(resultPathErr, "could not get result paths")
+	}
+	output := map[string][]string{}
+	for _, resultPath := range resultPaths.GetResultPathsForQueryResult.Paths.Paths {
+		for _, v := range resultPath.Node.Nodes {
+			methodLines, ok := output[resultPath.PathID]
+			if !ok {
+				methodLines = []string{}
+			}
+			methodLines = append(methodLines, v.MethodLine)
+			output[resultPath.PathID] = methodLines
 		}
 	}
 	return output, nil

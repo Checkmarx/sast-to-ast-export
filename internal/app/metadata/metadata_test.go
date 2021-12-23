@@ -12,33 +12,60 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type testResultData struct {
+	MethodLines  []string
+	SimilarityID string
+}
+
 func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	astQueryID := "12532796926860742976"
-	firstMethodLine := "100"
-	lastMethodLine := "101"
-	similarityID := "1234567890"
 	scanID := "1000001"
-	metaQuery := &MetadataQuery{
-		QueryID:  "6300",
-		Language: "Kotlin",
-		Name:     "SQL_Injection",
-		Group:    "Kotlin_High_Risk",
+	metaResult1Data := testResultData{
+		SimilarityID: "1234567890",
+		MethodLines:  []string{"100", "2", "3", "101"},
 	}
-	metaResult := &MetadataResult{
+	metaResult1 := Result{
 		PathID:   "2",
 		ResultID: "1000002",
-		FirstNode: MetadataNode{
+		FirstNode: Node{
 			FileName: "Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt",
 			Name:     "text",
 			Line:     "83",
 			Column:   "78",
 		},
-		LastNode: MetadataNode{
+		LastNode: Node{
 			FileName: "Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/helpers/DatabaseHelper.kt",
 			Name:     "note",
 			Line:     "129",
 			Column:   "28",
 		},
+	}
+	metaResult2Data := testResultData{
+		SimilarityID: "9492845843",
+		MethodLines:  []string{"43", "21", "13"},
+	}
+	metaResult2 := Result{
+		PathID:   "3",
+		ResultID: "1000002",
+		FirstNode: Node{
+			FileName: "path/file1.kt",
+			Name:     "text",
+			Line:     "83",
+			Column:   "78",
+		},
+		LastNode: Node{
+			FileName: "path/file2.kt",
+			Name:     "note",
+			Line:     "129",
+			Column:   "28",
+		},
+	}
+	metaQuery := &Query{
+		QueryID:  "6300",
+		Language: "Kotlin",
+		Name:     "SQL_Injection",
+		Group:    "Kotlin_High_Risk",
+		Results:  []*Result{&metaResult1, &metaResult2},
 	}
 
 	ctrl := gomock.NewController(t)
@@ -47,16 +74,26 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	astQueryIDProviderMock.EXPECT().GetQueryID(metaQuery.Language, metaQuery.Name, metaQuery.Group).Return(astQueryID, nil)
 	similarityIDProviderMock := mock_integration_similarity.NewMockSimilarityIDProvider(ctrl)
 	similarityIDProviderMock.EXPECT().Calculate(
-		gomock.Any(), metaResult.FirstNode.Name, metaResult.FirstNode.Line, metaResult.FirstNode.Column, firstMethodLine,
-		gomock.Any(), metaResult.LastNode.Name, metaResult.LastNode.Line, metaResult.LastNode.Column, lastMethodLine,
+		gomock.Any(), metaResult1.FirstNode.Name, metaResult1.FirstNode.Line, metaResult1.FirstNode.Column, metaResult1Data.MethodLines[0],
+		gomock.Any(), metaResult1.LastNode.Name, metaResult1.LastNode.Line, metaResult1.LastNode.Column, metaResult1Data.MethodLines[3],
 		astQueryID,
-	).Return(similarityID, nil)
+	).Return(metaResult1Data.SimilarityID, nil)
+	similarityIDProviderMock.EXPECT().Calculate(
+		gomock.Any(), metaResult2.FirstNode.Name, metaResult2.FirstNode.Line, metaResult2.FirstNode.Column, metaResult2Data.MethodLines[0],
+		gomock.Any(), metaResult2.LastNode.Name, metaResult2.LastNode.Line, metaResult2.LastNode.Column, metaResult2Data.MethodLines[2],
+		astQueryID,
+	).Return(metaResult2Data.SimilarityID, nil)
 	sourceProviderMock := mock_persistence_source.NewMockSourceProvider(ctrl)
 	sourceProviderMock.EXPECT().
 		DownloadSourceFiles(scanID, gomock.Any()).
 		DoAndReturn(
 			func(_ string, files map[string]string) error {
-				expectedFiles := []string{metaResult.FirstNode.FileName, metaResult.LastNode.FileName}
+				expectedFiles := []string{
+					metaResult1.FirstNode.FileName,
+					metaResult1.LastNode.FileName,
+					metaResult2.FirstNode.FileName,
+					metaResult2.LastNode.FileName,
+				}
 				var result []string
 				for k := range files {
 					result = append(result, k)
@@ -66,19 +103,30 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 			},
 		)
 	methodLineProvider := mock_persistence_method_line.NewMockProvider(ctrl)
+	methodLinesResult := map[string][]string{
+		metaResult1.PathID: metaResult1Data.MethodLines,
+		metaResult2.PathID: metaResult2Data.MethodLines,
+	}
 	methodLineProvider.EXPECT().
-		GetMethodLines(scanID, metaQuery.QueryID, metaResult.PathID).
-		Return([]string{firstMethodLine, "2", "3", lastMethodLine}, nil)
+		GetMethodLinesByPath(scanID, metaQuery.QueryID).
+		Return(methodLinesResult, nil)
 	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir)
 
-	result, err := metadata.GetMetadataForQueryAndResult(scanID, metaQuery, metaResult)
+	result, err := metadata.GetMetadataRecords(scanID, metaQuery)
 	assert.NoError(t, err)
 
-	expectedResult := MetadataRecord{
+	record1 := Record{
 		QueryID:      metaQuery.QueryID,
-		SimilarityID: similarityID,
-		PathID:       metaResult.PathID,
-		ResultID:     metaResult.ResultID,
+		SimilarityID: metaResult1Data.SimilarityID,
+		PathID:       metaResult1.PathID,
+		ResultID:     metaResult1.ResultID,
 	}
-	assert.Equal(t, expectedResult, *result)
+	record2 := Record{
+		QueryID:      metaQuery.QueryID,
+		SimilarityID: metaResult2Data.SimilarityID,
+		PathID:       metaResult2.PathID,
+		ResultID:     metaResult2.ResultID,
+	}
+	expectedResult := []*Record{&record1, &record2}
+	assert.ElementsMatch(t, expectedResult, result)
 }
