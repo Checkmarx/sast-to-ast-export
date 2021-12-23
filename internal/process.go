@@ -4,19 +4,21 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/soap/repo"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/checkmarxDev/ast-sast-export/internal/ast"
-	"github.com/checkmarxDev/ast-sast-export/internal/export"
-	"github.com/checkmarxDev/ast-sast-export/internal/permissions"
-	"github.com/checkmarxDev/ast-sast-export/internal/sast"
-	"github.com/checkmarxDev/ast-sast-export/internal/sast/report"
-	"github.com/checkmarxDev/ast-sast-export/internal/sliceutils"
-	"github.com/checkmarxDev/ast-sast-export/internal/soap"
-	"github.com/checkmarxDev/ast-sast-export/internal/utils"
+	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/permissions"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/report"
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/ast_query_id"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/source"
+	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
+
 	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
@@ -55,7 +57,7 @@ func RunExport(args *Args) error {
 		Msg("starting export")
 
 	// create api client
-	client, err := sast.NewSASTClient(args.URL, &retryablehttp.Client{
+	client, err := rest.NewSASTClient(args.URL, &retryablehttp.Client{
 		HTTPClient:   cleanhttp.DefaultPooledClient(),
 		Logger:       nil,
 		RetryWaitMin: httpRetryWaitMin,
@@ -101,13 +103,13 @@ func RunExport(args *Args) error {
 
 	// collect export data
 	log.Info().Msg("collecting data from SAST")
-	exportValues, exportCreateErr := export.CreateExport(args.ProductName)
+	exportValues, exportCreateErr := export2.CreateExport(args.ProductName)
 	if exportCreateErr != nil {
 		return errors.Wrap(exportCreateErr, "could not create export package")
 	}
 
 	if !args.Debug {
-		defer func(exportValues export.Exporter) {
+		defer func(exportValues export2.Exporter) {
 			cleanErr := exportValues.Clean()
 			if cleanErr != nil {
 				log.Error().Err(cleanErr).Msg("error cleaning export temporary folder")
@@ -115,18 +117,18 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	astQueryIDRepo, astQueryIDRepoErr := ast.NewQueryIDRepo(ast.AllQueries)
+	astQueryIDRepo, astQueryIDRepoErr := ast_query_id.NewQueryIDRepo(ast_query_id.AllQueries)
 	if astQueryIDRepoErr != nil {
 		return errors.Wrap(astQueryIDRepoErr, "could not create AST query id repo")
 	}
 
-	similarityIDCalculator, similarityIDCalculatorErr := sast.NewSimilarityIDCalculator()
+	similarityIDCalculator, similarityIDCalculatorErr := similarity.NewSimilarityIDCalculator()
 	if similarityIDCalculatorErr != nil {
 		return errors.Wrap(similarityIDCalculatorErr, "could not create similarity id calculator")
 	}
 
 	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
-	sourceRepo := repo.NewSourceRepo(soapClient)
+	sourceRepo := source.NewSourceRepo(soapClient)
 
 	metadataTempDir, metadataTempDirErr := os.MkdirTemp("", args.ProductName)
 	if metadataTempDirErr != nil {
@@ -139,7 +141,7 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := export.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, soapClient, sourceRepo, metadataTempDir)
+	metadataSource := metadata.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, soapClient, sourceRepo, metadataTempDir)
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource)
@@ -158,7 +160,7 @@ func RunExport(args *Args) error {
 	return nil
 }
 
-func exportResultsToFile(args *Args, exportValues export.Exporter) (string, error) {
+func exportResultsToFile(args *Args, exportValues export2.Exporter) (string, error) {
 	// create export package
 	tmpDir := exportValues.GetTmpDir()
 	if args.Debug {
@@ -197,22 +199,22 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 	return nil
 }
 
-func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args, retryAttempts int,
-	retryMinSleep, retryMaxSleep time.Duration, metadataProvider export.MetadataProvider,
+func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args, retryAttempts int,
+	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
 ) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
-	for _, exportOption := range export.GetOptions() {
+	for _, exportOption := range export2.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
 			switch exportOption {
-			case export.UsersOption:
+			case export2.UsersOption:
 				if err := fetchUsersData(client, exporter); err != nil {
 					return err
 				}
-			case export.TeamsOption:
+			case export2.TeamsOption:
 				if err := fetchTeamsData(client, exporter); err != nil {
 					return err
 				}
-			case export.ResultsOption:
+			case export2.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
 					retryMaxSleep, metadataProvider); err != nil {
 					return err
@@ -223,59 +225,59 @@ func fetchSelectedData(client sast.Client, exporter export.Exporter, args *Args,
 	return nil
 }
 
-func fetchUsersData(client sast.Client, exporter export.Exporter) error {
+func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
 	log.Info().Msg("collecting users")
-	if err := exporter.AddFileWithDataSource(export.UsersFileName, client.GetUsers); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.UsersFileName, client.GetUsers); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(export.RolesFileName, client.GetRoles); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.RolesFileName, client.GetRoles); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(export.LdapRoleMappingsFileName, client.GetLdapRoleMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.LdapRoleMappingsFileName, client.GetLdapRoleMappings); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(export.SamlRoleMappingsFileName, client.GetSamlRoleMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.SamlRoleMappingsFileName, client.GetSamlRoleMappings); err != nil {
 		return err
 	}
-	if _, fileErr := os.Stat(export.LdapServersFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(export.LdapServersFileName, client.GetLdapServers); err != nil {
+	if _, fileErr := os.Stat(export2.LdapServersFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export2.LdapServersFileName, client.GetLdapServers); err != nil {
 			return err
 		}
 	}
-	if _, fileErr := os.Stat(export.SamlIdpFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(export.SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
+	if _, fileErr := os.Stat(export2.SamlIdpFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export2.SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func fetchTeamsData(client sast.Client, exporter export.Exporter) error {
+func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 	log.Info().Msg("collecting teams")
-	if err := exporter.AddFileWithDataSource(export.TeamsFileName, client.GetTeams); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.TeamsFileName, client.GetTeams); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(export.LdapTeamMappingsFileName, client.GetLdapTeamMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.LdapTeamMappingsFileName, client.GetLdapTeamMappings); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(export.SamlTeamMappingsFileName, client.GetSamlTeamMappings); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.SamlTeamMappingsFileName, client.GetSamlTeamMappings); err != nil {
 		return err
 	}
-	if _, fileErr := os.Stat(export.LdapServersFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(export.LdapServersFileName, client.GetLdapServers); err != nil {
+	if _, fileErr := os.Stat(export2.LdapServersFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export2.LdapServersFileName, client.GetLdapServers); err != nil {
 			return err
 		}
 	}
-	if _, fileErr := os.Stat(export.SamlIdpFileName); os.IsNotExist(fileErr) {
-		if err := exporter.AddFileWithDataSource(export.SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
+	if _, fileErr := os.Stat(export2.SamlIdpFileName); os.IsNotExist(fileErr) {
+		if err := exporter.AddFileWithDataSource(export2.SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProjectActiveSince int,
-	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider export.MetadataProvider,
+func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
+	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
 ) error {
 	consumerCount := GetNumCPU()
 	reportJobs := make(chan ReportJob)
@@ -329,7 +331,7 @@ func fetchResultsData(client sast.Client, exporter export.Exporter, resultsProje
 	return nil
 }
 
-func getTriagedScans(client sast.Client, fromDate string) ([]TriagedScan, error) {
+func getTriagedScans(client rest.Client, fromDate string) ([]TriagedScan, error) {
 	var output []TriagedScan
 	projectOffset := 0
 	projectLimit := resultsPageLimit
@@ -383,23 +385,23 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 		reportJobs <- ReportJob{
 			ProjectID:  scan.ProjectID,
 			ScanID:     scan.ScanID,
-			ReportType: sast.ScanReportTypeXML,
+			ReportType: rest.ScanReportTypeXML,
 		}
 	}
 	close(reportJobs)
 }
 
-func consumeReports(client sast.Client, exporter export.Exporter, worker int,
+func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
-	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider export.MetadataProvider,
+	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
 ) {
-	var resultMetadata []export.MetadataRecord
+	var resultMetadata []metadata.MetadataRecord
 
 	for reportJob := range reportJobs {
 		// create scan report
 		var reportData []byte
 		var reportCreateErr error
-		retry := utils.Retry{
+		retry := rest.Retry{
 			Attempts: 10,
 			MinSleep: 1 * time.Second,
 			MaxSleep: 5 * time.Minute,
@@ -441,33 +443,33 @@ func consumeReports(client sast.Client, exporter export.Exporter, worker int,
 					path := reportReader.Queries[i].Results[j].Paths[k]
 					firstPathNode := path.PathNodes[0]
 					lastPathNode := path.PathNodes[len(path.PathNodes)-1]
-					metaQuery := &export.MetadataQuery{
+					metaQuery := &metadata.MetadataQuery{
 						QueryID:  query.ID,
 						Name:     query.Name,
 						Language: query.Language,
 						Group:    query.Group,
 					}
-					metaResult := &export.MetadataResult{
+					metaResult := &metadata.MetadataResult{
 						ResultID: path.ResultID,
 						PathID:   path.PathID,
-						FirstNode: export.MetadataNode{
+						FirstNode: metadata.MetadataNode{
 							FileName: firstPathNode.FileName,
 							Name:     firstPathNode.Name,
 							Line:     firstPathNode.Line,
 							Column:   firstPathNode.Column,
 						},
-						LastNode: export.MetadataNode{
+						LastNode: metadata.MetadataNode{
 							FileName: lastPathNode.FileName,
 							Name:     lastPathNode.Name,
 							Line:     lastPathNode.Line,
 							Column:   lastPathNode.Column,
 						},
 					}
-					metadata, metadataErr := metadataProvider.GetMetadataForQueryAndResult(reportReader.ScanID, metaQuery, metaResult)
-					if metadataErr != nil {
-						panic(metadataErr) //FIXME
+					metadataRecord, metadataRecordErr := metadataProvider.GetMetadataForQueryAndResult(reportReader.ScanID, metaQuery, metaResult)
+					if metadataRecordErr != nil {
+						panic(metadataRecordErr) //FIXME
 					}
-					resultMetadata = append(resultMetadata, *metadata)
+					resultMetadata = append(resultMetadata, *metadataRecord)
 				}
 			}
 		}

@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/logging"
 	"os"
 	"time"
 
 	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
-	"github.com/checkmarxDev/ast-sast-export/internal/export"
-	"github.com/checkmarxDev/ast-sast-export/internal/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -56,7 +56,7 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 		}
 
 		now := time.Now()
-		logFileName := fmt.Sprintf("%s-%s.log", productName, now.Format(export.DateTimeFormat))
+		logFileName := fmt.Sprintf("%s-%s.log", productName, now.Format(export2.DateTimeFormat))
 		logFileWriter, err := os.Create(logFileName)
 		if err != nil {
 			panic(err)
@@ -110,7 +110,7 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
-	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
+	rootCmd.Flags().StringSliceP(exportArg, "", export2.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
