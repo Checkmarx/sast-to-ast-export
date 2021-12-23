@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 
 	"github.com/pkg/errors"
@@ -23,18 +25,18 @@ func NewRepo(soapClient soap.Adapter) *Repo {
 	return &Repo{soapClient: soapClient}
 }
 
-func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles map[string]string) error {
+func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles []interfaces.SourceFile) error {
 	var batches []Batch
 	currentBatch := 0
-	for k, v := range sourceFiles {
+	for _, v := range sourceFiles {
 		if len(batches) < currentBatch+1 {
 			batches = append(batches, Batch{LocalFiles: []string{}, RemoteFiles: []string{}})
 		}
-		if _, statErr := os.Stat(v); errors.Is(statErr, os.ErrNotExist) {
-			batches[currentBatch].RemoteFiles = append(batches[currentBatch].RemoteFiles, k)
-			batches[currentBatch].LocalFiles = append(batches[currentBatch].LocalFiles, v)
+		if _, statErr := os.Stat(v.LocalName); errors.Is(statErr, os.ErrNotExist) {
+			batches[currentBatch].RemoteFiles = append(batches[currentBatch].RemoteFiles, v.RemoteName)
+			batches[currentBatch].LocalFiles = append(batches[currentBatch].LocalFiles, v.LocalName)
 		}
-		if len(batches[currentBatch].RemoteFiles) > filesPerBatch {
+		if len(batches[currentBatch].RemoteFiles) >= filesPerBatch {
 			currentBatch++
 		}
 	}

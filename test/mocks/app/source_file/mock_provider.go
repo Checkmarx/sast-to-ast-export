@@ -7,6 +7,7 @@ package mock_app_source_file
 import (
 	reflect "reflect"
 
+	interfaces "github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -34,7 +35,7 @@ func (m *MockSourceFileRepo) EXPECT() *MockSourceFileRepoMockRecorder {
 }
 
 // DownloadSourceFiles mocks base method.
-func (m *MockSourceFileRepo) DownloadSourceFiles(arg0 string, arg1 map[string]string) error {
+func (m *MockSourceFileRepo) DownloadSourceFiles(arg0 string, arg1 []interfaces.SourceFile) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DownloadSourceFiles", arg0, arg1)
 	ret0, _ := ret[0].(error)

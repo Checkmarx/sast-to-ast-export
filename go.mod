@@ -12,6 +12,4 @@ require (
 	github.com/rs/zerolog v1.25.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
-	gorm.io/driver/sqlserver v1.2.1
-	gorm.io/gorm v1.22.4
 )

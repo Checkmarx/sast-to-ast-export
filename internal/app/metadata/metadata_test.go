@@ -3,6 +3,8 @@ package metadata
 import (
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
+
 	mock_app_ast_query_id "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_id"
 	mock_app_method_line "github.com/checkmarxDev/ast-sast-export/test/mocks/app/method_line"
 	mock_app_source_file "github.com/checkmarxDev/ast-sast-export/test/mocks/app/source_file"
@@ -88,7 +90,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	sourceProviderMock.EXPECT().
 		DownloadSourceFiles(scanID, gomock.Any()).
 		DoAndReturn(
-			func(_ string, files map[string]string) error {
+			func(_ string, files []interfaces.SourceFile) error {
 				expectedFiles := []string{
 					metaResult1.FirstNode.FileName,
 					metaResult1.LastNode.FileName,
@@ -96,8 +98,8 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 					metaResult2.LastNode.FileName,
 				}
 				var result []string
-				for k := range files {
-					result = append(result, k)
+				for _, v := range files {
+					result = append(result, v.RemoteName)
 				}
 				assert.ElementsMatch(t, expectedFiles, result)
 				return nil

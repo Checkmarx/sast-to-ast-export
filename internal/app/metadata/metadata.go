@@ -48,13 +48,19 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 	if methodLineErr != nil {
 		return nil, errors.Wrap(methodLineErr, "could not get method lines")
 	}
-	filesToDownload := map[string]string{}
+	var filesToDownload []interfaces.SourceFile
 	for _, result := range query.Results {
-		if _, ok1 := filesToDownload[result.FirstNode.FileName]; !ok1 {
-			filesToDownload[result.FirstNode.FileName] = filepath.Join(e.tmpDir, result.FirstNode.FileName)
+		if ok1 := findSourceFile(result.FirstNode.FileName, filesToDownload); ok1 == nil {
+			filesToDownload = append(filesToDownload, interfaces.SourceFile{
+				RemoteName: result.FirstNode.FileName,
+				LocalName:  filepath.Join(e.tmpDir, result.FirstNode.FileName),
+			})
 		}
-		if _, ok2 := filesToDownload[result.LastNode.FileName]; !ok2 {
-			filesToDownload[result.LastNode.FileName] = filepath.Join(e.tmpDir, result.LastNode.FileName)
+		if ok2 := findSourceFile(result.LastNode.FileName, filesToDownload); ok2 == nil {
+			filesToDownload = append(filesToDownload, interfaces.SourceFile{
+				RemoteName: result.LastNode.FileName,
+				LocalName:  filepath.Join(e.tmpDir, result.LastNode.FileName),
+			})
 		}
 	}
 	downloadErr := e.sourceProvider.DownloadSourceFiles(scanID, filesToDownload)
@@ -67,12 +73,12 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 	similarityCalculationJobs := make(chan SimilarityCalculationJob)
 	go func() {
 		for _, result := range query.Results {
-			firstFileName := filesToDownload[result.FirstNode.FileName]
-			lastFileName := filesToDownload[result.LastNode.FileName]
+			firstSourceFile := findSourceFile(result.FirstNode.FileName, filesToDownload)
+			lastSourceFile := findSourceFile(result.LastNode.FileName, filesToDownload)
 			methodLines := methodLinesByPath[result.PathID]
 			similarityCalculationJobs <- SimilarityCalculationJob{
-				firstFileName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
-				lastFileName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
+				firstSourceFile.LocalName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
+				lastSourceFile.LocalName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
 				astQueryID,
 			}
 		}
@@ -111,4 +117,13 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 		})
 	}
 	return output, nil
+}
+
+func findSourceFile(remoteName string, sourceFiles []interfaces.SourceFile) *interfaces.SourceFile {
+	for _, v := range sourceFiles {
+		if v.RemoteName == remoteName {
+			return &v
+		}
+	}
+	return nil
 }
