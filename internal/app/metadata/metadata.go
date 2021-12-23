@@ -3,12 +3,11 @@ package metadata
 import (
 	"path/filepath"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/ast_query_id"
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/method_line"
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/source"
 	"github.com/pkg/errors"
 )
 
@@ -17,18 +16,18 @@ type MetadataProvider interface {
 }
 
 type MetadataFactory struct {
-	astQueryIDProvider   ast_query_id.QueryIDProvider
+	astQueryIDProvider   interfaces.ASTQueryIDRepo
 	similarityIDProvider similarity.SimilarityIDProvider
-	sourceProvider       source.SourceProvider
-	methodLineProvider   method_line.Provider
+	sourceProvider       interfaces.SourceFileRepo
+	methodLineProvider   interfaces.MethodLineRepo
 	tmpDir               string
 }
 
 func NewMetadataFactory(
-	astQueryIDProvider ast_query_id.QueryIDProvider,
+	astQueryIDProvider interfaces.ASTQueryIDRepo,
 	similarityIDProvider similarity.SimilarityIDProvider,
-	sourceProvider source.SourceProvider,
-	methodLineProvider method_line.Provider,
+	sourceProvider interfaces.SourceFileRepo,
+	methodLineProvider interfaces.MethodLineRepo,
 	tmpDir string,
 ) *MetadataFactory {
 	return &MetadataFactory{

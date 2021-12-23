@@ -12,26 +12,22 @@ import (
 //go:embed all_queries.json
 var AllQueries string
 
-type QueryIDProvider interface {
-	GetQueryID(language, name, group string) (string, error)
-}
-
-type QueryIDRepo struct {
+type Repo struct {
 	queries []Query
 }
 
-func NewQueryIDRepo(allQueries string) (*QueryIDRepo, error) {
+func NewRepo(allQueries string) (*Repo, error) {
 	var queries []Query
 	unmarshalErr := json.Unmarshal([]byte(allQueries), &queries)
 	if unmarshalErr != nil {
 		return nil, errors.Wrap(unmarshalErr, "could not unmarshal queries json")
 	}
-	return &QueryIDRepo{
+	return &Repo{
 		queries,
 	}, nil
 }
 
-func (e *QueryIDRepo) GetQueryID(language, name, group string) (string, error) {
+func (e *Repo) GetQueryID(language, name, group string) (string, error) {
 	sourcePath := fmt.Sprintf("queries/%s/%s/%s/%s.cs", language, group, name, name)
 	for _, query := range e.queries {
 		if query.SourcePath == sourcePath {

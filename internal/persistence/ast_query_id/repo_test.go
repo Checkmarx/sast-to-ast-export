@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestQueryIDRepo_GetQueryID(t *testing.T) {
+func TestRepo_GetQueryID(t *testing.T) {
 	t.Run("success case", func(t *testing.T) {
-		repo, repoErr := NewQueryIDRepo(AllQueries)
+		repo, repoErr := NewRepo(AllQueries)
 		assert.NoError(t, repoErr)
 
 		result, err := repo.GetQueryID("Kotlin", "Code_Injection", "Kotlin_High_Risk")
@@ -16,7 +16,7 @@ func TestQueryIDRepo_GetQueryID(t *testing.T) {
 		assert.Equal(t, "15158446363146771540", result)
 	})
 	t.Run("fails if source path doesn't exist", func(t *testing.T) {
-		repo, repoErr := NewQueryIDRepo(AllQueries)
+		repo, repoErr := NewRepo(AllQueries)
 		assert.NoError(t, repoErr)
 
 		result, err := repo.GetQueryID("Language", "Name", "Group")

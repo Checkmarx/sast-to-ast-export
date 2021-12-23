@@ -20,7 +20,7 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/ast_query_id"
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/source"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/source_file"
 	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
 
 	"github.com/golang-jwt/jwt"
@@ -121,7 +121,7 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	astQueryIDRepo, astQueryIDRepoErr := ast_query_id.NewQueryIDRepo(ast_query_id.AllQueries)
+	astQueryIDRepo, astQueryIDRepoErr := ast_query_id.NewRepo(ast_query_id.AllQueries)
 	if astQueryIDRepoErr != nil {
 		return errors.Wrap(astQueryIDRepoErr, "could not create AST query id repo")
 	}
@@ -132,7 +132,7 @@ func RunExport(args *Args) error {
 	}
 
 	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
-	sourceRepo := source.NewSourceRepo(soapClient)
+	sourceRepo := source_file.NewRepo(soapClient)
 	methodLineRepo := method_line.NewRepo(soapClient)
 
 	metadataTempDir, metadataTempDirErr := os.MkdirTemp("", args.ProductName)
@@ -396,7 +396,7 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 	close(reportJobs)
 }
 
-func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
+func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
 	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
 ) {
@@ -406,7 +406,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, worker int,
 		l := log.With().
 			Int("ProjectID", reportJob.ProjectID).
 			Int("ScanID", reportJob.ScanID).
-			Int("worker", worker).
+			Int("worker", workerID).
 			Logger()
 
 		// create scan report

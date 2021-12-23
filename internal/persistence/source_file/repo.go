@@ -1,10 +1,11 @@
-package source
+package source_file
 
 import (
 	"os"
 	"path/filepath"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
+
 	"github.com/pkg/errors"
 )
 
@@ -14,19 +15,15 @@ const (
 	filesPerBatch      = 10
 )
 
-type SourceProvider interface {
-	DownloadSourceFiles(scanID string, sourceFiles map[string]string) error
-}
-
-type SourceRepo struct {
+type Repo struct {
 	soapClient soap.Adapter
 }
 
-func NewSourceRepo(soapClient soap.Adapter) *SourceRepo {
-	return &SourceRepo{soapClient: soapClient}
+func NewRepo(soapClient soap.Adapter) *Repo {
+	return &Repo{soapClient: soapClient}
 }
 
-func (e *SourceRepo) DownloadSourceFiles(scanID string, sourceFiles map[string]string) error {
+func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles map[string]string) error {
 	var batches []Batch
 	currentBatch := 0
 	for k, v := range sourceFiles {

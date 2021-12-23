@@ -3,10 +3,11 @@ package metadata
 import (
 	"testing"
 
+	mock_app_ast_query_id "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_id"
+	mock_app_method_line "github.com/checkmarxDev/ast-sast-export/test/mocks/app/method_line"
+	mock_app_source_file "github.com/checkmarxDev/ast-sast-export/test/mocks/app/source_file"
+
 	mock_integration_similarity "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/similarity"
-	mock_persistence_ast_query_id "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/ast_query_id"
-	mock_persistence_method_line "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/method_line"
-	mock_persistence_source "github.com/checkmarxDev/ast-sast-export/test/mocks/persistence/source"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -70,7 +71,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	tmpDir := t.TempDir()
-	astQueryIDProviderMock := mock_persistence_ast_query_id.NewMockQueryIDProvider(ctrl)
+	astQueryIDProviderMock := mock_app_ast_query_id.NewMockASTQueryIDRepo(ctrl)
 	astQueryIDProviderMock.EXPECT().GetQueryID(metaQuery.Language, metaQuery.Name, metaQuery.Group).Return(astQueryID, nil)
 	similarityIDProviderMock := mock_integration_similarity.NewMockSimilarityIDProvider(ctrl)
 	similarityIDProviderMock.EXPECT().Calculate(
@@ -83,7 +84,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 		gomock.Any(), metaResult2.LastNode.Name, metaResult2.LastNode.Line, metaResult2.LastNode.Column, metaResult2Data.MethodLines[2],
 		astQueryID,
 	).Return(metaResult2Data.SimilarityID, nil)
-	sourceProviderMock := mock_persistence_source.NewMockSourceProvider(ctrl)
+	sourceProviderMock := mock_app_source_file.NewMockSourceFileRepo(ctrl)
 	sourceProviderMock.EXPECT().
 		DownloadSourceFiles(scanID, gomock.Any()).
 		DoAndReturn(
@@ -102,7 +103,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 				return nil
 			},
 		)
-	methodLineProvider := mock_persistence_method_line.NewMockProvider(ctrl)
+	methodLineProvider := mock_app_method_line.NewMockMethodLineRepo(ctrl)
 	methodLinesResult := map[string][]string{
 		metaResult1.PathID: metaResult1Data.MethodLines,
 		metaResult2.PathID: metaResult2Data.MethodLines,

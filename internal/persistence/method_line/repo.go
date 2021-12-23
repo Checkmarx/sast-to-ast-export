@@ -5,11 +5,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Provider interface {
-	GetMethodLines(scanID, queryID, pathID string) ([]string, error)
-	GetMethodLinesByPath(scanID, queryID string) (map[string][]string, error)
-}
-
 type Repo struct {
 	soapClient soap.Adapter
 }

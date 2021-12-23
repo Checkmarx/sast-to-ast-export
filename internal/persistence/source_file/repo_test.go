@@ -1,4 +1,4 @@
-package source
+package source_file
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSourceRepo_DownloadSourceFiles(t *testing.T) {
+func TestRepo_DownloadSourceFiles(t *testing.T) {
 	scanID := "1000000"
 	file1 := "project/folder1/file1.go"
 	file2 := "project/folder1/file2.go"
@@ -47,7 +47,7 @@ func TestSourceRepo_DownloadSourceFiles(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
 		soapClientMock.EXPECT().GetSourcesByScanID(scanID, gomock.Any()).DoAndReturn(getSourcesHandler)
-		instance := NewSourceRepo(soapClientMock)
+		instance := NewRepo(soapClientMock)
 
 		err := instance.DownloadSourceFiles(scanID, filesToDownload)
 		assert.NoError(t, err)
@@ -84,7 +84,7 @@ func TestSourceRepo_DownloadSourceFiles(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
 		soapClientMock.EXPECT().GetSourcesByScanID(scanID, gomock.Any()).DoAndReturn(getSourcesHandler)
-		instance := NewSourceRepo(soapClientMock)
+		instance := NewRepo(soapClientMock)
 
 		createErr := createFileAndPath(filesToDownload[file2], []byte(fileSources[file2]), metadataFilePerm, metadataFolderPerm)
 		assert.NoError(t, createErr)
