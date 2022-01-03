@@ -3,11 +3,11 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )

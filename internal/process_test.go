@@ -2,16 +2,16 @@ package internal
 
 import (
 	"fmt"
+	"io/ioutil"
+	"testing"
+	"time"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
 	mock_integration_rest "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/rest"
-	"io/ioutil"
-	"testing"
-	"time"
-
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -1006,6 +1006,7 @@ func TestFetchResultsData(t *testing.T) {
 	})
 }
 
+//nolint:funlen
 func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)

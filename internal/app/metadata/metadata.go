@@ -4,9 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
-
 	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
-
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/pkg/errors"
 )

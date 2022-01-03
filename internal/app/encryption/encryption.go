@@ -12,6 +12,7 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/pkg/aesctr"
 )
 
+//nolint:stylecheck
 //go:embed public.key
 var BuildTimeRSAPublicKey string
 

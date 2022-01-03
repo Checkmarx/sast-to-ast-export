@@ -1,4 +1,4 @@
-package method_line
+package methodline
 
 import (
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"

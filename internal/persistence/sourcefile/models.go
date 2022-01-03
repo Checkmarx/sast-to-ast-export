@@ -1,4 +1,4 @@
-package source_file
+package sourcefile
 
 type (
 	Batch struct {

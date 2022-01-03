@@ -1,4 +1,4 @@
-package method_line
+package methodline
 
 type (
 	ResultPath struct {

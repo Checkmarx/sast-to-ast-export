@@ -1,4 +1,4 @@
-package ast_query_id
+package astquery
 
 type (
 	Query struct {

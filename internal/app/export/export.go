@@ -5,12 +5,12 @@ import (
 	"compress/flate"
 	"encoding/base64"
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/app/encryption"
 	"io"
 	"os"
 	"path"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/encryption"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )

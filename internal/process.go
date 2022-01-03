@@ -10,7 +10,7 @@ import (
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
 
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/method_line"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/methodline"
 
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
@@ -19,8 +19,8 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/ast_query_id"
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/source_file"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/astquery"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/sourcefile"
 	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
 
 	"github.com/golang-jwt/jwt"
@@ -121,7 +121,7 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	astQueryIDRepo, astQueryIDRepoErr := ast_query_id.NewRepo(ast_query_id.AllQueries)
+	astQueryIDRepo, astQueryIDRepoErr := astquery.NewRepo(astquery.AllQueries)
 	if astQueryIDRepoErr != nil {
 		return errors.Wrap(astQueryIDRepoErr, "could not create AST query id repo")
 	}
@@ -132,8 +132,8 @@ func RunExport(args *Args) error {
 	}
 
 	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
-	sourceRepo := source_file.NewRepo(soapClient)
-	methodLineRepo := method_line.NewRepo(soapClient)
+	sourceRepo := sourcefile.NewRepo(soapClient)
+	methodLineRepo := methodline.NewRepo(soapClient)
 
 	metadataTempDir, metadataTempDirErr := os.MkdirTemp("", args.ProductName)
 	if metadataTempDirErr != nil {

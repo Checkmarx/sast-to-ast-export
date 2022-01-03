@@ -1,11 +1,10 @@
 package permissions
 
 import (
-	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/golang-jwt/jwt"
-
 	"github.com/stretchr/testify/assert"
 )
 

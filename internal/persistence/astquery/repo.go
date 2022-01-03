@@ -1,4 +1,4 @@
-package ast_query_id
+package astquery
 
 import (
 	_ "embed"
@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+//nolint:stylecheck
 //go:embed all_queries.json
 var AllQueries string
 
