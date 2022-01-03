@@ -43,7 +43,6 @@ func (e *Repo) GetMethodLinesByPath(scanID, queryID string) ([]*interfaces.Resul
 		}
 		for _, v := range resultPath.Node.Nodes {
 			methodLine.MethodLines = append(methodLine.MethodLines, v.MethodLine)
-
 		}
 		output = append(output, &methodLine)
 	}

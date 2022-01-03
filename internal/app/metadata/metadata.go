@@ -77,6 +77,7 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 			lastSourceFile := findSourceFile(result.LastNode.FileName, filesToDownload)
 			methodLines := findResultPath(result.PathID, methodLinesByPath).MethodLines
 			similarityCalculationJobs <- SimilarityCalculationJob{
+				result.ResultID, result.PathID,
 				firstSourceFile.LocalName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
 				lastSourceFile.LocalName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
 				astQueryID,
@@ -96,6 +97,8 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 					job.QueryID,
 				)
 				similarityCalculationResults <- SimilarityCalculationResult{
+					ResultID:     job.ResultID,
+					PathID:       job.PathID,
 					SimilarityID: similarityID,
 					Err:          similarityIDErr,
 				}
@@ -104,16 +107,16 @@ func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Re
 	}
 
 	// handle calculation results
-	for _, result := range query.Results {
+	for range query.Results {
 		r := <-similarityCalculationResults
 		if r.Err != nil {
 			return nil, r.Err
 		}
 		output = append(output, &Record{
 			QueryID:      query.QueryID,
+			ResultID:     r.ResultID,
+			PathID:       r.PathID,
 			SimilarityID: r.SimilarityID,
-			PathID:       result.PathID,
-			ResultID:     result.ResultID,
 		})
 	}
 	return output, nil
