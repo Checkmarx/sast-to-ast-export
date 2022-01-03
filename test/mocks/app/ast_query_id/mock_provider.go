@@ -7,6 +7,7 @@ package mock_app_ast_query_id
 import (
 	reflect "reflect"
 
+	interfaces "github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -31,6 +32,21 @@ func NewMockASTQueryIDRepo(ctrl *gomock.Controller) *MockASTQueryIDRepo {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockASTQueryIDRepo) EXPECT() *MockASTQueryIDRepoMockRecorder {
 	return m.recorder
+}
+
+// GetAllQueryIDsByGroup mocks base method.
+func (m *MockASTQueryIDRepo) GetAllQueryIDsByGroup(arg0, arg1 string) ([]interfaces.ASTQuery, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllQueryIDsByGroup", arg0, arg1)
+	ret0, _ := ret[0].([]interfaces.ASTQuery)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllQueryIDsByGroup indicates an expected call of GetAllQueryIDsByGroup.
+func (mr *MockASTQueryIDRepoMockRecorder) GetAllQueryIDsByGroup(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllQueryIDsByGroup", reflect.TypeOf((*MockASTQueryIDRepo)(nil).GetAllQueryIDsByGroup), arg0, arg1)
 }
 
 // GetQueryID mocks base method.

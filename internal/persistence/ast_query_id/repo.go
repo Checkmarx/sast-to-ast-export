@@ -4,8 +4,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	"github.com/pkg/errors"
 )
 
@@ -35,4 +37,26 @@ func (e *Repo) GetQueryID(language, name, group string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("unknown source path: %s", sourcePath)
+}
+
+func (e *Repo) GetAllQueryIDsByGroup(language, name string) ([]interfaces.ASTQuery, error) {
+	pattern := fmt.Sprintf("queries/%s/([^/]+)/%s/%s.cs", language, name, name)
+	r, regexErr := regexp.Compile(pattern)
+	if regexErr != nil {
+		return nil, regexErr
+	}
+	out := []interfaces.ASTQuery{}
+	for _, query := range e.queries {
+		if r.MatchString(query.SourcePath) {
+			match := r.FindStringSubmatch(query.SourcePath)
+			queryID := strconv.FormatUint(query.ID, 10)
+			out = append(out, interfaces.ASTQuery{
+				Language: language,
+				Group:    match[1],
+				Name:     name,
+				QueryID:  queryID,
+			})
+		}
+	}
+	return out, nil
 }

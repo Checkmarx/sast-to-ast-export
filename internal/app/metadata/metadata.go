@@ -42,7 +42,23 @@ func NewMetadataFactory(
 func (e *MetadataFactory) GetMetadataRecords(scanID string, query *Query) ([]*Record, error) {
 	astQueryID, astQueryIDErr := e.astQueryIDProvider.GetQueryID(query.Language, query.Name, query.Group)
 	if astQueryIDErr != nil {
-		return nil, errors.Wrap(astQueryIDErr, "could not get AST query id")
+		// maybe the group changed
+		queryList, queryListErr := e.astQueryIDProvider.GetAllQueryIDsByGroup(query.Language, query.Name)
+		if queryListErr != nil {
+			return nil, errors.Wrap(astQueryIDErr, "could not get AST query ids by group")
+		}
+		if len(queryList) == 0 {
+			return nil, errors.Wrap(astQueryIDErr, "could not get AST query id")
+		}
+		if len(queryList) > 1 {
+			return nil, errors.Wrapf(
+				astQueryIDErr,
+				"could not get AST query id - found more than one query for language %s and name %s",
+				query.Language,
+				query.Name,
+			)
+		}
+		astQueryID = queryList[0].QueryID
 	}
 	methodLinesByPath, methodLineErr := e.methodLineProvider.GetMethodLinesByPath(scanID, query.QueryID)
 	if methodLineErr != nil {
