@@ -24,6 +24,20 @@ make public_key
 make build
 ```
 
+## Package for distribution
+
+Note generating zip packages requires zip command in your path.
+
+Example command on Linux
+```
+make package
+```
+
+On Windows you can use WSL:
+```
+wsl make package
+```
+
 # How to build similarity calculator
 
 In order to calculate AST similarity IDs, the export tool relies on a .NET CLI app.  

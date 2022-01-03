@@ -1,4 +1,4 @@
-BUILD_PATH = ./build
+	BUILD_PATH = ./build
 PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
@@ -13,6 +13,9 @@ lint:
 	golangci-lint run
 
 build: windows_amd64 #windows_386 linux_amd64 linux_386 darwin_amd64
+
+package: build
+	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_$(PRODUCT_BUILD)_windows_amd64.zip ./build/windows/amd64/*
 
 run: windows_amd64 run_windows
 
