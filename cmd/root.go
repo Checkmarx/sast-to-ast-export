@@ -2,13 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
-	"github.com/checkmarxDev/ast-sast-export/internal/app/logging"
 	"os"
 	"time"
 
-	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
+	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -67,17 +66,11 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 			}
 		}()
 
-		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, aol.GetNewConsoleWriter(), logFileWriter)
+		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, logging.GetNewConsoleWriter(), logFileWriter)
 
-		aolErr := aol.Init(aol.InitOptions{
-			ServiceName:       productName,
-			LogLevel:          zerolog.LevelTraceValue,
-			LogOutputStream:   &levelWriter,
-			Version:           "",
-			TelemetryEndpoint: "",
-		})
-		if aolErr != nil {
-			panic(aolErr)
+		logInitErr := logging.Init(zerolog.LevelTraceValue, &levelWriter)
+		if logInitErr != nil {
+			panic(logInitErr)
 		}
 
 		defer func() {
