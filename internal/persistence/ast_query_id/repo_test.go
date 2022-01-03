@@ -34,7 +34,7 @@ func TestRepo_GetAllQueryIDsByGroup(t *testing.T) {
 		result, err := repo.GetAllQueryIDsByGroup("Kotlin", "Code_Injection")
 		assert.NoError(t, err)
 		expected := []interfaces.ASTQuery{
-			{"Kotlin", "Code_Injection", "Kotlin_High_Risk", "15158446363146771540"},
+			{Language: "Kotlin", Name: "Code_Injection", Group: "Kotlin_High_Risk", QueryID: "15158446363146771540"},
 		}
 		assert.Equal(t, expected, result)
 	})
@@ -44,6 +44,6 @@ func TestRepo_GetAllQueryIDsByGroup(t *testing.T) {
 
 		result, err := repo.GetAllQueryIDsByGroup("Language", "Name")
 		assert.NoError(t, err)
-		assert.Equal(t, []interfaces.ASTQuery{}, result)
+		assert.Len(t, result, 0)
 	})
 }

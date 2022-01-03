@@ -14,8 +14,12 @@ import (
 //go:embed all_queries.json
 var AllQueries string
 
+const (
+	sourcePathRegex = "queries/([^/]+)/([^/]+)/([^/]+)/.+\\.cs"
+)
+
 type Repo struct {
-	queries []Query
+	queries map[string][]Query
 }
 
 func NewRepo(allQueries string) (*Repo, error) {
@@ -24,14 +28,25 @@ func NewRepo(allQueries string) (*Repo, error) {
 	if unmarshalErr != nil {
 		return nil, errors.Wrap(unmarshalErr, "could not unmarshal queries json")
 	}
-	return &Repo{
-		queries,
-	}, nil
+	r, regexErr := regexp.Compile(sourcePathRegex)
+	if regexErr != nil {
+		return nil, errors.Wrap(regexErr, "could not compile source path regex")
+	}
+	i := Repo{queries: map[string][]Query{}}
+	for _, q := range queries {
+		match := r.FindStringSubmatch(q.SourcePath)
+		language := match[1]
+		if _, ok := i.queries[language]; !ok {
+			i.queries[language] = []Query{}
+		}
+		i.queries[language] = append(i.queries[language], q)
+	}
+	return &i, nil
 }
 
 func (e *Repo) GetQueryID(language, name, group string) (string, error) {
 	sourcePath := fmt.Sprintf("queries/%s/%s/%s/%s.cs", language, group, name, name)
-	for _, query := range e.queries {
+	for _, query := range e.queries[language] {
 		if query.SourcePath == sourcePath {
 			return strconv.FormatUint(query.ID, 10), nil
 		}
@@ -45,8 +60,8 @@ func (e *Repo) GetAllQueryIDsByGroup(language, name string) ([]interfaces.ASTQue
 	if regexErr != nil {
 		return nil, regexErr
 	}
-	out := []interfaces.ASTQuery{}
-	for _, query := range e.queries {
+	var out []interfaces.ASTQuery
+	for _, query := range e.queries[language] {
 		if r.MatchString(query.SourcePath) {
 			match := r.FindStringSubmatch(query.SourcePath)
 			queryID := strconv.FormatUint(query.ID, 10)
