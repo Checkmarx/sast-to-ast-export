@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal"
-	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -40,7 +40,7 @@ var rootCmd = &cobra.Command{
 	Short: "Exports SAST data for importing in AST",
 	Long: `Exports encrypted SAST data for importing in AST. Example usage:
 
-cxsast_exporter --user username --pass password --url http://localhost --db sqlserver://dbuser:dbpass@127.0.0.1:61286?database=CxDB
+cxsast_exporter --user username --pass password --url http://localhost
 
 Produces a zip file containing the encrypted SAST data, e.g. cxsast_exporter-2021-09-10-15-42-35.zip
 Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-09-10-15-42-35.log
@@ -55,7 +55,7 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 		}
 
 		now := time.Now()
-		logFileName := fmt.Sprintf("%s-%s.log", productName, now.Format(export2.DateTimeFormat))
+		logFileName := fmt.Sprintf("%s-%s.log", productName, now.Format(export.DateTimeFormat))
 		logFileWriter, err := os.Create(logFileName)
 		if err != nil {
 			panic(err)
@@ -103,7 +103,7 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
-	rootCmd.Flags().StringSliceP(exportArg, "", export2.GetOptions(), "SAST export options")
+	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
