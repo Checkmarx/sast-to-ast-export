@@ -450,9 +450,14 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 				Language: query.Language,
 				Group:    query.Group,
 			}
-			for j := 0; j < len(reportReader.Queries[i].Results); j++ {
-				for k := 0; k < len(reportReader.Queries[i].Results[j].Paths); k++ {
-					path := reportReader.Queries[i].Results[j].Paths[k]
+			for j := 0; j < len(query.Results); j++ {
+				result := query.Results[j]
+				// only triaged results will have metadata records generated
+				if result.Remark == "" {
+					continue
+				}
+				for k := 0; k < len(result.Paths); k++ {
+					path := result.Paths[k]
 					firstPathNode := path.PathNodes[0]
 					lastPathNode := path.PathNodes[len(path.PathNodes)-1]
 					metaQuery.Results = append(metaQuery.Results, &metadata.Result{
@@ -473,11 +478,13 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 					})
 				}
 			}
-			metadataRecords, metadataRecordErr = metadataProvider.GetMetadataRecords(reportReader.ScanID, metaQuery)
-			if metadataRecordErr != nil {
-				break
+			if len(metaQuery.Results) > 0 {
+				metadataRecords, metadataRecordErr = metadataProvider.GetMetadataRecords(reportReader.ScanID, metaQuery)
+				if metadataRecordErr != nil {
+					break
+				}
+				resultMetadata = append(resultMetadata, metadataRecords...)
 			}
-			resultMetadata = append(resultMetadata, metadataRecords...)
 		}
 		if metadataRecordErr != nil {
 			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
