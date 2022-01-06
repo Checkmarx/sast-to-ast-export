@@ -34,17 +34,17 @@ func (m *MockMetadataProvider) EXPECT() *MockMetadataProviderMockRecorder {
 	return m.recorder
 }
 
-// GetMetadataRecords mocks base method.
-func (m *MockMetadataProvider) GetMetadataRecords(arg0 string, arg1 *metadata.Query) ([]*metadata.Record, error) {
+// GetMetadataRecord mocks base method.
+func (m *MockMetadataProvider) GetMetadataRecord(arg0 string, arg1 []*metadata.Query) (*metadata.Record, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetadataRecords", arg0, arg1)
-	ret0, _ := ret[0].([]*metadata.Record)
+	ret := m.ctrl.Call(m, "GetMetadataRecord", arg0, arg1)
+	ret0, _ := ret[0].(*metadata.Record)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetMetadataRecords indicates an expected call of GetMetadataRecords.
-func (mr *MockMetadataProviderMockRecorder) GetMetadataRecords(arg0, arg1 interface{}) *gomock.Call {
+// GetMetadataRecord indicates an expected call of GetMetadataRecord.
+func (mr *MockMetadataProviderMockRecorder) GetMetadataRecord(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadataRecords", reflect.TypeOf((*MockMetadataProvider)(nil).GetMetadataRecords), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadataRecord", reflect.TypeOf((*MockMetadataProvider)(nil).GetMetadataRecord), arg0, arg1)
 }

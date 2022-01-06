@@ -2,8 +2,20 @@ package metadata
 
 type (
 	Record struct {
-		QueryID      string `json:"queryId"`
-		ResultID     string `json:"resultId"`
+		Queries []*RecordQuery `json:"queries"`
+	}
+
+	RecordQuery struct {
+		QueryID string          `json:"queryId"`
+		Results []*RecordResult `json:"results"`
+	}
+
+	RecordResult struct {
+		ResultID string        `json:"resultId"`
+		Paths    []*RecordPath `json:"paths"`
+	}
+
+	RecordPath struct {
 		PathID       string `json:"pathId"`
 		SimilarityID string `json:"similarityId"`
 	}

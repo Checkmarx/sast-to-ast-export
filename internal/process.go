@@ -400,8 +400,6 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
 	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
 ) {
-	var resultMetadata []*metadata.Record
-
 	for reportJob := range reportJobs {
 		l := log.With().
 			Int("ProjectID", reportJob.ProjectID).
@@ -440,67 +438,23 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			done <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
-		var metadataRecords []*metadata.Record
-		var metadataRecordErr error
-		for i := 0; i < len(reportReader.Queries); i++ {
-			query := reportReader.Queries[i]
-			metaQuery := &metadata.Query{
-				QueryID:  query.ID,
-				Name:     query.Name,
-				Language: query.Language,
-				Group:    query.Group,
-			}
-			for j := 0; j < len(query.Results); j++ {
-				result := query.Results[j]
-				// only triaged results will have metadata records generated
-				if result.Remark == "" {
-					continue
-				}
-				for k := 0; k < len(result.Paths); k++ {
-					path := result.Paths[k]
-					firstPathNode := path.PathNodes[0]
-					lastPathNode := path.PathNodes[len(path.PathNodes)-1]
-					metaQuery.Results = append(metaQuery.Results, &metadata.Result{
-						ResultID: path.ResultID,
-						PathID:   path.PathID,
-						FirstNode: metadata.Node{
-							FileName: firstPathNode.FileName,
-							Name:     firstPathNode.Name,
-							Line:     firstPathNode.Line,
-							Column:   firstPathNode.Column,
-						},
-						LastNode: metadata.Node{
-							FileName: lastPathNode.FileName,
-							Name:     lastPathNode.Name,
-							Line:     lastPathNode.Line,
-							Column:   lastPathNode.Column,
-						},
-					})
-				}
-			}
-			if len(metaQuery.Results) > 0 {
-				metadataRecords, metadataRecordErr = metadataProvider.GetMetadataRecords(reportReader.ScanID, metaQuery)
-				if metadataRecordErr != nil {
-					break
-				}
-				resultMetadata = append(resultMetadata, metadataRecords...)
-			}
-		}
+		metadataQueries := metadata.GetQueriesFromReport(&reportReader)
+		metadataRecord, metadataRecordErr := metadataProvider.GetMetadataRecord(reportReader.ScanID, metadataQueries)
 		if metadataRecordErr != nil {
 			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
 			done <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		} else {
-			resultMetadataJSON, resultMetadataJSONErr := json.Marshal(resultMetadata)
-			if resultMetadataJSONErr != nil {
-				l.Debug().Err(resultMetadataJSONErr).Msg("failed marshaling metadata")
-				done <- ReportConsumeOutput{Err: resultMetadataJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
+			if metadataRecordJSONErr != nil {
+				l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
+				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 				continue
 			}
-			exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), resultMetadataJSON)
+			exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
 			if exportMetadataErr != nil {
-				l.Debug().Err(resultMetadataJSONErr).Msg("failed saving metadata")
-				done <- ReportConsumeOutput{Err: resultMetadataJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
+				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 				continue
 			}
 		}

@@ -115,21 +115,30 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 		Return(methodLinesResult, nil)
 	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir)
 
-	result, err := metadata.GetMetadataRecords(scanID, metaQuery)
+	result, err := metadata.GetMetadataRecord(scanID, []*Query{metaQuery})
 	assert.NoError(t, err)
 
-	record1 := Record{
-		QueryID:      metaQuery.QueryID,
-		SimilarityID: metaResult1Data.SimilarityID,
-		PathID:       metaResult1.PathID,
-		ResultID:     metaResult1.ResultID,
+	expectedResult := &Record{
+		Queries: []*RecordQuery{
+			{
+				QueryID: metaQuery.QueryID,
+				Results: []*RecordResult{
+					{
+						ResultID: metaResult1.ResultID,
+						Paths: []*RecordPath{
+							{
+								PathID:       metaResult1.PathID,
+								SimilarityID: metaResult1Data.SimilarityID,
+							},
+							{
+								PathID:       metaResult2.PathID,
+								SimilarityID: metaResult2Data.SimilarityID,
+							},
+						},
+					},
+				},
+			},
+		},
 	}
-	record2 := Record{
-		QueryID:      metaQuery.QueryID,
-		SimilarityID: metaResult2Data.SimilarityID,
-		PathID:       metaResult2.PathID,
-		ResultID:     metaResult2.ResultID,
-	}
-	expectedResult := []*Record{&record1, &record2}
-	assert.ElementsMatch(t, expectedResult, result)
+	assert.Equal(t, expectedResult, result)
 }

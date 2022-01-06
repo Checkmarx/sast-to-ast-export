@@ -874,13 +874,10 @@ func TestConsumeReports(t *testing.T) {
 		MinTimes(1).
 		MaxTimes(1)
 	metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
-	metadataRecord := metadata.Record{
-		QueryID:      "1",
-		PathID:       "1",
-		ResultID:     "1",
-		SimilarityID: "1",
+	metadataRecord := &metadata.Record{
+		Queries: []*metadata.RecordQuery{},
 	}
-	metadataProvider.EXPECT().GetMetadataRecords(gomock.Any(), gomock.Any()).Return([]*metadata.Record{&metadataRecord}, nil).AnyTimes()
+	metadataProvider.EXPECT().GetMetadataRecord(gomock.Any(), gomock.Any()).Return(metadataRecord, nil).AnyTimes()
 	outputCh := make(chan ReportConsumeOutput, reportCount)
 
 	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider)
