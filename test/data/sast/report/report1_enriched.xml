@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CxXMLResults InitiatorName="Constantino Antunes" Owner="admin" ScanId="1000002" ProjectId="3" ProjectName="Goatlin" TeamFullPathOnReportDate="CxServer" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3" ScanStart="Wednesday, September 15, 2021 3:05:20 PM" Preset="Checkmarx Default" ScanTime="00h:01m:35s" LinesOfCodeScanned="2056" FilesScanned="61" ReportCreationTime="Thursday, December 16, 2021 11:50:18 AM" Team="CxServer" CheckmarxVersion="9.3.0.1139" ScanComments="" ScanType="Full" SourceOrigin="LocalPath" Visibility="Public">
+    <Query id="6300" cweId="89" name="SQL_Injection" group="Kotlin_High_Risk" Severity="High" Language="Kotlin" LanguageHash="0185196830802044" LanguageChangeDate="2021-03-02T00:00:00.0000000" SeverityIndex="3" QueryPath="Kotlin\Cx\Kotlin High Risk\SQL Injection Version:1" QueryVersionCode="132879452">
+        <Result NodeId="10000020002" FileName="Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt" Status="New" Line="83" Column="78" FalsePositive="False" Severity="High" AssignToUser="" state="0" Remark="Constantino Antunes Goatlin, [Wednesday, September 15, 2021 3:09:16 PM]: Changed status to To Verify" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3&amp;pathid=2" SeverityIndex="3" DetectionDate="9/15/2021 3:06:51 PM">
+            <Path ResultId="1000002" PathId="2" SimilarityId="-748694192" NewSimilarityId="12000000">
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt</FileName>
+                    <Line>83</Line>
+                    <Column>78</Column>
+                    <NodeId>1</NodeId>
+                    <Name>text</Name>
+                    <Type></Type>
+                    <Length>4</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>83</Number>
+                            <Code>        note.title = CryptoHelper.encrypt(findViewById&lt;EditText&gt;(R.id.title).text.toString())</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt</FileName>
+                    <Line>83</Line>
+                    <Column>83</Column>
+                    <NodeId>2</NodeId>
+                    <Name>toString</Name>
+                    <Type></Type>
+                    <Length>8</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>83</Number>
+                            <Code>        note.title = CryptoHelper.encrypt(findViewById&lt;EditText&gt;(R.id.title).text.toString())</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/helpers/DatabaseHelper.kt</FileName>
+                    <Line>138</Line>
+                    <Column>29</Column>
+                    <NodeId>17</NodeId>
+                    <Name>update</Name>
+                    <Type></Type>
+                    <Length>6</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>138</Number>
+                            <Code>        val count: Int = db.update(TABLE_NOTES, values, &#34;id = ?&#34;,</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+            </Path>
+        </Result>
+        <Result NodeId="10000020003" FileName="Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt" Status="New" Line="84" Column="82" FalsePositive="False" Severity="High" AssignToUser="" state="0" Remark="Constantino Antunes Goatlin, [Wednesday, September 15, 2021 3:09:16 PM]: Changed status to To Verify" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3&amp;pathid=3" SeverityIndex="3" DetectionDate="9/15/2021 3:06:51 PM">
+            <Path ResultId="1000002" PathId="3" SimilarityId="1325895920" NewSimilarityId="34000000">
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt</FileName>
+                    <Line>84</Line>
+                    <Column>82</Column>
+                    <NodeId>1</NodeId>
+                    <Name>text</Name>
+                    <Type></Type>
+                    <Length>4</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>84</Number>
+                            <Code>        note.content = CryptoHelper.encrypt(findViewById&lt;EditText&gt;(R.id.content).text.toString())</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt</FileName>
+                    <Line>84</Line>
+                    <Column>87</Column>
+                    <NodeId>2</NodeId>
+                    <Name>toString</Name>
+                    <Type></Type>
+                    <Length>8</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>84</Number>
+                            <Code>        note.content = CryptoHelper.encrypt(findViewById&lt;EditText&gt;(R.id.content).text.toString())</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/helpers/CryptoHelper.kt</FileName>
+                    <Line>7</Line>
+                    <Column>21</Column>
+                    <NodeId>3</NodeId>
+                    <Name>original</Name>
+                    <Type></Type>
+                    <Length>8</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>7</Number>
+                            <Code>        fun encrypt(original: String): String {</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/helpers/CryptoHelper.kt</FileName>
+                    <Line>10</Line>
+                    <Column>23</Column>
+                    <NodeId>4</NodeId>
+                    <Name>original</Name>
+                    <Type></Type>
+                    <Length>8</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>10</Number>
+                            <Code>            for (c in original) {</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/helpers/DatabaseHelper.kt</FileName>
+                    <Line>138</Line>
+                    <Column>29</Column>
+                    <NodeId>16</NodeId>
+                    <Name>update</Name>
+                    <Type></Type>
+                    <Length>6</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>138</Number>
+                            <Code>        val count: Int = db.update(TABLE_NOTES, values, &#34;id = ?&#34;,</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+            </Path>
+        </Result>
+    </Query>
+    <Query id="3922" cweId="352" name="Potentially_Vulnerable_To_Xsrf" group="JavaScript_Server_Side_Vulnerabilities" Severity="Low" Language="JavaScript" LanguageHash="1681617171013993" LanguageChangeDate="2021-03-02T00:00:00.0000000" SeverityIndex="1" QueryPath="JavaScript\Cx\JavaScript Server Side Vulnerabilities\Potentially Vulnerable To Xsrf Version:1" QueryVersionCode="96941927">
+        <Result NodeId="10000020006" FileName="Goatlin-develop/packages/services/api/src/app.js" Status="New" Line="11" Column="7" FalsePositive="False" Severity="Low" AssignToUser="" state="0" Remark="Constantino Antunes Goatlin, [Wednesday, September 15, 2021 3:09:16 PM]: Changed status to To Verify" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000002&amp;projectid=3&amp;pathid=6" SeverityIndex="1" DetectionDate="9/15/2021 3:06:52 PM">
+            <Path ResultId="1000002" PathId="6" SimilarityId="-1465516664" NewSimilarityId="55000000">
+                <PathNode>
+                    <FileName>Goatlin-develop/packages/services/api/src/app.js</FileName>
+                    <Line>11</Line>
+                    <Column>7</Column>
+                    <NodeId>1</NodeId>
+                    <Name>app</Name>
+                    <Type></Type>
+                    <Length>3</Length>
+                    <Snippet>
+                        <Line>
+                            <Number>11</Number>
+                            <Code>const app = express();</Code>
+                        </Line>
+                    </Snippet>
+                </PathNode>
+            </Path>
+        </Result>
+    </Query>
+</CxXMLResults>

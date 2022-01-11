@@ -5,10 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/checkmarxDev/ast-observability-library/pkg/aol"
 	"github.com/checkmarxDev/ast-sast-export/internal"
-	"github.com/checkmarxDev/ast-sast-export/internal/export"
-	"github.com/checkmarxDev/ast-sast-export/internal/logging"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/logging"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -38,12 +37,12 @@ var productBuild string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   productName,
-	Short: "Exports SAST data for importing in AST",
-	Long: `Exports encrypted SAST data for importing in AST. Example usage:
+	Short: "Exports SAST triaged results for importing in AST",
+	Long: `Exports encrypted SAST triaged results for importing in AST. Example usage:
 
 cxsast_exporter --user username --pass password --url http://localhost
 
-Produces a zip file containing the encrypted SAST data, e.g. cxsast_exporter-2021-09-10-15-42-35.zip
+Produces a zip file containing the encrypted SAST triaged results, e.g. cxsast_exporter-2021-09-10-15-42-35.zip
 Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-09-10-15-42-35.log
 
 NOTE the minimum supported SAST version is 9.3. SAST installations below this version should be upgraded in order to run this export tool. 
@@ -67,17 +66,11 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 			}
 		}()
 
-		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, aol.GetNewConsoleWriter(), logFileWriter)
+		levelWriter := logging.NewMultiLevelWriter(verbose, zerolog.InfoLevel, logging.GetNewConsoleWriter(), logFileWriter)
 
-		aolErr := aol.Init(aol.InitOptions{
-			ServiceName:       productName,
-			LogLevel:          zerolog.LevelTraceValue,
-			LogOutputStream:   &levelWriter,
-			Version:           "",
-			TelemetryEndpoint: "",
-		})
-		if aolErr != nil {
-			panic(aolErr)
+		logInitErr := logging.Init(zerolog.LevelTraceValue, &levelWriter)
+		if logInitErr != nil {
+			panic(logInitErr)
 		}
 
 		defer func() {
@@ -89,7 +82,11 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 
 		// start export
 		allArgs := GetArgs(cmd, productName)
-		internal.RunExport(&allArgs)
+		exportErr := internal.RunExport(&allArgs)
+		if exportErr != nil {
+			log.Error().Err(exportErr)
+			panic(exportErr)
+		}
 	},
 }
 
@@ -101,7 +98,7 @@ func Execute() {
 
 //nolint:gochecknoinits
 func init() {
-	projectsActiveSinceUsage := "include only results from projects active in the last N days"
+	projectsActiveSinceUsage := "include only triaged results from projects active in the last N days"
 
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")

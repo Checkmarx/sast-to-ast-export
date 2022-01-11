@@ -1,4 +1,4 @@
-# How to run build
+# How to run
 
 1. Create an admin user in SAST
 2. Run export
@@ -15,13 +15,43 @@ add --debug parameter to bypass the zip and encryption process.
 1. Make sure you have access to AWS KMS
 2. Make sure that the KMS key exists with the alias sast-migration-key in the eu-west-1 region
 3. Make public key file
-4. Build
+4. Build exporter
+5. Build similarity calculator (see below)
 
 Example for dev environment:
 ```
 make public_key
 make build
 ```
+
+## Package for distribution
+
+Note generating zip packages requires zip command in your path.
+
+Example command on Linux
+```
+make package
+```
+
+On Windows you can use WSL:
+```
+wsl make package
+```
+
+# How to build similarity calculator
+
+In order to calculate AST similarity IDs, the export tool relies on a .NET CLI app.  
+
+1. Checkout https://github.com/CheckmarxDev/ast-sast-similarity-calculator
+2. Open solution with visual studio 2019
+3. Right-click on the solution to open context menu
+4. Click on "Publish..."
+5. Make sure you have a Folder publish profile:
+   1. Target location: {{ast-sast-export folder}}/build/windows/amd64
+   2. Configuration: Release
+   3. Target framework: netcoreapp3.1
+   4. Target runtime: win-x64
+6. Click on "Publish" button
 
 ## Troubleshooting
 
@@ -46,12 +76,4 @@ Command `jq` is being used to parse JSON. You can find installation instructions
 # How to run repo
 
 In order to run during development we'll need to `make public_key`, like for build.
-Once the public.key file exists, we can run and test using the file reference:
-```
-go run -ldflags "-X sast-export/internal/encryption.BuildTimeRSAPublicKey=$(cat .\public.key)" .
-```
-
-```
-go test -ldflags "-X sast-export/internal/encryption.BuildTimeRSAPublicKey=$(cat .\public.key)" .\...
-```
-
+Once the public.key file exists, we can run and test.

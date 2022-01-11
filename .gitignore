@@ -17,5 +17,5 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 build
-public.key
+internal/app/encryption/public.key
 coverage.out
