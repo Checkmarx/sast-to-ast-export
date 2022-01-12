@@ -1110,7 +1110,7 @@ func TestFetchSelectedData(t *testing.T) {
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
-			Export:              []string{"users", "teams", "results"},
+			Export:              []string{export.UsersOption, export.TeamsOption, export.ResultsOption},
 			ProjectsActiveSince: 100,
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
@@ -1128,7 +1128,7 @@ func TestFetchSelectedData(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
-			Export:              []string{"users", "teams", "results"},
+			Export:              []string{export.UsersOption, export.TeamsOption, export.ResultsOption},
 			ProjectsActiveSince: 100,
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
