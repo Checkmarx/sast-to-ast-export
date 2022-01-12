@@ -6,7 +6,7 @@ const (
 	// TeamsOption represent teams (groups)
 	TeamsOption = "teams"
 	// ResultsOption represent results (projects & data)
-	ResultsOption = "triaged"
+	ResultsOption = "triage"
 )
 
 func GetOptions() []string {
