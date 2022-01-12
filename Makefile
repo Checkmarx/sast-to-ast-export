@@ -1,4 +1,4 @@
-	BUILD_PATH = ./build
+BUILD_PATH = ./build
 PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
