@@ -55,6 +55,15 @@ In order to calculate AST similarity IDs, the export tool relies on a .NET CLI a
    4. Target runtime: win-x64
 6. Click on "Publish" button
 
+# Update public key
+
+Make sure you have access to AWS account and the environment where keys exist. Then:  
+```
+make download_public_key ENV=<environment>
+```
+
+See [How to build](#How to build) section for the list of environments available.
+
 ## Troubleshooting
 
 ### No such file or directory
