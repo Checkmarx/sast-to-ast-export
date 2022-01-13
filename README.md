@@ -79,3 +79,7 @@ Makefile:28: pipe: No such file or directory
 This happens because the shell being spawn doesn't support some commands needed.
 On Windows, please make sure you have Git bash installed, and add Git bash's usr/bin folder to your PATH.
 Git bash is `C:\Program Files\Git\usr\bin` and should be added in your user's `Path` variable.
+
+### make download_public_key fails because "jq" is missing
+
+Command `jq` is being used to parse JSON. You can find installation instructions in https://stedolan.github.io/jq/. 
