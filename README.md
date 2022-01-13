@@ -32,8 +32,10 @@ Note generating zip packages requires zip command in your path.
 
 Example command on Linux
 ```
-make package
+make package [ENV=<environment>]
 ```
+
+See [How to build](#how-to-build) section for the list of environments available.
 
 On Windows you can use WSL:
 ```
@@ -59,10 +61,10 @@ In order to calculate AST similarity IDs, the export tool relies on a .NET CLI a
 
 Make sure you have access to AWS account and the environment where keys exist. Then:  
 ```
-make download_public_key ENV=<environment>
+make download_public_key [ENV=<environment>]
 ```
 
-See [How to build](#How to build) section for the list of environments available.
+See [How to build](#how-to-build) section for the list of environments available.
 
 ## Troubleshooting
 
