@@ -1,4 +1,7 @@
+KEYS_PATH = ./keys
+EXTERNAL_PATH = ./external
 BUILD_PATH = ./build
+ENV ?= prod
 PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
@@ -12,7 +15,7 @@ lint:
 	go fmt ./...
 	golangci-lint run
 
-build: windows_amd64 #windows_386 linux_amd64 linux_386 darwin_amd64
+build: public_key windows_amd64
 
 package: build
 	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_$(PRODUCT_BUILD)_windows_amd64.zip ./build/windows/amd64/*
@@ -27,26 +30,12 @@ unit_test:
 clean:
 	rm -r $(BUILD_PATH)
 
-windows_amd64: check_public_key
+windows_amd64:
 	env GOOS=windows GOARCH=amd64 go build -o $(BUILD_PATH)/windows/amd64/$(PRODUCT_NAME).exe $(LD_FLAGS)
-
-#windows_386: check_public_key
-#	env GOOS=windows GOARCH=386 go build -o $(BUILD_PATH)/windows/386/$(PRODUCT_NAME).exe $(LD_FLAGS)
-
-#linux_amd64: check_public_key
-#	env GOOS=linux GOARCH=amd64 go build -o $(BUILD_PATH)/linux/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
-
-#linux_386: check_public_key
-#	env GOOS=linux GOARCH=386 go build -o $(BUILD_PATH)/linux/386/$(PRODUCT_NAME) $(LD_FLAGS)
-
-#darwin_amd64: check_public_key
-#	env GOOS=darwin GOARCH=amd64 go build -o $(BUILD_PATH)/darwin/amd64/$(PRODUCT_NAME) $(LD_FLAGS)
+	cp -v $(EXTERNAL_PATH)/windows/amd64/SimilarityCalculator.exe $(BUILD_PATH)/windows/amd64/
 
 public_key:
-	aws kms get-public-key --key-id alias/sast-migration-key --region eu-west-1 | jq -r .PublicKey > $(PUBLIC_KEY)
-
-check_public_key:
-	if [ ! -f $(PUBLIC_KEY) ]; then echo "Please run: make public_key"; exit 1; fi
+	cp -v $(KEYS_PATH)/$(ENV).key $(PUBLIC_KEY)
 
 run_windows:
 	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 1

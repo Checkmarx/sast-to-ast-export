@@ -19,3 +19,6 @@
 build
 internal/app/encryption/public.key
 coverage.out
+terraform/.terraform
+terraform/.terraform.lock.hcl
+!external/windows/amd64/*.exe
