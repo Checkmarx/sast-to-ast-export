@@ -18,7 +18,11 @@ lint:
 build: public_key windows_amd64
 
 package: build
-	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_$(PRODUCT_BUILD)_windows_amd64.zip ./build/windows/amd64/*
+ifeq ($(ENV),prod)
+	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_windows_amd64.zip ./build/windows/amd64/*
+else
+	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_$(PRODUCT_BUILD)_$(ENV)_windows_amd64.zip ./build/windows/amd64/*
+endif
 
 run: windows_amd64 run_windows
 
