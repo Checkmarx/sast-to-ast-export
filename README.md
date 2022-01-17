@@ -1,7 +1,13 @@
 # How to run
 
 1. Create an admin user in SAST
-2. Run export
+2. Assign the following permissions to the user
+   1. Sast > API > Use Odata
+   2. Sast > Reports > Generate Scan Report
+   3. Sast > Scan Results > View Results
+   4. Access Control > General > Manage Authentication Providers
+   5. Access Control > General > Manage Roles
+3. Run export
 ```
     ./cxsast_exporter --user username --pass password --url http://localhost
 ```
