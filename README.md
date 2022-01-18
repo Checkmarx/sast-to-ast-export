@@ -1,93 +1,61 @@
-# How to run
+# AST SAST exporter
 
-1. Create an admin user in SAST
-2. Assign the following permissions to the user
-   1. Sast > API > Use Odata
-   2. Sast > Reports > Generate Scan Report
-   3. Sast > Scan Results > View Results
-   4. Access Control > General > Manage Authentication Providers
-   5. Access Control > General > Manage Roles
-3. Run export
+Exports SAST triaged results for importing in AST.
+
+## Description
+
+Fetches SAST triaged results and exports as an encrypted package, which can then be imported in AST.
+
+## Getting Started
+
+### Dependencies
+
+Requires Microsoft Windows x64.
+
+### Installation
+
+* Download the latest version and extract the package contents
+* Create export user in SAST
+  * Assign the following permissions:
+    1. Sast > API > Use Odata
+    2. Sast > Reports > Generate Scan Report
+    3. Sast > Scan Results > View Results
+    4. Access Control > General > Manage Authentication Providers
+    5. Access Control > General > Manage Roles
+* Please refer to (TODO) [Wiki](insert-wiki-url) for more details
+
+### Execution
+
+Run export with: 
 ```
-    ./cxsast_exporter --user username --pass password --url http://localhost
-```
-
-This will generate an export package in the same folder where the command is run.
-
-add --debug parameter to bypass the zip and encryption process. 
-
-# How to build
-
-Make command:
-```
-make build [ENV=<environment>]
-```
-
-Available environments:
- * prod (default)
- * ppe
- * dev
-
-Example prod build: `make build`
-
-Example dev build: `make build ENV=dev`
-
-## Package for distribution
-
-Note generating zip packages requires zip command in your path.
-
-Example command on Linux
-```
-make package [ENV=<environment>]
+.\cxsast_exporter --user username --pass password --url http://localhost`
 ```
 
-See [How to build](#how-to-build) section for the list of environments available.
+Replace `username` and `password` with user credentials.
+Replace `http://localhost` with the url to SAST, if necessary.
 
-On Windows you can use WSL:
-```
-wsl make package
-```
+## Additional Documentation
 
-## Build similarity calculator
+Refer to the project (TODO) [Wiki](insert-wiki-url) for additional information
 
-In order to calculate AST similarity IDs, the export tool relies on a .NET CLI app, available in external folder.  
+## Version History
 
-1. Checkout https://github.com/CheckmarxDev/ast-sast-similarity-calculator
-2. Open solution with visual studio 2019
-3. Right-click on the solution to open context menu
-4. Click on "Publish..."
-5. Make sure you have a Folder publish profile:
-   1. Target location: {{ast-sast-export folder}}/external/windows/amd64
-   2. Configuration: Release
-   3. Target framework: netcoreapp3.1
-   4. Target runtime: win-x64
-6. Click on "Publish" button
+* 1.0
+  * Initial Release
 
-# Update public key
+## Contributing
 
-Make sure you have access to AWS account and the environment where keys exist. Then:  
-```
-make download_public_key [ENV=<environment>]
-```
+We appreciate feedback and contribution to this repo! Before you get started, please see the following:
 
-See [How to build](#how-to-build) section for the list of environments available.
+- [Checkmarx general contribution guidelines](CONTRIBUTING.md)
+- [Checkmarx code of conduct guidelines](CODE-OF-CONDUCT.md)
 
-## Troubleshooting
+## Support + Feedback
 
-### No such file or directory
+Include information on how to get support. Consider adding:
 
-Examples:
+- Use [Issues](https://github.com/CheckmarxDev/ast-sast-export/issues) for code-level support
 
-```
-> make build
-process_begin: CreateProcess(NULL, cat VERSION, ...) failed.
-Makefile:28: pipe: No such file or directory
-```
+## License
 
-This happens because the shell being spawn doesn't support some commands needed.
-On Windows, please make sure you have Git bash installed, and add Git bash's usr/bin folder to your PATH.
-Git bash is `C:\Program Files\Git\usr\bin` and should be added in your user's `Path` variable.
-
-### make download_public_key fails because "jq" is missing
-
-Command `jq` is being used to parse JSON. You can find installation instructions in https://stedolan.github.io/jq/. 
+Project License can be found [here](LICENSE)
