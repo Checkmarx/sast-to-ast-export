@@ -26,13 +26,13 @@ Requires Microsoft Windows x64.
 
 ### Execution
 
-Run export with: 
+Run export with:
 ```
-.\cxsast_exporter --user username --pass password --url http://localhost`
+.\cxsast_exporter --user username --pass password --url http://localhost
 ```
 
-Replace `username` and `password` with user credentials.
-Replace `http://localhost` with the url to SAST, if necessary.
+ * Replace `username` and `password` with user credentials.
+ * Replace `http://localhost` with the url to SAST, if necessary.
 
 ## Additional Documentation
 
@@ -40,8 +40,8 @@ Refer to the project (TODO) [Wiki](insert-wiki-url) for additional information
 
 ## Version History
 
-* 1.0
-  * Initial Release
+ * 1.0
+   * Initial Release
 
 ## Contributing
 
