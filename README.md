@@ -1,4 +1,4 @@
-# AST SAST exporter
+# SAST to AST export
 
 Exports SAST triaged results for importing in AST.
 
