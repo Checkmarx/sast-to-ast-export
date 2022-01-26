@@ -22,7 +22,7 @@ Requires Microsoft Windows x64.
     3. Sast > Scan Results > View Results
     4. Access Control > General > Manage Authentication Providers
     5. Access Control > General > Manage Roles
-* Please refer to (TODO) [Wiki](insert-wiki-url) for more details
+* Please refer to [Wiki](https://checkmarx.atlassian.net/wiki/spaces/AST/pages/6247580171/SAST+Migration+to+AST) for more details
 
 ### Execution
 
@@ -36,7 +36,7 @@ Run export with:
 
 ## Additional Documentation
 
-Refer to the project (TODO) [Wiki](insert-wiki-url) for additional information
+Refer to the project [Wiki](https://checkmarx.atlassian.net/wiki/spaces/AST/pages/6247580171/SAST+Migration+to+AST) for additional information
 
 ## Version History
 
