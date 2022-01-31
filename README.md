@@ -1,4 +1,25 @@
-# SAST to AST export
+<!-- PROJECT LOGO -->
+<br />
+<p align="center">
+  <a href="">
+    <img src="./logo.png" alt="Logo" width="80" height="80">
+  </a>
+
+<h3 align="center">SAST to AST Export</h3>
+
+<p align="center">
+    SAST to AST Export is a standalone Checkmarx tool.
+<br />
+    <a href="https://checkmarx.atlassian.net/wiki/spaces/AST/pages/6247580171/SAST+Migration+to+AST"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/Checkmarx/sast-to-ast-export/issues/new/choose">Report Bug</a>
+    ·
+    <a href="https://github.com/Checkmarx/sast-to-ast-export/issues/new/choose">Request Feature</a>
+  </p>
+</p>
+
+# SAST to AST Export
 
 Exports SAST triaged results for importing in AST.
 
