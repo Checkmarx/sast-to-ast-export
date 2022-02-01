@@ -59,6 +59,16 @@ Run export with:
 
 Refer to the project [Wiki](https://checkmarx.atlassian.net/wiki/spaces/AST/pages/6247580171/SAST+Migration+to+AST) for additional information
 
+## Encryption keys
+
+The export package produced is encrypted using a public RSA keys which is embedded in the binary produced with the build.
+Keys for each environment are provided in the `keys` folder and are rotated every year.
+
+## Similarity Calculator
+
+The exporter relies on a Windows binary for similarity calculation.
+This is internally built by Checkmarx and provided in the `external` folder for inclusion with the build. 
+
 ## Version History
 
  * 1.0
