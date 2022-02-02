@@ -29,9 +29,9 @@ Fetches SAST triaged results and exports as an encrypted package, which can then
 
 ## Getting Started
 
-### Dependencies
+### Prerequisites
 
-Requires Microsoft Windows x64.
+Microsoft Windows x64.
 
 ### Installation
 
@@ -69,11 +69,6 @@ Keys for each environment are provided in the `keys` folder and are rotated ever
 The exporter relies on a Windows binary for similarity calculation.
 This is internally built by Checkmarx and provided in the `external` folder for inclusion with the build. 
 
-## Version History
-
- * 1.0
-   * Initial Release
-
 ## Contributing
 
 We appreciate feedback and contribution to this repo! Before you get started, please see the following:
@@ -81,12 +76,5 @@ We appreciate feedback and contribution to this repo! Before you get started, pl
 - [Checkmarx general contribution guidelines](CONTRIBUTING.md)
 - [Checkmarx code of conduct guidelines](CODE-OF-CONDUCT.md)
 
-## Support + Feedback
-
-Include information on how to get support. Consider adding:
-
-- Use [Issues](https://github.com/CheckmarxDev/ast-sast-export/issues) for code-level support
-
 ## License
-
-Project License can be found [here](LICENSE)
+Distributed under the [Apache 2.0](LICENSE). See `LICENSE` for more information.
