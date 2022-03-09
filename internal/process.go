@@ -12,6 +12,7 @@ import (
 
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/methodline"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/astquery"
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/permissions"
@@ -19,7 +20,6 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/astquery"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/sourcefile"
 	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
 
@@ -34,7 +34,7 @@ const (
 	scansFileName         = "%d.xml"
 	scansMetadataFileName = "%d.json"
 	resultsPageLimit      = 10000
-	httpRetryWaitMin      = 1 * time.Second
+	httpRetryWaitMin      = 1 * time.Second //nolint:revive
 	httpRetryWaitMax      = 30 * time.Second
 	httpRetryMax          = 4
 
@@ -121,9 +121,9 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	astQueryIDRepo, astQueryIDRepoErr := astquery.NewRepo(astquery.AllQueries)
-	if astQueryIDRepoErr != nil {
-		return errors.Wrap(astQueryIDRepoErr, "could not create AST query id repo")
+	astQueryIDProvider, astQueryIDProviderErr := astquery.NewProvider()
+	if astQueryIDProviderErr != nil {
+		return errors.Wrap(astQueryIDProviderErr, "could not create AST query id provider")
 	}
 
 	similarityIDCalculator, similarityIDCalculatorErr := similarity.NewSimilarityIDCalculator()
@@ -146,7 +146,7 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := metadata.NewMetadataFactory(astQueryIDRepo, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
+	metadataSource := metadata.NewMetadataFactory(astQueryIDProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource)
