@@ -119,7 +119,7 @@ func (e *MetadataFactory) GetMetadataRecord(scanID string, queries []*Query) (*R
 		for range query.Results {
 			r := <-similarityCalculationResults
 			if r.Err != nil {
-				return nil, r.Err
+				return nil, errors.Wrap(r.Err, "failed calculating similarity id")
 			}
 			var recordResult *RecordResult
 			for _, x := range output.Queries[queryIdx].Results {
