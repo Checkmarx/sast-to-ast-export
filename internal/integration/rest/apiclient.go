@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -34,17 +33,16 @@ const (
 
 type Client interface {
 	Authenticate(username, password string) error
-	GetResponseBody(endpoint string) ([]byte, error)
 	PostResponseBody(endpoint string, body io.Reader) ([]byte, error)
-	GetUsers() ([]byte, error)
+	GetUsers() ([]User, error)
 	GetRoles() ([]byte, error)
-	GetTeams() ([]byte, error)
+	GetTeams() ([]Team, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
 	GetLdapTeamMappings() ([]byte, error)
 	GetSamlIdentityProviders() ([]byte, error)
 	GetSamlRoleMappings() ([]byte, error)
-	GetSamlTeamMappings() ([]byte, error)
+	GetSamlTeamMappings() ([]SamlTeamMapping, error)
 	GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error)
 	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
 	CreateScanReport(scanID int, reportType string, retry Retry) ([]byte, error)
@@ -101,7 +99,7 @@ func (c *APIClient) Authenticate(username, password string) error {
 		Logger()
 
 	if resp.StatusCode == http.StatusOK {
-		responseBody, ioErr := ioutil.ReadAll(resp.Body)
+		responseBody, ioErr := io.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate ok failed read response")
 			return fmt.Errorf("authentication error - could not read response")
@@ -117,7 +115,7 @@ func (c *APIClient) Authenticate(username, password string) error {
 		}
 		return nil
 	} else if resp.StatusCode == http.StatusBadRequest {
-		responseBody, ioErr := ioutil.ReadAll(resp.Body)
+		responseBody, ioErr := io.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate bad request failed to read response")
 			return fmt.Errorf("authentication error - could not read response")
@@ -140,7 +138,8 @@ func (c *APIClient) Authenticate(username, password string) error {
 	return fmt.Errorf("authentication error - please try again later or contact support")
 }
 
-func (c *APIClient) GetResponseBody(endpoint string) ([]byte, error) {
+// getResponseBody returns response body as byte array
+func (c *APIClient) getResponseBody(endpoint string) ([]byte, error) {
 	req, err := CreateRequest(http.MethodGet, c.BaseURL+endpoint, nil, c.Token)
 	if err != nil {
 		return []byte{}, err
@@ -148,6 +147,7 @@ func (c *APIClient) GetResponseBody(endpoint string) ([]byte, error) {
 	return c.getResponseBodyFromRequest(req)
 }
 
+// getResponseBodyFromRequest sends request and reads its response body
 func (c *APIClient) getResponseBodyFromRequest(req *retryablehttp.Request) ([]byte, error) {
 	resp, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
@@ -158,7 +158,16 @@ func (c *APIClient) getResponseBodyFromRequest(req *retryablehttp.Request) ([]by
 			log.Debug().Err(closeErr).Msg("getResponseBody")
 		}
 	}()
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
+}
+
+// unmarshalResponseBody gets and unmarshal response body
+func (c *APIClient) unmarshalResponseBody(endpoint string, output interface{}) error {
+	data, getErr := c.getResponseBody(endpoint)
+	if getErr != nil {
+		return getErr
+	}
+	return json.Unmarshal(data, output)
 }
 
 func (c *APIClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, error) {
@@ -176,7 +185,7 @@ func (c *APIClient) PostResponseBody(endpoint string, body io.Reader) ([]byte, e
 			log.Debug().Err(closeErr).Msg("postResponseBody")
 		}
 	}()
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 func (c *APIClient) doRequest(req *retryablehttp.Request, expectStatusCode int) (*http.Response, error) {
@@ -210,48 +219,51 @@ func (c *APIClient) getReportStatusResponse(report ReportResponse) (*StatusRespo
 	return &status, nil
 }
 
-func (c *APIClient) GetUsers() ([]byte, error) {
-	return c.GetResponseBody(usersEndpoint)
+func (c *APIClient) GetUsers() ([]User, error) {
+	var users []User
+	return users, c.unmarshalResponseBody(usersEndpoint, &users)
 }
 
 func (c *APIClient) GetRoles() ([]byte, error) {
-	return c.GetResponseBody(rolesEndpoint)
+	return c.getResponseBody(rolesEndpoint)
 }
 
-func (c *APIClient) GetTeams() ([]byte, error) {
-	return c.GetResponseBody(teamsEndpoint)
+func (c *APIClient) GetTeams() ([]Team, error) {
+	var teams []Team
+	return teams, c.unmarshalResponseBody(teamsEndpoint, &teams)
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {
-	return c.GetResponseBody(ldapServersEndpoint)
+	return c.getResponseBody(ldapServersEndpoint)
 }
 
 func (c *APIClient) GetLdapRoleMappings() ([]byte, error) {
-	return c.GetResponseBody(ldapRoleMappingsEndpoint)
+	return c.getResponseBody(ldapRoleMappingsEndpoint)
 }
 
 func (c *APIClient) GetLdapTeamMappings() ([]byte, error) {
-	return c.GetResponseBody(ldapTeamMappingsEndpoint)
+	return c.getResponseBody(ldapTeamMappingsEndpoint)
 }
 
 func (c *APIClient) GetSamlIdentityProviders() ([]byte, error) {
-	return c.GetResponseBody(samlIdentityProvidersEndpoint)
+	return c.getResponseBody(samlIdentityProvidersEndpoint)
 }
 
 func (c *APIClient) GetSamlRoleMappings() ([]byte, error) {
-	return c.GetResponseBody(samlRoleMappingsEndpoint)
+	return c.getResponseBody(samlRoleMappingsEndpoint)
 }
 
-func (c *APIClient) GetSamlTeamMappings() ([]byte, error) {
-	return c.GetResponseBody(teamMappingsEndpoint)
+func (c *APIClient) GetSamlTeamMappings() ([]SamlTeamMapping, error) {
+	var samlTeamMappings []SamlTeamMapping
+	return samlTeamMappings, c.unmarshalResponseBody(teamMappingsEndpoint, &samlTeamMappings)
 }
 
 func (c *APIClient) getReportIDStatus(reportID int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(reportsCheckStatusEndpoint, reportID))
+	return c.getResponseBody(fmt.Sprintf(reportsCheckStatusEndpoint, reportID))
 }
 
 func (c *APIClient) getReportResult(reportID int) ([]byte, error) {
-	return c.GetResponseBody(fmt.Sprintf(reportsResultEndpoint, reportID))
+	return c.getResponseBody(fmt.Sprintf(reportsResultEndpoint, reportID))
 }
 
 func (c *APIClient) postReportID(body io.Reader) ([]byte, error) {

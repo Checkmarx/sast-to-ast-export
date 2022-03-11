@@ -55,4 +55,41 @@ type (
 	TriagedScanResult struct {
 		ID int `json:"Id"`
 	}
+
+	Team struct {
+		ID       int    `json:"id"`
+		Name     string `json:"name"`
+		FullName string `json:"fullName"`
+		ParendID int    `json:"parentId"`
+	}
+
+	User struct {
+		ID                       int      `json:"id"`
+		UserName                 string   `json:"userName"`
+		LastLoginDate            string   `json:"lastLoginDate"`
+		RoleIds                  []int    `json:"roleIds"`
+		TeamIds                  []int    `json:"teamIds"`
+		AuthenticationProviderID int      `json:"authenticationProviderId"`
+		CreationDate             string   `json:"creationDate"`
+		FirstName                string   `json:"firstName"`
+		LastName                 string   `json:"lastName"`
+		Email                    string   `json:"email"`
+		PhoneNumber              string   `json:"phoneNumber"`
+		CellPhoneNumber          string   `json:"cellPhoneNumber"`
+		JobTitle                 string   `json:"jobTitle"`
+		Other                    string   `json:"other"`
+		Country                  string   `json:"country"`
+		Active                   bool     `json:"active"`
+		ExpirationDate           string   `json:"expirationDate"`
+		AllowedIPList            []string `json:"allowedIpList"`
+		LocaleID                 int      `json:"localeId"`
+	}
+
+	SamlTeamMapping struct {
+		ID                     int    `json:"id"`
+		SamlIdentityProviderID int    `json:"samlIdentityProviderId"`
+		TeamID                 int    `json:"teamId"`
+		TeamFullPath           string `json:"teamFullPath"`
+		SamlAttributeValue     string `json:"samlAttributeValue"`
+	}
 )

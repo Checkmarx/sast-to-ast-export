@@ -2,7 +2,7 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -49,7 +49,7 @@ type teamsExpect struct {
 func fetchUsersSetupExpects(client *mock_integration_rest.MockClient, expect *usersExpect) {
 	client.EXPECT().
 		GetUsers().
-		Return([]byte{}, expect.Users.ReturnError).
+		Return([]rest.User{}, expect.Users.ReturnError).
 		MinTimes(expect.Users.RunCount).
 		MaxTimes(expect.Users.RunCount)
 	client.EXPECT().
@@ -82,7 +82,7 @@ func fetchUsersSetupExpects(client *mock_integration_rest.MockClient, expect *us
 func fetchTeamsSetupExpects(client *mock_integration_rest.MockClient, expect *teamsExpect) {
 	client.EXPECT().
 		GetTeams().
-		Return([]byte{}, expect.Teams.ReturnError).
+		Return([]rest.Team{}, expect.Teams.ReturnError).
 		MinTimes(expect.Teams.RunCount).
 		MaxTimes(expect.Teams.RunCount)
 	client.EXPECT().
@@ -92,7 +92,7 @@ func fetchTeamsSetupExpects(client *mock_integration_rest.MockClient, expect *te
 		MaxTimes(expect.LdapTeamMappings.RunCount)
 	client.EXPECT().
 		GetSamlTeamMappings().
-		Return([]byte{}, expect.SamlTeamMappings.ReturnError).
+		Return([]rest.SamlTeamMapping{}, expect.SamlTeamMappings.ReturnError).
 		MinTimes(expect.SamlTeamMappings.RunCount).
 		MaxTimes(expect.SamlTeamMappings.RunCount)
 	client.EXPECT().
@@ -828,7 +828,7 @@ func TestProduceReports(t *testing.T) {
 }
 
 func TestConsumeReports(t *testing.T) {
-	report1, ioErr := ioutil.ReadFile("../test/data/process/report1.xml")
+	report1, ioErr := os.ReadFile("../test/data/process/report1.xml")
 	assert.NoError(t, ioErr)
 	reportCount := 4
 	reportJobs := make(chan ReportJob, reportCount)
@@ -1008,6 +1008,7 @@ func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().GetUsers().Return([]rest.User{}, nil)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
@@ -1023,6 +1024,7 @@ func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users fails if fetch or write fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().GetUsers().Return([]rest.User{}, nil)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.UsersFileName), gomock.Any()).
 			Return(nil)
@@ -1041,6 +1043,9 @@ func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users and teams success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().GetUsers().Return([]rest.User{}, nil)
+		client.EXPECT().GetTeams().Return([]rest.Team{}, nil)
+		client.EXPECT().GetSamlTeamMappings().Return([]rest.SamlTeamMapping{}, nil)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
@@ -1056,6 +1061,8 @@ func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users and teams fail if fetch or write fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().GetUsers().Return([]rest.User{}, nil)
+		client.EXPECT().GetTeams().Return([]rest.Team{}, nil)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Eq(export.UsersFileName), gomock.Any()).
 			Return(nil)
@@ -1090,6 +1097,9 @@ func TestFetchSelectedData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
+		client.EXPECT().GetUsers().Return([]rest.User{}, nil)
+		client.EXPECT().GetTeams().Return([]rest.Team{}, nil)
+		client.EXPECT().GetSamlTeamMappings().Return([]rest.SamlTeamMapping{}, nil)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Any()).
 			Return(&projectPage, nil)
@@ -1122,6 +1132,9 @@ func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users, teams and results fails if result processing fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().GetUsers().Return([]rest.User{}, nil)
+		client.EXPECT().GetTeams().Return([]rest.Team{}, nil)
+		client.EXPECT().GetSamlTeamMappings().Return([]rest.SamlTeamMapping{}, nil)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(0), gomock.Any()).
 			Return(&[]rest.ProjectWithLastScanID{}, fmt.Errorf("failed fetching projects"))

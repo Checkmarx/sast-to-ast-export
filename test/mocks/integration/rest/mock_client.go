@@ -127,7 +127,7 @@ func (mr *MockClientMockRecorder) GetProjectsWithLastScanID(arg0, arg1, arg2 int
 // GetResponseBody mocks base method.
 func (m *MockClient) GetResponseBody(arg0 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResponseBody", arg0)
+	ret := m.ctrl.Call(m, "getResponseBody", arg0)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -136,7 +136,7 @@ func (m *MockClient) GetResponseBody(arg0 string) ([]byte, error) {
 // GetResponseBody indicates an expected call of GetResponseBody.
 func (mr *MockClientMockRecorder) GetResponseBody(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponseBody", reflect.TypeOf((*MockClient)(nil).GetResponseBody), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "getResponseBody", reflect.TypeOf((*MockClient)(nil).GetResponseBody), arg0)
 }
 
 // GetRoles mocks base method.
@@ -185,10 +185,10 @@ func (mr *MockClientMockRecorder) GetSamlRoleMappings() *gomock.Call {
 }
 
 // GetSamlTeamMappings mocks base method.
-func (m *MockClient) GetSamlTeamMappings() ([]byte, error) {
+func (m *MockClient) GetSamlTeamMappings() ([]rest.SamlTeamMapping, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSamlTeamMappings")
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].([]rest.SamlTeamMapping)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -200,10 +200,10 @@ func (mr *MockClientMockRecorder) GetSamlTeamMappings() *gomock.Call {
 }
 
 // GetTeams mocks base method.
-func (m *MockClient) GetTeams() ([]byte, error) {
+func (m *MockClient) GetTeams() ([]rest.Team, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTeams")
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].([]rest.Team)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -230,10 +230,10 @@ func (mr *MockClientMockRecorder) GetTriagedResultsByScanID(arg0 interface{}) *g
 }
 
 // GetUsers mocks base method.
-func (m *MockClient) GetUsers() ([]byte, error) {
+func (m *MockClient) GetUsers() ([]rest.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUsers")
-	ret0, _ := ret[0].([]byte)
+	ret0, _ := ret[0].([]rest.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
