@@ -1,6 +1,8 @@
 package export
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
@@ -41,6 +43,19 @@ func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping) []*rest
 	return out
 }
 
+// TransformScanReport updates scan report in context of flatten teams.
+func TransformScanReport(xml []byte) ([]byte, error) {
+	var teamPath string
+	out := replaceKeyValue(xml, "TeamFullPathOnReportDate", func(s string) string {
+		teamPath = strings.ReplaceAll(s, "\\", "_")
+		return teamPath
+	})
+	out = replaceKeyValue(out, "Team", func(s string) string {
+		return teamPath
+	})
+	return out, nil
+}
+
 // getAllChildTeamIDs returns all child team ids relative to a root team id.
 func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
 	var out []int
@@ -51,4 +66,15 @@ func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
 		}
 	}
 	return out
+}
+
+// replaceKeyValue
+func replaceKeyValue(d []byte, key string, getValue func(string) string) []byte {
+	re := regexp.MustCompile(fmt.Sprintf(`(%s)="([^"]+)"`, key))
+	submatchCount := 2
+	return re.ReplaceAllFunc(d, func(entry []byte) []byte {
+		matches := re.FindAllSubmatch(entry, submatchCount)
+		value := getValue(string(matches[0][2]))
+		return []byte(fmt.Sprintf(`%s=%q`, key, value))
+	})
 }

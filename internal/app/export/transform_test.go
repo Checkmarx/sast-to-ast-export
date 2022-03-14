@@ -1,6 +1,7 @@
 package export
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
@@ -214,6 +215,37 @@ func TestTransformSamlTeamMappings(t *testing.T) {
 	})
 }
 
+func TestTransformScanReport(t *testing.T) {
+	t.Run("root team", func(t *testing.T) {
+		report := newMockScanReportXML("TeamA", "TeamA")
+
+		result, err := TransformScanReport([]byte(report))
+
+		assert.NoError(t, err)
+		assert.Equal(t, report, string(result))
+	})
+
+	t.Run("one level deep team", func(t *testing.T) {
+		report := newMockScanReportXML("TeamB", "TeamA\\TeamB")
+
+		result, err := TransformScanReport([]byte(report))
+
+		assert.NoError(t, err)
+		expected := newMockScanReportXML("TeamA_TeamB", "TeamA_TeamB")
+		assert.Equal(t, expected, string(result))
+	})
+
+	t.Run("two levels deep team", func(t *testing.T) {
+		report := newMockScanReportXML("TeamC", "TeamA\\TeamB\\TeamC")
+
+		result, err := TransformScanReport([]byte(report))
+
+		assert.NoError(t, err)
+		expected := newMockScanReportXML("TeamA_TeamB_TeamC", "TeamA_TeamB_TeamC")
+		assert.Equal(t, expected, string(result))
+	})
+}
+
 func TestGetAllChildTeamIDs(t *testing.T) {
 	teams := []*rest.Team{
 		{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
@@ -251,4 +283,36 @@ func TestGetAllChildTeamIDs(t *testing.T) {
 		var expected []int
 		assert.ElementsMatch(t, expected, result)
 	})
+}
+
+func TestReplaceKeyValue(t *testing.T) {
+	s := `a="1" b="2" c="3"`
+
+	t.Run("a", func(t *testing.T) {
+		result := replaceKeyValue([]byte(s), "a", func(a string) string {
+			return fmt.Sprintf(".%s.", a)
+		})
+
+		expected := `a=".1." b="2" c="3"`
+		assert.Equal(t, expected, string(result))
+	})
+
+	t.Run("b", func(t *testing.T) {
+		result := replaceKeyValue([]byte(s), "b", func(b string) string {
+			return fmt.Sprintf("-%s-", b)
+		})
+
+		expected := `a="1" b="-2-" c="3"`
+		assert.Equal(t, expected, string(result))
+	})
+}
+
+func newMockScanReportXML(teamName, teamFullPath string) string {
+	// nolint:lll
+	return fmt.Sprintf(`
+<?xml version="1.0" encoding="utf-8"?>
+<CxXMLResults InitiatorName="test" Owner="test" ScanId="1000000" ProjectId="1" ProjectName="test" TeamFullPathOnReportDate="%s" DeepLink="http://localhost/CxWebClient/ViewerMain.aspx?scanid=1000000&amp;projectid=1" ScanStart="Thursday, September 30, 2021 11:57:20 AM" Preset="Checkmarx Default" ScanTime="00h:00m:44s" LinesOfCodeScanned="1330" FilesScanned="9" ReportCreationTime="Thursday, February 24, 2022 4:15:03 PM" Team="%s" CheckmarxVersion="9.3.0.1139" ScanComments="" ScanType="Full" SourceOrigin="LocalPath" Visibility="Public">
+
+</CxXMLResults>
+`, teamFullPath, teamName)
 }
