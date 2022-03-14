@@ -43,13 +43,13 @@ func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles []interfaces.Sourc
 	for _, batch := range batches {
 		sourceResponse, sourceErr := e.soapClient.GetSourcesByScanID(scanID, batch.RemoteFiles)
 		if sourceErr != nil {
-			return errors.Wrap(sourceErr, "could not fetch sources")
+			return errors.Wrapf(sourceErr, "could not fetch sources scanID=%s remoteFiles=%v", scanID, batch.RemoteFiles)
 		}
 		contents := sourceResponse.GetSourcesByScanIDResult.CxWSResponseSourcesContent.CxWSResponseSourceContents
 		for i, file := range contents {
 			createErr := createFileAndPath(batch.LocalFiles[i], []byte(file.Source), metadataFilePerm, metadataFolderPerm)
 			if createErr != nil {
-				return errors.Wrap(createErr, "could not create file")
+				return errors.Wrapf(createErr, "could not create local file scanID=%s localFile=%s", scanID, batch.LocalFiles[i])
 			}
 		}
 	}
