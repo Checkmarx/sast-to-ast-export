@@ -207,7 +207,7 @@ func getEncryptedKey(key []byte) (encKey []byte, err error) {
 	return
 }
 
-func NewMarshalDataSource(obj interface{}) func() ([]byte, error) {
+func NewJSONDataSource(obj interface{}) func() ([]byte, error) {
 	return func() ([]byte, error) {
 		return json.Marshal(obj)
 	}

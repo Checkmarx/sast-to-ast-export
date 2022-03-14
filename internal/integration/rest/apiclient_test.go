@@ -183,7 +183,7 @@ func TestAPIClient_GetUsers(t *testing.T) {
 		result, err := client.GetUsers()
 
 		assert.NoError(t, err)
-		expected := []User{
+		expected := []*User{
 			{ID: 1, UserName: "test1", LastLoginDate: "2021-08-17T12:22:28.2331383Z", Active: true},
 			{ID: 2, UserName: "test2", LastLoginDate: "2021-08-17T12:22:28.2331383Z", Active: true},
 			{ID: 3, UserName: "test3", LastLoginDate: "2021-08-17T12:22:28.2331383Z", Active: true},
@@ -213,7 +213,7 @@ func TestAPIClient_GetTeams(t *testing.T) {
 		result, err := client.GetTeams()
 
 		assert.NoError(t, err)
-		expected := []Team{
+		expected := []*Team{
 			{ID: 1, Name: "test1", FullName: "/CxServer/test1", ParendID: 0},
 			{ID: 2, Name: "test2", FullName: "/CxServer/test2", ParendID: 1},
 			{ID: 3, Name: "test3", FullName: "/CxServer/test3", ParendID: 1},
@@ -240,7 +240,7 @@ func TestAPIClient_GetSamlTeamMappings(t *testing.T) {
 		result, err := client.GetSamlTeamMappings()
 
 		assert.NoError(t, err)
-		expected := []SamlTeamMapping{
+		expected := []*SamlTeamMapping{
 			{ID: 3, SamlIdentityProviderID: 2, TeamID: 4, TeamFullPath: "/CxServer/Mapped SAML", SamlAttributeValue: "TeamA"},
 		}
 		assert.Equal(t, expected, result)

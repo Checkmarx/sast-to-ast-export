@@ -10,7 +10,7 @@ import (
 
 // TransformTeams flattens teams.
 func TransformTeams(teams []*rest.Team) []*rest.Team {
-	var out []*rest.Team
+	out := make([]*rest.Team, 0)
 	for _, e := range teams {
 		e.ParendID = 0
 		e.Name = strings.ReplaceAll(strings.TrimLeft(e.FullName, "/"), "/", "_")
@@ -23,7 +23,7 @@ func TransformTeams(teams []*rest.Team) []*rest.Team {
 // TransformUsers reassigns users in the context of flatten teams.
 // Note "teams" list passed must be the original, non-flattened, list
 func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
-	var out []*rest.User
+	out := make([]*rest.User, 0)
 	for _, e := range users {
 		for _, teamID := range e.TeamIDs {
 			e.TeamIDs = append(e.TeamIDs, getAllChildTeamIDs(teamID, teams)...)
@@ -35,7 +35,7 @@ func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
 
 // TransformSamlTeamMappings updates team mapping in the context of flatten teams.
 func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping) []*rest.SamlTeamMapping {
-	var out []*rest.SamlTeamMapping
+	out := make([]*rest.SamlTeamMapping, 0)
 	for _, e := range samlTeamMappings {
 		e.TeamFullPath = "/" + strings.ReplaceAll(strings.TrimLeft(e.TeamFullPath, "/"), "/", "_")
 		out = append(out, e)
@@ -58,7 +58,7 @@ func TransformScanReport(xml []byte) ([]byte, error) {
 
 // getAllChildTeamIDs returns all child team ids relative to a root team id.
 func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
-	var out []int
+	out := make([]int, 0)
 	for _, e := range teams {
 		if e.ParendID == root {
 			out = append(out, e.ID)

@@ -236,7 +236,12 @@ func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
 	if usersErr != nil {
 		return errors.Wrap(usersErr, "failed getting users")
 	}
-	if err := exporter.AddFileWithDataSource(export2.UsersFileName, export2.NewMarshalDataSource(users)); err != nil {
+	teams, teamsErr := client.GetTeams()
+	if teamsErr != nil {
+		return errors.Wrap(teamsErr, "failed getting teams")
+	}
+	usersDataSource := export2.NewJSONDataSource(export2.TransformUsers(users, teams))
+	if err := exporter.AddFileWithDataSource(export2.UsersFileName, usersDataSource); err != nil {
 		return err
 	}
 	if err := exporter.AddFileWithDataSource(export2.RolesFileName, client.GetRoles); err != nil {
@@ -267,7 +272,8 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 	if teamsErr != nil {
 		return errors.Wrap(teamsErr, "failed getting teams")
 	}
-	if err := exporter.AddFileWithDataSource(export2.TeamsFileName, export2.NewMarshalDataSource(teams)); err != nil {
+	teamsDataSource := export2.NewJSONDataSource(export2.TransformTeams(teams))
+	if err := exporter.AddFileWithDataSource(export2.TeamsFileName, teamsDataSource); err != nil {
 		return err
 	}
 	if err := exporter.AddFileWithDataSource(export2.LdapTeamMappingsFileName, client.GetLdapTeamMappings); err != nil {
@@ -277,7 +283,8 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 	if samlTeamMappingsErr != nil {
 		return errors.Wrap(samlTeamMappingsErr, "failed getting saml team mappings")
 	}
-	if err := exporter.AddFileWithDataSource(export2.SamlTeamMappingsFileName, export2.NewMarshalDataSource(samlTeamMappings)); err != nil {
+	samlTeamMappingsDataSource := export2.NewJSONDataSource(export2.TransformSamlTeamMappings(samlTeamMappings))
+	if err := exporter.AddFileWithDataSource(export2.SamlTeamMappingsFileName, samlTeamMappingsDataSource); err != nil {
 		return err
 	}
 	if _, fileErr := os.Stat(export2.LdapServersFileName); os.IsNotExist(fileErr) {

@@ -34,15 +34,15 @@ const (
 type Client interface {
 	Authenticate(username, password string) error
 	PostResponseBody(endpoint string, body io.Reader) ([]byte, error)
-	GetUsers() ([]User, error)
+	GetUsers() ([]*User, error)
 	GetRoles() ([]byte, error)
-	GetTeams() ([]Team, error)
+	GetTeams() ([]*Team, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
 	GetLdapTeamMappings() ([]byte, error)
 	GetSamlIdentityProviders() ([]byte, error)
 	GetSamlRoleMappings() ([]byte, error)
-	GetSamlTeamMappings() ([]SamlTeamMapping, error)
+	GetSamlTeamMappings() ([]*SamlTeamMapping, error)
 	GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error)
 	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
 	CreateScanReport(scanID int, reportType string, retry Retry) ([]byte, error)
@@ -219,18 +219,20 @@ func (c *APIClient) getReportStatusResponse(report ReportResponse) (*StatusRespo
 	return &status, nil
 }
 
-func (c *APIClient) GetUsers() ([]User, error) {
-	var users []User
-	return users, c.unmarshalResponseBody(usersEndpoint, &users)
+func (c *APIClient) GetUsers() ([]*User, error) {
+	var users []*User
+	err := c.unmarshalResponseBody(usersEndpoint, &users)
+	return users, err
 }
 
 func (c *APIClient) GetRoles() ([]byte, error) {
 	return c.getResponseBody(rolesEndpoint)
 }
 
-func (c *APIClient) GetTeams() ([]Team, error) {
-	var teams []Team
-	return teams, c.unmarshalResponseBody(teamsEndpoint, &teams)
+func (c *APIClient) GetTeams() ([]*Team, error) {
+	var teams []*Team
+	err := c.unmarshalResponseBody(teamsEndpoint, &teams)
+	return teams, err
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {
@@ -253,9 +255,10 @@ func (c *APIClient) GetSamlRoleMappings() ([]byte, error) {
 	return c.getResponseBody(samlRoleMappingsEndpoint)
 }
 
-func (c *APIClient) GetSamlTeamMappings() ([]SamlTeamMapping, error) {
-	var samlTeamMappings []SamlTeamMapping
-	return samlTeamMappings, c.unmarshalResponseBody(teamMappingsEndpoint, &samlTeamMappings)
+func (c *APIClient) GetSamlTeamMappings() ([]*SamlTeamMapping, error) {
+	var samlTeamMappings []*SamlTeamMapping
+	err := c.unmarshalResponseBody(teamMappingsEndpoint, &samlTeamMappings)
+	return samlTeamMappings, err
 }
 
 func (c *APIClient) getReportIDStatus(reportID int) ([]byte, error) {
