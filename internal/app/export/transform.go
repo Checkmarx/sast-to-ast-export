@@ -6,6 +6,7 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 )
 
+// TransformTeams flattens teams.
 func TransformTeams(teams []*rest.Team) []*rest.Team {
 	var out []*rest.Team
 	for _, e := range teams {
@@ -17,6 +18,8 @@ func TransformTeams(teams []*rest.Team) []*rest.Team {
 	return out
 }
 
+// TransformUsers reassigns users in the context of flatten teams.
+// Note "teams" list passed must be the original, non-flattened, list
 func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
 	var out []*rest.User
 	for _, e := range users {
@@ -28,6 +31,7 @@ func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
 	return out
 }
 
+// TransformSamlTeamMappings updates team mapping in the context of flatten teams.
 func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping) []*rest.SamlTeamMapping {
 	var out []*rest.SamlTeamMapping
 	for _, e := range samlTeamMappings {
@@ -37,6 +41,7 @@ func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping) []*rest
 	return out
 }
 
+// getAllChildTeamIDs returns all child team ids relative to a root team id.
 func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
 	var out []int
 	for _, e := range teams {
