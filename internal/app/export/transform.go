@@ -6,8 +6,8 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 )
 
-func TransformTeams(teams []rest.Team) []rest.Team {
-	var out []rest.Team
+func TransformTeams(teams []*rest.Team) []*rest.Team {
+	var out []*rest.Team
 	for _, e := range teams {
 		e.ParendID = 0
 		e.Name = strings.ReplaceAll(strings.TrimLeft(e.FullName, "/"), "/", "_")
@@ -17,8 +17,8 @@ func TransformTeams(teams []rest.Team) []rest.Team {
 	return out
 }
 
-func TransformUsers(users []rest.User, teams []rest.Team) []rest.User {
-	var out []rest.User
+func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
+	var out []*rest.User
 	for _, e := range users {
 		for _, teamID := range e.TeamIDs {
 			e.TeamIDs = append(e.TeamIDs, getAllChildTeamIDs(teamID, teams)...)
@@ -28,7 +28,7 @@ func TransformUsers(users []rest.User, teams []rest.Team) []rest.User {
 	return out
 }
 
-func getAllChildTeamIDs(root int, teams []rest.Team) []int {
+func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
 	var out []int
 	for _, e := range teams {
 		if e.ParendID == root {
