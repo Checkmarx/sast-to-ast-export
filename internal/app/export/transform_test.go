@@ -164,6 +164,56 @@ func TestTransformUsers(t *testing.T) {
 	}
 }
 
+func TestTransformSamlTeamMappings(t *testing.T) {
+	t.Run("no mappings", func(t *testing.T) {
+		var samlTeamMappings []*rest.SamlTeamMapping
+
+		result := TransformSamlTeamMappings(samlTeamMappings)
+
+		var expected []*rest.SamlTeamMapping
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("top level team", func(t *testing.T) {
+		samlTeamMappings := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 1, TeamFullPath: "/TeamA", SamlAttributeValue: "team"},
+		}
+
+		result := TransformSamlTeamMappings(samlTeamMappings)
+
+		expected := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 1, TeamFullPath: "/TeamA", SamlAttributeValue: "team"},
+		}
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("team in sub-level", func(t *testing.T) {
+		samlTeamMappings := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 2, TeamFullPath: "/TeamA/TeamB", SamlAttributeValue: "team"},
+		}
+
+		result := TransformSamlTeamMappings(samlTeamMappings)
+
+		expected := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 2, TeamFullPath: "/TeamA_TeamB", SamlAttributeValue: "team"},
+		}
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("team in 2nd sub-level", func(t *testing.T) {
+		samlTeamMappings := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 3, TeamFullPath: "/TeamA/TeamB/TeamC", SamlAttributeValue: "team"},
+		}
+
+		result := TransformSamlTeamMappings(samlTeamMappings)
+
+		expected := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 3, TeamFullPath: "/TeamA_TeamB_TeamC", SamlAttributeValue: "team"},
+		}
+		assert.ElementsMatch(t, expected, result)
+	})
+}
+
 func TestGetAllChildTeamIDs(t *testing.T) {
 	teams := []*rest.Team{
 		{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},

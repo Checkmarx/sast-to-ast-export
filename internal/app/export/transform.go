@@ -28,6 +28,15 @@ func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
 	return out
 }
 
+func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping) []*rest.SamlTeamMapping {
+	var out []*rest.SamlTeamMapping
+	for _, e := range samlTeamMappings {
+		e.TeamFullPath = "/" + strings.ReplaceAll(strings.TrimLeft(e.TeamFullPath, "/"), "/", "_")
+		out = append(out, e)
+	}
+	return out
+}
+
 func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
 	var out []int
 	for _, e := range teams {
