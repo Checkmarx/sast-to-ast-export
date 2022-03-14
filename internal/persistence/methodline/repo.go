@@ -17,7 +17,7 @@ func NewRepo(soapClient soap.Adapter) *Repo {
 func (e *Repo) GetMethodLines(scanID, queryID, pathID string) ([]string, error) {
 	resultPaths, resultPathErr := e.soapClient.GetResultPathsForQuery(scanID, queryID)
 	if resultPathErr != nil {
-		return nil, errors.Wrap(resultPathErr, "could not get result paths")
+		return nil, errors.Wrapf(resultPathErr, "could not get result paths scanID=%s queryID=%s", scanID, queryID)
 	}
 	var output []string
 	for _, resultPath := range resultPaths.GetResultPathsForQueryResult.Paths.Paths {
@@ -33,7 +33,7 @@ func (e *Repo) GetMethodLines(scanID, queryID, pathID string) ([]string, error) 
 func (e *Repo) GetMethodLinesByPath(scanID, queryID string) ([]*interfaces.ResultPath, error) {
 	resultPaths, resultPathErr := e.soapClient.GetResultPathsForQuery(scanID, queryID)
 	if resultPathErr != nil {
-		return nil, errors.Wrap(resultPathErr, "could not get result paths")
+		return nil, errors.Wrapf(resultPathErr, "could not get result paths scanID=%s queryID=%s", scanID, queryID)
 	}
 	var output []*interfaces.ResultPath
 	for _, resultPath := range resultPaths.GetResultPathsForQueryResult.Paths.Paths {

@@ -1,8 +1,7 @@
 package interfaces
 
-type ASTQueryIDRepo interface {
+type ASTQueryIDProvider interface {
 	GetQueryID(language, name, group string) (string, error)
-	GetAllQueryIDsByGroup(language, name string) ([]ASTQuery, error)
 }
 
 type ASTQuery struct {
