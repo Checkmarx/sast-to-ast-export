@@ -16,3 +16,25 @@ func TransformTeams(teams []rest.Team) []rest.Team {
 	}
 	return out
 }
+
+func TransformUsers(users []rest.User, teams []rest.Team) []rest.User {
+	var out []rest.User
+	for _, e := range users {
+		for _, teamID := range e.TeamIDs {
+			e.TeamIDs = append(e.TeamIDs, getAllChildTeamIDs(teamID, teams)...)
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+func getAllChildTeamIDs(root int, teams []rest.Team) []int {
+	var out []int
+	for _, e := range teams {
+		if e.ParendID == root {
+			out = append(out, e.ID)
+			out = append(out, getAllChildTeamIDs(e.ID, teams)...)
+		}
+	}
+	return out
+}

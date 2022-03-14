@@ -67,8 +67,8 @@ type (
 		ID                       int      `json:"id"`
 		UserName                 string   `json:"userName"`
 		LastLoginDate            string   `json:"lastLoginDate"`
-		RoleIds                  []int    `json:"roleIds"`
-		TeamIds                  []int    `json:"teamIds"`
+		RoleIDs                  []int    `json:"roleIds"`
+		TeamIDs                  []int    `json:"teamIds"`
 		AuthenticationProviderID int      `json:"authenticationProviderId"`
 		CreationDate             string   `json:"creationDate"`
 		FirstName                string   `json:"firstName"`
