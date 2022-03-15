@@ -478,7 +478,13 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			}
 		}
 		// export report
-		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), reportData)
+		transformedReportData, transformErr := export2.TransformScanReport(reportData)
+		if transformErr != nil {
+			l.Debug().Err(transformErr).Msg("failed transforming report data")
+			done <- ReportConsumeOutput{Err: transformErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), transformedReportData)
 		if exportErr != nil {
 			l.Debug().Err(exportErr).Msg("failed saving result")
 			done <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
