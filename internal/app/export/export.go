@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"compress/flate"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -204,4 +205,10 @@ func getEncryptedKey(key []byte) (encKey []byte, err error) {
 
 	encKey, err = encryption.EncryptAsymmetric(publicKey, key)
 	return
+}
+
+func NewJSONDataSource(obj interface{}) func() ([]byte, error) {
+	return func() ([]byte, error) {
+		return json.Marshal(obj)
+	}
 }

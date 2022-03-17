@@ -3,7 +3,7 @@ package rest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -17,6 +17,10 @@ const (
 	BaseURL                 = "http://127.0.0.1"
 	ErrorResponseJSON       = `"error"`
 	InvalidDataResponseJSON = `invalid data`
+)
+
+var (
+	mockToken = &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 )
 
 type DoResponse struct {
@@ -41,9 +45,19 @@ func (c *HTTPClientMock2) Do(request *retryablehttp.Request) (*http.Response, er
 	return c.DoHandler(request)
 }
 
+func newMockClient(response *http.Response) (*APIClient, error) {
+	adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
+	client, err := NewSASTClient(BaseURL, adapter)
+	if err != nil {
+		return nil, err
+	}
+	client.Token = mockToken
+	return client, nil
+}
+
 func TestNewSASTClient(t *testing.T) {
 	response := http.Response{
-		Body: ioutil.NopCloser(bytes.NewBufferString("test")),
+		Body: io.NopCloser(bytes.NewBufferString("test")),
 	}
 	adapter := &HTTPClientMock{DoResponse: &response, DoError: nil}
 
@@ -93,7 +107,7 @@ func TestAPIClient_Authenticate(t *testing.T) {
 		response := http.Response{
 			StatusCode: 0,
 			Status:     "Unknown",
-			Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+			Body:       io.NopCloser(bytes.NewBufferString("")),
 		}
 		adapter := &HTTPClientMock{DoResponse: &response, DoError: fmt.Errorf("can't connect to server")}
 		client, _ := NewSASTClient(BaseURL, adapter)
@@ -115,8 +129,6 @@ func TestAPIClient_Authenticate(t *testing.T) {
 }
 
 func TestAPIClient_doRequest(t *testing.T) {
-	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
-
 	t.Run("returns successful response", func(t *testing.T) {
 		request, err := retryablehttp.NewRequest("GET", "http://localhost/test", nil)
 		assert.NoError(t, err)
@@ -135,7 +147,7 @@ func TestAPIClient_doRequest(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, result.StatusCode, expectedStatusCode)
 
-		content, ioErr := ioutil.ReadAll(result.Body)
+		content, ioErr := io.ReadAll(result.Body)
 		assert.NoError(t, ioErr)
 		assert.Equal(t, responseJSON, string(content))
 	})
@@ -161,28 +173,26 @@ func TestAPIClient_doRequest(t *testing.T) {
 
 // nolint:dupl
 func TestAPIClient_GetUsers(t *testing.T) {
-	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	t.Run("returns users response", func(t *testing.T) {
 		responseJSON := `[{"id": 1, "userName": "test1", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true},
 						  {"id": 2, "userName": "test2", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true},
 						  {"id": 3, "userName": "test3", "lastLoginDate": "2021-08-17T12:22:28.2331383Z", "active": true}]`
-		response := makeOkResponse(responseJSON) //nolint:bodyclose
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
-		client, _ := NewSASTClient(BaseURL, adapter)
-		client.Token = mockToken
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
 
 		result, err := client.GetUsers()
 
 		assert.NoError(t, err)
-		assert.NotNil(t, result)
-		assert.Equal(t, responseJSON, string(result))
+		expected := []*User{
+			{ID: 1, UserName: "test1", LastLoginDate: "2021-08-17T12:22:28.2331383Z", Active: true},
+			{ID: 2, UserName: "test2", LastLoginDate: "2021-08-17T12:22:28.2331383Z", Active: true},
+			{ID: 3, UserName: "test3", LastLoginDate: "2021-08-17T12:22:28.2331383Z", Active: true},
+		}
+		assert.Equal(t, expected, result)
 	})
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
-		response := makeBadRequestResponse(ErrorResponseJSON)
-		defer response.Body.Close()
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
-		client, _ := NewSASTClient(BaseURL, adapter)
-		client.Token = mockToken
+		client, clientErr := newMockClient(makeBadRequestResponse(ErrorResponseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
 
 		result, err := client.GetUsers()
 
@@ -193,28 +203,26 @@ func TestAPIClient_GetUsers(t *testing.T) {
 
 // nolint:dupl
 func TestAPIClient_GetTeams(t *testing.T) {
-	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	t.Run("returns teams response", func(t *testing.T) {
-		responseJSON := `[{"id": 1, "name": "test1", "fullName": "/CxServer/test1", "parentId": 1},
+		responseJSON := `[{"id": 1, "name": "test1", "fullName": "/CxServer/test1", "parentId": 0},
 						  {"id": 2, "name": "test2", "fullName": "/CxServer/test2", "parentId": 1},
 						  {"id": 3, "name": "test3", "fullName": "/CxServer/test3", "parentId": 1}]`
-		response := makeOkResponse(responseJSON) //nolint:bodyclose
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
-		client, _ := NewSASTClient(BaseURL, adapter)
-		client.Token = mockToken
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
 
 		result, err := client.GetTeams()
 
 		assert.NoError(t, err)
-		assert.NotNil(t, result)
-		assert.Equal(t, responseJSON, string(result))
+		expected := []*Team{
+			{ID: 1, Name: "test1", FullName: "/CxServer/test1", ParendID: 0},
+			{ID: 2, Name: "test2", FullName: "/CxServer/test2", ParendID: 1},
+			{ID: 3, Name: "test3", FullName: "/CxServer/test3", ParendID: 1},
+		}
+		assert.Equal(t, expected, result)
 	})
 	t.Run("returns error if response is not HTTP OK", func(t *testing.T) {
-		response := makeBadRequestResponse(ErrorResponseJSON)
-		defer response.Body.Close()
-		adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
-		client, _ := NewSASTClient(BaseURL, adapter)
-		client.Token = mockToken
+		client, clientErr := newMockClient(makeBadRequestResponse(ErrorResponseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
 
 		result, err := client.GetTeams()
 
@@ -223,9 +231,33 @@ func TestAPIClient_GetTeams(t *testing.T) {
 	})
 }
 
+func TestAPIClient_GetSamlTeamMappings(t *testing.T) {
+	t.Run("success case", func(t *testing.T) {
+		responseJSON := `[{"id":3,"samlIdentityProviderId":2,"teamId":4,"teamFullPath":"/CxServer/Mapped SAML","samlAttributeValue":"TeamA"}]`
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetSamlTeamMappings()
+
+		assert.NoError(t, err)
+		expected := []*SamlTeamMapping{
+			{ID: 3, SamlIdentityProviderID: 2, TeamID: 4, TeamFullPath: "/CxServer/Mapped SAML", SamlAttributeValue: "TeamA"},
+		}
+		assert.Equal(t, expected, result)
+	})
+	t.Run("failure case", func(t *testing.T) {
+		client, clientErr := newMockClient(makeBadRequestResponse(ErrorResponseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetSamlTeamMappings()
+
+		assert.Error(t, err)
+		assert.Len(t, result, 0)
+	})
+}
+
 // nolint:dupl
 func TestAPIClient_GetRoles(t *testing.T) {
-	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	t.Run("returns teams response", func(t *testing.T) {
 		responseJSON := `[{"id": 1, "isSystemRole": true, "name": "test1", "description": "test1", permissionIds: []},
 						  {"id": 2, "isSystemRole": true, "name": "test2", "description": "test2", permissionIds: []},
@@ -264,7 +296,6 @@ func TestAPIClient_GetProjectsWithLastScanID(t *testing.T) {
         {"Id": 2,"LastScanId": 1000001,"LastScan": {"Id": 1000001}}
 	]
 }`
-	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	adapter := &HTTPClientMock{DoResponse: makeOkResponse(odataResponse), DoError: nil} //nolint:bodyclose
 	client, _ := NewSASTClient(BaseURL, adapter)
 	client.Token = mockToken
@@ -288,7 +319,6 @@ func TestAPIClient_GetTriagedResultsByScanID(t *testing.T) {
         {"Id": 3}
 	]
 }`
-	mockToken := &AccessToken{AccessToken: "jwt", TokenType: "Bearer", ExpiresIn: 1234}
 	response := makeOkResponse(odataResponse)
 	defer response.Body.Close()
 	adapter := &HTTPClientMock{DoResponse: response, DoError: nil}
@@ -490,7 +520,7 @@ func makeOkResponse(body string) *http.Response {
 	return &http.Response{
 		StatusCode: 200,
 		Status:     "OK",
-		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
 	}
 }
 
@@ -498,7 +528,7 @@ func makeBadRequestResponse(body string) *http.Response {
 	return &http.Response{
 		StatusCode: 400,
 		Status:     "Bad Request",
-		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
 	}
 }
 
@@ -506,7 +536,7 @@ func makeResponse(statusCode int, status, body string) *http.Response {
 	return &http.Response{
 		StatusCode: statusCode,
 		Status:     status,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
 	}
 }
 

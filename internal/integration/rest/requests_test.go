@@ -3,7 +3,6 @@ package rest
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -51,7 +50,7 @@ func TestRequests_CreateRequest(t *testing.T) {
 		response := http.Response{
 			StatusCode: 400,
 			Status:     "Bad Request",
-			Body:       ioutil.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
+			Body:       io.NopCloser(bytes.NewBufferString(ErrorResponseJSON)),
 		}
 		adapter := &HTTPClientMock{DoResponse: &response, DoError: nil}
 		client, _ := NewSASTClient(BaseURL, adapter)
