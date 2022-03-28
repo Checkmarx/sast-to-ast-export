@@ -1,6 +1,7 @@
 package permissions
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
@@ -171,5 +172,34 @@ func TestGetMissing(t *testing.T) {
 
 		expected := []interface{}{"c", "e"}
 		assert.ElementsMatch(t, expected, result)
+	})
+}
+
+func TestGetDescription(t *testing.T) {
+	successTests := [][]string{
+		{useOdataPermission, "Sast > API > Use Odata"},
+		{generateScanReportPermission, "Sast > Reports > Generate Scan Report"},
+		{viewResults, "Sast > Scan Results > View Results"},
+		{manageAuthProviderPermission, "Access Control > General > Manage Authentication Providers"},
+		{manageRolesPermission, "Access Control > General > Manage Roles"},
+	}
+	for _, test := range successTests {
+		testName := fmt.Sprintf("succeeds if %s exists", test[0])
+		t.Run(testName, func(t *testing.T) {
+			result, err := GetDescription(test[0])
+
+			assert.NoError(t, err)
+			assert.Equal(t, test[1], result)
+		})
+	}
+
+	t.Run("fails if permission doesn't exist", func(t *testing.T) {
+		permissionID := "invalid"
+
+		result, err := GetDescription(permissionID)
+
+		assert.Error(t, err)
+		assert.Equal(t, err.Error(), "unknown permission invalid")
+		assert.Equal(t, "", result)
 	})
 }

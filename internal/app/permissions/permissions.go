@@ -19,6 +19,7 @@ const (
 var permissionDescription = map[interface{}]string{
 	useOdataPermission:           "Sast > API > Use Odata",
 	generateScanReportPermission: "Sast > Reports > Generate Scan Report",
+	viewResults:                  "Sast > Scan Results > View Results",
 	manageAuthProviderPermission: "Access Control > General > Manage Authentication Providers",
 	manageRolesPermission:        "Access Control > General > Manage Roles",
 }
