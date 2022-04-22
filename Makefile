@@ -1,15 +1,15 @@
 KEYS_PATH = ./keys
 EXTERNAL_PATH = ./external
 BUILD_PATH = ./build
-ENV ?= prod
+ENV ?= dev
 PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
 PUBLIC_KEY = "internal/app/encryption/public.key"
 LD_FLAGS = -ldflags="-s -w -X github.com/checkmarxDev/ast-sast-export/cmd.productName=$(PRODUCT_NAME) -X github.com/checkmarxDev/ast-sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X github.com/checkmarxDev/ast-sast-export/cmd.productBuild=$(PRODUCT_BUILD)"
 
-SAST_EXPORT_USER = '###########'
-SAST_EXPORT_PASS = '###########'
+SAST_EXPORT_USER = 'ssd'
+SAST_EXPORT_PASS = 'Cx12345678!'
 
 lint:
 	go fmt ./...
@@ -45,10 +45,10 @@ download_public_key:
 	aws kms get-public-key --key-id alias/sast-migration-key --region eu-west-1 --output json | jq -r .PublicKey | tr -d '\r' | tr -d '\n' > $(KEYS_PATH)/$(ENV).key
 
 run_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 1
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams,projects --project-active-since 1
 
 debug_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 10 --debug
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams,projects --project-active-since 10 --debug
 
 mocks:
 	rm -rf test/mocks

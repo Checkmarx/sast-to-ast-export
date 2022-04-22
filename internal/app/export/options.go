@@ -7,8 +7,10 @@ const (
 	TeamsOption = "teams"
 	// ResultsOption represent results (projects & data)
 	ResultsOption = "triage"
+	// ProjectsOption represent projects
+	ProjectsOption = "projects"
 )
 
 func GetOptions() []string {
-	return []string{UsersOption, TeamsOption, ResultsOption}
+	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption}
 }

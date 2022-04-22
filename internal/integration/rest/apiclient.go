@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	usersEndpoint = "/CxRestAPI/auth/Users"
-	teamsEndpoint = "/CxRestAPI/auth/Teams"
-	rolesEndpoint = "/CxRestAPI/auth/Roles"
+	usersEndpoint    = "/CxRestAPI/auth/Users"
+	teamsEndpoint    = "/CxRestAPI/auth/Teams"
+	rolesEndpoint    = "/CxRestAPI/auth/Roles"
+	projectsEndpoint = "/CxRestAPI/projects"
 
 	ldapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
 	ldapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
@@ -37,6 +38,7 @@ type Client interface {
 	GetUsers() ([]*User, error)
 	GetRoles() ([]byte, error)
 	GetTeams() ([]*Team, error)
+	GetProjects() ([]*Project, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
 	GetLdapTeamMappings() ([]byte, error)
@@ -233,6 +235,12 @@ func (c *APIClient) GetTeams() ([]*Team, error) {
 	var teams []*Team
 	err := c.unmarshalResponseBody(teamsEndpoint, &teams)
 	return teams, err
+}
+
+func (c *APIClient) GetProjects() ([]*Project, error) {
+	var projects []*Project
+	err := c.unmarshalResponseBody(projectsEndpoint, &projects)
+	return projects, err
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {
