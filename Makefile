@@ -1,15 +1,15 @@
 KEYS_PATH = ./keys
 EXTERNAL_PATH = ./external
 BUILD_PATH = ./build
-ENV ?= dev
+ENV ?= prod
 PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
 PUBLIC_KEY = "internal/app/encryption/public.key"
 LD_FLAGS = -ldflags="-s -w -X github.com/checkmarxDev/ast-sast-export/cmd.productName=$(PRODUCT_NAME) -X github.com/checkmarxDev/ast-sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X github.com/checkmarxDev/ast-sast-export/cmd.productBuild=$(PRODUCT_BUILD)"
 
-SAST_EXPORT_USER = 'ssd'
-SAST_EXPORT_PASS = 'Cx12345678!'
+SAST_EXPORT_USER = '###########'
+SAST_EXPORT_PASS = '###########'
 
 lint:
 	go fmt ./...
