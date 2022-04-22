@@ -109,6 +109,21 @@ func (mr *MockClientMockRecorder) GetLdapTeamMappings() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLdapTeamMappings", reflect.TypeOf((*MockClient)(nil).GetLdapTeamMappings))
 }
 
+// GetProjects mocks base method.
+func (m *MockClient) GetProjects() ([]*rest.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjects")
+	ret0, _ := ret[0].([]*rest.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjects indicates an expected call of GetProjects.
+func (mr *MockClientMockRecorder) GetProjects() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjects", reflect.TypeOf((*MockClient)(nil).GetProjects))
+}
+
 // GetProjectsWithLastScanID mocks base method.
 func (m *MockClient) GetProjectsWithLastScanID(arg0 string, arg1, arg2 int) (*[]rest.ProjectWithLastScanID, error) {
 	m.ctrl.T.Helper()

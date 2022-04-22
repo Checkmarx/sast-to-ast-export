@@ -75,12 +75,12 @@ type (
 	SourceSettingsLinkObj struct {
 		Type string `json:"type"`
 		Rel  string `json:"rel"`
-		Uri  string `json:"uri"`
+		URI  string `json:"uri"`
 	}
 
 	LinkObj struct {
 		Rel string `json:"rel"`
-		Uri string `json:"uri"`
+		URI string `json:"uri"`
 	}
 
 	User struct {
