@@ -1240,3 +1240,32 @@ func TestExportResultsToFile(t *testing.T) {
 		assert.Equal(t, "", fileName)
 	})
 }
+
+func TestFetchProjects(t *testing.T) {
+	t.Run("fetch projects successfully", func(t *testing.T) {
+		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1}}
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+		client.EXPECT().GetProjects().Return(projects, nil).Times(1)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
+				_, callbackErr := callback()
+				return callbackErr
+			}).
+			AnyTimes()
+
+		result := fetchProjectsData(client, exporter)
+
+		assert.NoError(t, result)
+	})
+
+	t.Run("fetch projects with error", func(t *testing.T) {
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+		client.EXPECT().GetProjects().Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
+
+		err := fetchProjectsData(client, exporter)
+
+		assert.EqualError(t, err, "failed getting projects: failed fetching project")
+	})
+}

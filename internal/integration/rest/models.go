@@ -64,23 +64,10 @@ type (
 	}
 
 	Project struct {
-		ID                 int                   `json:"id"`
-		TeamID             int                   `json:"teamId"`
-		Name               string                `json:"name"`
-		IsPublic           bool                  `json:"isPublic"`
-		SourceSettingsLink SourceSettingsLinkObj `json:"sourceSettingsLink"`
-		Link               LinkObj               `json:"link"`
-	}
-
-	SourceSettingsLinkObj struct {
-		Type string `json:"type"`
-		Rel  string `json:"rel"`
-		URI  string `json:"uri"`
-	}
-
-	LinkObj struct {
-		Rel string `json:"rel"`
-		URI string `json:"uri"`
+		ID       int    `json:"id"`
+		TeamID   int    `json:"teamId"`
+		Name     string `json:"name"`
+		IsPublic bool   `json:"isPublic"`
 	}
 
 	User struct {
