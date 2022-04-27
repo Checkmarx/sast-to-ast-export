@@ -56,25 +56,33 @@ func TransformScanReport(xml []byte) ([]byte, error) {
 	return out, nil
 }
 
+// TransformProjects adds custom fields and created date to projects
 func TransformProjects(projects []*rest.Project, projectsOData []*rest.ProjectOData) []*rest.Project {
-	for _, project := range projects {
-		var i int
-		for i = 0; i < len(projectsOData); i++ {
-			if project.ID == projectsOData[i].ID {
-				project.Configuration = &rest.Configuration{
-					CustomFields: projectsOData[i].CustomFields,
-				}
-				project.CreatedDate = projectsOData[i].CreatedDate
-				// remove used item from array
-				projectsOData[i] = projectsOData[len(projectsOData)-1]
-				projectsOData[len(projectsOData)-1] = nil
-				projectsOData = projectsOData[:len(projectsOData)-1]
+	for indexProject, project := range projects {
+		// arrays have to have the same order
+		if len(projectsOData) > indexProject && project.ID == projectsOData[indexProject].ID {
+			addDateAndCustomFields(project, projectsOData[indexProject])
+			continue
+		}
+
+		// if we have wrong order in OData array
+		for _, projectOData := range projectsOData {
+			if project.ID == projectOData.ID {
+				addDateAndCustomFields(project, projectOData)
 				break
 			}
 		}
 	}
 
 	return projects
+}
+
+// addDateAndCustomFields adds created date and custom field in project
+func addDateAndCustomFields(project *rest.Project, projectOData *rest.ProjectOData) {
+	project.Configuration = &rest.Configuration{
+		CustomFields: projectOData.CustomFields,
+	}
+	project.CreatedDate = projectOData.CreatedDate
 }
 
 // getAllChildTeamIDs returns all child team ids relative to a root team id.
