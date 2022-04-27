@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	usersEndpoint    = "/CxRestAPI/auth/Users"
-	teamsEndpoint    = "/CxRestAPI/auth/Teams"
-	rolesEndpoint    = "/CxRestAPI/auth/Roles"
-	projectsEndpoint = "/CxRestAPI/projects"
+	usersEndpoint         = "/CxRestAPI/auth/Users"
+	teamsEndpoint         = "/CxRestAPI/auth/Teams"
+	rolesEndpoint         = "/CxRestAPI/auth/Roles"
+	projectsEndpoint      = "/CxRestAPI/projects"
+	projectsODataEndpoint = "/Cxwebinterface/odata/v1/Projects?$expand=CustomFields"
 
 	ldapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
 	ldapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
@@ -39,6 +40,7 @@ type Client interface {
 	GetRoles() ([]byte, error)
 	GetTeams() ([]*Team, error)
 	GetProjects() ([]*Project, error)
+	GetProjectsOData() ([]*ProjectOData, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
 	GetLdapTeamMappings() ([]byte, error)
@@ -241,6 +243,12 @@ func (c *APIClient) GetProjects() ([]*Project, error) {
 	var projects []*Project
 	err := c.unmarshalResponseBody(projectsEndpoint, &projects)
 	return projects, err
+}
+
+func (c *APIClient) GetProjectsOData() ([]*ProjectOData, error) {
+	var oDataResponse ODataResponse
+	err := c.unmarshalResponseBody(projectsODataEndpoint, &oDataResponse)
+	return oDataResponse.Value, err
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {

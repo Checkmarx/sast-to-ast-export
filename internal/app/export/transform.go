@@ -56,6 +56,27 @@ func TransformScanReport(xml []byte) ([]byte, error) {
 	return out, nil
 }
 
+func TransformProjects(projects []*rest.Project, projectsOData []*rest.ProjectOData) []*rest.Project {
+	for _, project := range projects {
+		var i int
+		for i = 0; i < len(projectsOData); i++ {
+			if project.ID == projectsOData[i].ID {
+				project.Configuration = &rest.Configuration{
+					CustomFields: projectsOData[i].CustomFields,
+				}
+				project.CreatedDate = projectsOData[i].CreatedDate
+				// remove used item from array
+				projectsOData[i] = projectsOData[len(projectsOData)-1]
+				projectsOData[len(projectsOData)-1] = nil
+				projectsOData = projectsOData[:len(projectsOData)-1]
+				break
+			}
+		}
+	}
+
+	return projects
+}
+
 // getAllChildTeamIDs returns all child team ids relative to a root team id.
 func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
 	out := make([]int, 0)
