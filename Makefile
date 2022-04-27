@@ -45,10 +45,10 @@ download_public_key:
 	aws kms get-public-key --key-id alias/sast-migration-key --region eu-west-1 --output json | jq -r .PublicKey | tr -d '\r' | tr -d '\n' > $(KEYS_PATH)/$(ENV).key
 
 run_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 1
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams,projects --project-active-since 1
 
 debug_windows:
-	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams --results-project-active-since 10 --debug
+	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams,projects --project-active-since 10 --debug
 
 mocks:
 	rm -rf test/mocks

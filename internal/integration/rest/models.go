@@ -63,6 +63,13 @@ type (
 		ParendID int    `json:"parentId"`
 	}
 
+	Project struct {
+		ID       int    `json:"id"`
+		TeamID   int    `json:"teamId"`
+		Name     string `json:"name"`
+		IsPublic bool   `json:"isPublic"`
+	}
+
 	User struct {
 		ID                       int      `json:"id"`
 		UserName                 string   `json:"userName"`

@@ -219,6 +219,10 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 				if err := fetchTeamsData(client, exporter); err != nil {
 					return err
 				}
+			case export2.ProjectsOption:
+				if err := fetchProjectsData(client, exporter); err != nil {
+					return err
+				}
 			case export2.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
 					retryMaxSleep, metadataProvider); err != nil {
@@ -296,6 +300,18 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 		if err := exporter.AddFileWithDataSource(export2.SamlIdpFileName, client.GetSamlIdentityProviders); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func fetchProjectsData(client rest.Client, exporter export2.Exporter) error {
+	log.Info().Msg("collecting projects")
+	projects, projectsErr := client.GetProjects()
+	if projectsErr != nil {
+		return errors.Wrap(projectsErr, "failed getting projects")
+	}
+	if err := exporter.AddFileWithDataSource(export2.ProjectsFileName, export2.NewJSONDataSource(projects)); err != nil {
+		return err
 	}
 	return nil
 }

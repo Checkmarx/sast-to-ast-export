@@ -35,6 +35,8 @@ const (
 	SamlTeamMappingsFileName = "saml_team_mappings.json"
 	// TeamsFileName teams file
 	TeamsFileName = "teams.json"
+	// ProjectsFileName projects file
+	ProjectsFileName = "projects.json"
 
 	encryptedKeyFileName = "key.enc.bin"
 
