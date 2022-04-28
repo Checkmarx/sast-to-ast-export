@@ -1243,13 +1243,14 @@ func TestExportResultsToFile(t *testing.T) {
 
 func TestFetchProjects(t *testing.T) {
 	t.Run("fetch projects successfully", func(t *testing.T) {
-		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1}}
-		projectsOData := []*rest.ProjectOData{{ID: 1, CreatedDate: "2022-04-21T20:30:59.39+03:00",
-			CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}}}}
+		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
+			CreatedDate: "2022-04-21T20:30:59.39+03:00",
+			Configuration: &rest.Configuration{
+				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
+			}}}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 		client.EXPECT().GetProjects().Return(projects, nil).Times(1)
-		client.EXPECT().GetProjectsOData().Return(projectsOData, nil).Times(1)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
@@ -1270,18 +1271,5 @@ func TestFetchProjects(t *testing.T) {
 		err := fetchProjectsData(client, exporter)
 
 		assert.EqualError(t, err, "failed getting projects: failed fetching project")
-	})
-
-	t.Run("fetch projects oData with error", func(t *testing.T) {
-		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1}}
-		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
-		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects().Return(projects, nil).Times(1)
-		client.EXPECT().GetProjectsOData().Return([]*rest.ProjectOData{},
-			fmt.Errorf("failed fetching project OData")).Times(1)
-
-		err := fetchProjectsData(client, exporter)
-
-		assert.EqualError(t, err, "failed getting projects OData: failed fetching project OData")
 	})
 }

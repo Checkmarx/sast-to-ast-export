@@ -40,7 +40,6 @@ type Client interface {
 	GetRoles() ([]byte, error)
 	GetTeams() ([]*Team, error)
 	GetProjects() ([]*Project, error)
-	GetProjectsOData() ([]*ProjectOData, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
 	GetLdapTeamMappings() ([]byte, error)
@@ -242,10 +241,18 @@ func (c *APIClient) GetTeams() ([]*Team, error) {
 func (c *APIClient) GetProjects() ([]*Project, error) {
 	var projects []*Project
 	err := c.unmarshalResponseBody(projectsEndpoint, &projects)
-	return projects, err
+	if err != nil {
+		return projects, err
+	}
+	projectOData, errOData := c.getProjectsOData()
+	if errOData != nil {
+		return projects, errOData
+	}
+	projects = ExtendProjects(projects, projectOData)
+	return projects, nil
 }
 
-func (c *APIClient) GetProjectsOData() ([]*ProjectOData, error) {
+func (c *APIClient) getProjectsOData() ([]*ProjectOData, error) {
 	var oDataResponse ODataResponse
 	err := c.unmarshalResponseBody(projectsODataEndpoint, &oDataResponse)
 	return oDataResponse.Value, err
