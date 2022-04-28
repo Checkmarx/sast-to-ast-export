@@ -1243,7 +1243,11 @@ func TestExportResultsToFile(t *testing.T) {
 
 func TestFetchProjects(t *testing.T) {
 	t.Run("fetch projects successfully", func(t *testing.T) {
-		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1}}
+		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
+			CreatedDate: "2022-04-21T20:30:59.39+03:00",
+			Configuration: &rest.Configuration{
+				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
+			}}}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 		client.EXPECT().GetProjects().Return(projects, nil).Times(1)

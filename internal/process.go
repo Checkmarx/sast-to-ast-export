@@ -310,7 +310,8 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter) error {
 	if projectsErr != nil {
 		return errors.Wrap(projectsErr, "failed getting projects")
 	}
-	if err := exporter.AddFileWithDataSource(export2.ProjectsFileName, export2.NewJSONDataSource(projects)); err != nil {
+	if err := exporter.AddFileWithDataSource(export2.ProjectsFileName,
+		export2.NewJSONDataSource(projects)); err != nil {
 		return err
 	}
 	return nil

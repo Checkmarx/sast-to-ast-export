@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	usersEndpoint    = "/CxRestAPI/auth/Users"
-	teamsEndpoint    = "/CxRestAPI/auth/Teams"
-	rolesEndpoint    = "/CxRestAPI/auth/Roles"
-	projectsEndpoint = "/CxRestAPI/projects"
+	usersEndpoint         = "/CxRestAPI/auth/Users"
+	teamsEndpoint         = "/CxRestAPI/auth/Teams"
+	rolesEndpoint         = "/CxRestAPI/auth/Roles"
+	projectsEndpoint      = "/CxRestAPI/projects"
+	projectsODataEndpoint = "/Cxwebinterface/odata/v1/Projects?$expand=CustomFields"
 
 	ldapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
 	ldapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
@@ -240,7 +241,21 @@ func (c *APIClient) GetTeams() ([]*Team, error) {
 func (c *APIClient) GetProjects() ([]*Project, error) {
 	var projects []*Project
 	err := c.unmarshalResponseBody(projectsEndpoint, &projects)
-	return projects, err
+	if err != nil {
+		return projects, err
+	}
+	projectOData, errOData := c.getProjectsOData()
+	if errOData != nil {
+		return projects, errOData
+	}
+	projects = ExtendProjects(projects, projectOData)
+	return projects, nil
+}
+
+func (c *APIClient) getProjectsOData() ([]*ProjectOData, error) {
+	var oDataResponse ODataResponse
+	err := c.unmarshalResponseBody(projectsODataEndpoint, &oDataResponse)
+	return oDataResponse.Value, err
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {

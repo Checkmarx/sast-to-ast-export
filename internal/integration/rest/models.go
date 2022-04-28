@@ -64,10 +64,31 @@ type (
 	}
 
 	Project struct {
-		ID       int    `json:"id"`
-		TeamID   int    `json:"teamId"`
-		Name     string `json:"name"`
-		IsPublic bool   `json:"isPublic"`
+		ID            int            `json:"id"`
+		TeamID        int            `json:"teamId"`
+		Name          string         `json:"name"`
+		IsPublic      bool           `json:"isPublic"`
+		CreatedDate   string         `json:"createdDate"`
+		Configuration *Configuration `json:"configuration"`
+	}
+
+	Configuration struct {
+		CustomFields []*CustomField `json:"customFields"`
+	}
+
+	CustomField struct {
+		FieldName  string `json:"fieldName"`
+		FieldValue string `json:"fieldValue"`
+	}
+
+	ODataResponse struct {
+		Value []*ProjectOData `json:"value"`
+	}
+
+	ProjectOData struct {
+		ID           int            `json:"Id"`
+		CreatedDate  string         `json:"CreatedDate"`
+		CustomFields []*CustomField `json:"CustomFields"`
 	}
 
 	User struct {
