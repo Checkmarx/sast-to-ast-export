@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"github.com/checkmarxDev/ast-sast-export/internal"
 	"os"
+
+	"github.com/checkmarxDev/ast-sast-export/internal"
 
 	"github.com/spf13/cobra"
 )
