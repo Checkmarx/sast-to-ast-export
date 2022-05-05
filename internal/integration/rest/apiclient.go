@@ -238,7 +238,7 @@ func (c *APIClient) GetTeams() ([]*Team, error) {
 }
 
 func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, limit int) ([]*Project, error) {
-	var response []*ProjectWithCustomFields
+	var response ODataProjectsWithCustomFields
 	url := fmt.Sprintf("%s%s", c.BaseURL, projectsODataEndpoint)
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
 	if requestErr != nil {
@@ -260,7 +260,7 @@ func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, l
 		return nil, unmarshalErr
 	}
 	var projects []*Project
-	for _, v := range response {
+	for _, v := range response.Value {
 		project := &Project{
 			ID:          v.ID,
 			Name:        v.Name,

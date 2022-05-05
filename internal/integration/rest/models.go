@@ -63,6 +63,10 @@ type (
 		ParendID int    `json:"parentId"`
 	}
 
+	ODataProjectsWithCustomFields struct {
+		Value []ProjectWithCustomFields `json:"value"`
+	}
+
 	ProjectWithCustomFields struct {
 		ID           int            `json:"Id"`
 		TeamID       int            `json:"OwningTeamId"`
