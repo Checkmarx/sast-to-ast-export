@@ -9,7 +9,9 @@ type Args struct {
 	Export              []string
 	ProjectsActiveSince int
 	Debug               bool
-	DBConnectionString  string
+	DBConnectionString,
+	ProjectsIds,
+	TeamName string
 }
 
 type ReportJob struct {

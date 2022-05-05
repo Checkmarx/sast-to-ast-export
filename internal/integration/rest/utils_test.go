@@ -7,42 +7,88 @@ import (
 )
 
 func TestExtendProjects(t *testing.T) {
-	t.Run("test same order", func(t *testing.T) {
-		projects := []*Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1}}
-		projectsOData := []*ProjectOData{{ID: 1, CreatedDate: "2022-04-21T20:30:59.39+03:00",
-			CustomFields: []*CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}}}}
+	type TestObj struct {
+		fromDate, teamName, projectIds, expectedResult string
+	}
+	fromDate := "2022-01-15"
 
-		expectedProjects := []*Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
-			CreatedDate: "2022-04-21T20:30:59.39+03:00", Configuration: &Configuration{
-				CustomFields: []*CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
-			}}}
-
-		resultProjects := ExtendProjects(projects, projectsOData)
-
-		assert.Equal(t, expectedProjects, resultProjects)
-	})
-
-	t.Run("test wrong order", func(t *testing.T) {
-		projects := []*Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1},
-			{ID: 2, Name: "test_name_2", IsPublic: true, TeamID: 2}}
-		projectsOData := []*ProjectOData{
-			{ID: 2, CreatedDate: "2022-05-25T20:30:59.39+03:00",
-				CustomFields: []*CustomField{}},
-			{ID: 1, CreatedDate: "2022-04-21T20:30:59.39+03:00",
-				CustomFields: []*CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}}}}
-
-		expectedProjects := []*Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
-			CreatedDate: "2022-04-21T20:30:59.39+03:00", Configuration: &Configuration{
-				CustomFields: []*CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
-			}},
-			{ID: 2, Name: "test_name_2", IsPublic: true, TeamID: 2,
-				CreatedDate: "2022-05-25T20:30:59.39+03:00", Configuration: &Configuration{
-					CustomFields: []*CustomField{},
-				}},
+	t.Run("Test filter for project list", func(t *testing.T) {
+		tests := []TestObj{
+			{
+				fromDate:       fromDate,
+				teamName:       "",
+				projectIds:     "",
+				expectedResult: "CreatedDate gt 2022-01-15",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "TestTeam",
+				projectIds:     "",
+				expectedResult: "CreatedDate gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam'",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "",
+				projectIds:     "1",
+				expectedResult: "CreatedDate gt 2022-01-15 and Id eq 1",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "TestTeam",
+				projectIds:     "1,2",
+				expectedResult: "CreatedDate gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam' and Id in (1,2)",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "",
+				projectIds:     "1-5",
+				expectedResult: "CreatedDate gt 2022-01-15 and Id ge 1 and Id le 5",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "",
+				projectIds:     "wrong_num",
+				expectedResult: "CreatedDate gt 2022-01-15 and Id gt 0",
+			},
 		}
 
-		resultProjects := ExtendProjects(projects, projectsOData)
+		for _, test := range tests {
+			result := GetFilterForProjects(test.fromDate, test.teamName, test.projectIds)
+			assert.Equal(t, test.expectedResult, result)
+		}
+	})
 
-		assert.Equal(t, expectedProjects, resultProjects)
+	t.Run("Test filter for project list with last scan", func(t *testing.T) {
+		tests := []TestObj{
+			{
+				fromDate:       fromDate,
+				teamName:       "",
+				projectIds:     "",
+				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "TestTeam",
+				projectIds:     "",
+				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam'",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "",
+				projectIds:     "5-2",
+				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and Id ge 2 and Id le 5",
+			},
+			{
+				fromDate:       fromDate,
+				teamName:       "TestTeam",
+				projectIds:     "1,2",
+				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam' and Id in (1,2)",
+			},
+		}
+
+		for _, test := range tests {
+			result := GetFilterForProjectsWithLastScan(test.fromDate, test.teamName, test.projectIds)
+			assert.Equal(t, test.expectedResult, result)
+		}
 	})
 }

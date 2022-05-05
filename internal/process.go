@@ -220,12 +220,13 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 					return err
 				}
 			case export2.ProjectsOption:
-				if err := fetchProjectsData(client, exporter); err != nil {
+				if err := fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName,
+					args.ProjectsIds); err != nil {
 					return err
 				}
 			case export2.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
-					retryMaxSleep, metadataProvider); err != nil {
+					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIds); err != nil {
 					return err
 				}
 			}
@@ -304,11 +305,26 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 	return nil
 }
 
-func fetchProjectsData(client rest.Client, exporter export2.Exporter) error {
+func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
+	teamName, projectsIds string) error {
 	log.Info().Msg("collecting projects")
-	projects, projectsErr := client.GetProjects()
-	if projectsErr != nil {
-		return errors.Wrap(projectsErr, "failed getting projects")
+	var projects []*rest.Project
+	projectOffset := 0
+	projectLimit := resultsPageLimit
+	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
+	for {
+		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIds, projectOffset, projectLimit)
+		if projectsErr != nil {
+			return errors.Wrap(projectsErr, "failed getting projects")
+		}
+		if len(projectsItems) == 0 {
+			break
+		}
+
+		projects = append(projects, projectsItems...)
+
+		// prepare to fetch next page
+		projectOffset += projectLimit
 	}
 	if err := exporter.AddFileWithDataSource(export2.ProjectsFileName,
 		export2.NewJSONDataSource(projects)); err != nil {
@@ -319,12 +335,13 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter) error {
 
 func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
 	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
+	teamName, projectsIds string,
 ) error {
 	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
 	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
-	triagedScans, triagedScanErr := getTriagedScans(client, fromDate)
+	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds)
 	if triagedScanErr != nil {
 		return triagedScanErr
 	}
@@ -372,7 +389,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 	return nil
 }
 
-func getTriagedScans(client rest.Client, fromDate string) ([]TriagedScan, error) {
+func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string) ([]TriagedScan, error) {
 	var output []TriagedScan
 	projectOffset := 0
 	projectLimit := resultsPageLimit
@@ -386,7 +403,8 @@ func getTriagedScans(client rest.Client, fromDate string) ([]TriagedScan, error)
 		log.Info().Msg("searching for results...")
 
 		// fetch current page
-		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, projectOffset, projectLimit)
+		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds,
+			projectOffset, projectLimit)
 		if fetchErr != nil {
 			log.Debug().Err(fetchErr).Msg("failed fetching project last scans")
 			return output, fmt.Errorf("error searching for results")

@@ -21,6 +21,8 @@ const (
 	projectsActiveSinceArg = "projects-active-since"
 	debugArg               = "debug"
 	verboseArg             = "verbose"
+	projectsIds            = "project-id"
+	teamName               = "team"
 
 	projectsActiveSinceDefaultValue = 180
 )

@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/checkmarxDev/ast-sast-export/internal"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -34,6 +33,14 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 		panic(err)
 	}
 	args.ProjectsActiveSince, err = cmd.Flags().GetInt(projectsActiveSinceArg)
+	if err != nil {
+		panic(err)
+	}
+	args.ProjectsIds, err = cmd.Flags().GetString(projectsIds)
+	if err != nil {
+		panic(err)
+	}
+	args.TeamName, err = cmd.Flags().GetString(teamName)
 	if err != nil {
 		panic(err)
 	}

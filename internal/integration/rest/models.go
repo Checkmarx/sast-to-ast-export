@@ -63,6 +63,15 @@ type (
 		ParendID int    `json:"parentId"`
 	}
 
+	ProjectWithCustomFields struct {
+		ID           int            `json:"Id"`
+		TeamID       int            `json:"OwningTeamId"`
+		Name         string         `json:"Name"`
+		IsPublic     bool           `json:"IsPublic"`
+		CreatedDate  string         `json:"CreatedDate"`
+		CustomFields []*CustomField `json:"CustomFields"`
+	}
+
 	Project struct {
 		ID            int            `json:"id"`
 		TeamID        int            `json:"teamId"`
@@ -79,10 +88,6 @@ type (
 	CustomField struct {
 		FieldName  string `json:"fieldName"`
 		FieldValue string `json:"fieldValue"`
-	}
-
-	ODataResponse struct {
-		Value []*ProjectOData `json:"value"`
 	}
 
 	ProjectOData struct {
