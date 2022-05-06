@@ -22,7 +22,7 @@ const (
 	debugArg               = "debug"
 	verboseArg             = "verbose"
 	projectsIds            = "project-id"
-	teamName               = "team"
+	teamName               = "project-team"
 
 	projectsActiveSinceDefaultValue = 180
 )

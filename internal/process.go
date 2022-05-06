@@ -313,6 +313,13 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 	projectLimit := resultsPageLimit
 	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
 	for {
+		log.Debug().
+			Str("fromDate", fromDate).
+			Int("offset", projectOffset).
+			Int("limit", projectLimit).
+			Msg("fetching projects with custom fields")
+		log.Info().Msg("searching for projects...")
+
 		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIds, projectOffset, projectLimit)
 		if projectsErr != nil {
 			return errors.Wrap(projectsErr, "failed getting projects")

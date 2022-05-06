@@ -48,7 +48,7 @@ func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string) str
 
 // getTeamFilter get filter string for team
 func getTeamFilter(teamName string) string {
-	return fmt.Sprintf("OwningTeam/FullName+eq+'%s'", teamName)
+	return fmt.Sprintf("OwningTeam/FullName eq '%s'", teamName)
 }
 
 // getProjectIdsFilter get filter string for project-id option

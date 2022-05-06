@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExtendProjects(t *testing.T) {
+func TestApiClientUtils(t *testing.T) {
 	type TestObj struct {
 		fromDate, teamName, projectIds, expectedResult string
 	}
@@ -24,7 +24,7 @@ func TestExtendProjects(t *testing.T) {
 				fromDate:       fromDate,
 				teamName:       "TestTeam",
 				projectIds:     "",
-				expectedResult: "CreatedDate gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam'",
+				expectedResult: "CreatedDate gt 2022-01-15 and OwningTeam/FullName eq 'TestTeam'",
 			},
 			{
 				fromDate:       fromDate,
@@ -36,7 +36,7 @@ func TestExtendProjects(t *testing.T) {
 				fromDate:       fromDate,
 				teamName:       "TestTeam",
 				projectIds:     "1,2",
-				expectedResult: "CreatedDate gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam' and Id in (1,2)",
+				expectedResult: "CreatedDate gt 2022-01-15 and OwningTeam/FullName eq 'TestTeam' and Id in (1,2)",
 			},
 			{
 				fromDate:       fromDate,
@@ -70,7 +70,7 @@ func TestExtendProjects(t *testing.T) {
 				fromDate:       fromDate,
 				teamName:       "TestTeam",
 				projectIds:     "",
-				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam'",
+				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and OwningTeam/FullName eq 'TestTeam'",
 			},
 			{
 				fromDate:       fromDate,
@@ -82,7 +82,7 @@ func TestExtendProjects(t *testing.T) {
 				fromDate:       fromDate,
 				teamName:       "TestTeam",
 				projectIds:     "1,2",
-				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and OwningTeam/FullName+eq+'TestTeam' and Id in (1,2)",
+				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and OwningTeam/FullName eq 'TestTeam' and Id in (1,2)",
 			},
 		}
 

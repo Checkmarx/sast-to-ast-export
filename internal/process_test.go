@@ -1278,9 +1278,9 @@ func TestFetchProjects(t *testing.T) {
 			}}}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), gomock.Eq(teamName), gomock.Eq(projectsIds), gomock.Eq(0),
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
 			gomock.Any()).Return(projects, nil)
-		client.EXPECT().GetProjects(gomock.Any(), gomock.Eq(teamName), gomock.Eq(projectsIds), gomock.Any(),
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
 			gomock.Any()).Return([]*rest.Project{}, nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
@@ -1297,11 +1297,43 @@ func TestFetchProjects(t *testing.T) {
 	t.Run("fetch projects with error", func(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), gomock.Eq(teamName), gomock.Eq(projectsIds), gomock.Eq(0),
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
 			gomock.Any()).Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
 
 		err := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
 
 		assert.EqualError(t, err, "failed getting projects: failed fetching project")
+	})
+
+	t.Run("fetch many pages", func(t *testing.T) {
+		projectsIds = "1-4"
+		projectsFirst := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
+			CreatedDate: "2022-04-21T20:30:59.39+03:00",
+			Configuration: &rest.Configuration{
+				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
+			}}}
+		projectsSecond := []*rest.Project{{ID: 4, Name: "test_name 4", IsPublic: true, TeamID: 1,
+			CreatedDate: "2022-04-22T20:30:59.39+03:00",
+			Configuration: &rest.Configuration{
+				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test 4"}},
+			}}}
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
+			gomock.Any()).Return(projectsFirst, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
+			gomock.Any()).Return(projectsSecond, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
+			gomock.Any()).Return([]*rest.Project{}, nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
+				_, callbackErr := callback()
+				return callbackErr
+			}).
+			AnyTimes()
+
+		result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+
+		assert.NoError(t, result)
 	})
 }
