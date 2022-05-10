@@ -16,8 +16,7 @@ const (
 	usersEndpoint         = "/CxRestAPI/auth/Users"
 	teamsEndpoint         = "/CxRestAPI/auth/Teams"
 	rolesEndpoint         = "/CxRestAPI/auth/Roles"
-	projectsEndpoint      = "/CxRestAPI/projects"
-	projectsODataEndpoint = "/Cxwebinterface/odata/v1/Projects?$expand=CustomFields"
+	projectsODataEndpoint = "/Cxwebinterface/odata/v1/Projects"
 
 	ldapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
 	ldapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
@@ -39,14 +38,14 @@ type Client interface {
 	GetUsers() ([]*User, error)
 	GetRoles() ([]byte, error)
 	GetTeams() ([]*Team, error)
-	GetProjects() ([]*Project, error)
+	GetProjects(fromDate, teamName, projectIds string, offset, limit int) ([]*Project, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
 	GetLdapTeamMappings() ([]byte, error)
 	GetSamlIdentityProviders() ([]byte, error)
 	GetSamlRoleMappings() ([]byte, error)
 	GetSamlTeamMappings() ([]*SamlTeamMapping, error)
-	GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error)
+	GetProjectsWithLastScanID(fromDate, teamName, projectsIds string, offset, limit int) (*[]ProjectWithLastScanID, error)
 	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
 	CreateScanReport(scanID int, reportType string, retry Retry) ([]byte, error)
 }
@@ -238,24 +237,43 @@ func (c *APIClient) GetTeams() ([]*Team, error) {
 	return teams, err
 }
 
-func (c *APIClient) GetProjects() ([]*Project, error) {
+func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, limit int) ([]*Project, error) {
+	var response ODataProjectsWithCustomFields
+	url := fmt.Sprintf("%s%s", c.BaseURL, projectsODataEndpoint)
+	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
+	if requestErr != nil {
+		return nil, requestErr
+	}
+	q := req.URL.Query()
+	q.Add("$select", "Id,OwningTeamId,Name,IsPublic,CreatedDate,CustomFields")
+	q.Add("$expand", "CustomFields($select=FieldName,FieldValue)")
+	q.Add("$filter", GetFilterForProjects(fromDate, teamName, projectIds))
+	q.Add("$skip", fmt.Sprintf("%d", offset))
+	q.Add("$top", fmt.Sprintf("%d", limit))
+	req.URL.RawQuery = q.Encode()
+	body, getErr := c.getResponseBodyFromRequest(req)
+	if getErr != nil {
+		return nil, getErr
+	}
+	unmarshalErr := json.Unmarshal(body, &response)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
 	var projects []*Project
-	err := c.unmarshalResponseBody(projectsEndpoint, &projects)
-	if err != nil {
-		return projects, err
+	for _, v := range response.Value {
+		project := &Project{
+			ID:          v.ID,
+			Name:        v.Name,
+			TeamID:      v.TeamID,
+			IsPublic:    v.IsPublic,
+			CreatedDate: v.CreatedDate,
+			Configuration: &Configuration{
+				CustomFields: v.CustomFields,
+			},
+		}
+		projects = append(projects, project)
 	}
-	projectOData, errOData := c.getProjectsOData()
-	if errOData != nil {
-		return projects, errOData
-	}
-	projects = ExtendProjects(projects, projectOData)
 	return projects, nil
-}
-
-func (c *APIClient) getProjectsOData() ([]*ProjectOData, error) {
-	var oDataResponse ODataResponse
-	err := c.unmarshalResponseBody(projectsODataEndpoint, &oDataResponse)
-	return oDataResponse.Value, err
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {
@@ -296,7 +314,7 @@ func (c *APIClient) postReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(createReportIDEndpoint, body)
 }
 
-func (c *APIClient) GetProjectsWithLastScanID(fromDate string, offset, limit int) (*[]ProjectWithLastScanID, error) {
+func (c *APIClient) GetProjectsWithLastScanID(fromDate, teamName, projectsIds string, offset, limit int) (*[]ProjectWithLastScanID, error) {
 	url := fmt.Sprintf("%s/Cxwebinterface/odata/v1/Projects", c.BaseURL)
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
 	if requestErr != nil {
@@ -305,7 +323,7 @@ func (c *APIClient) GetProjectsWithLastScanID(fromDate string, offset, limit int
 	q := req.URL.Query()
 	q.Add("$select", "Id,LastScanId")
 	q.Add("$expand", "LastScan($select=Id)")
-	q.Add("$filter", fmt.Sprintf("LastScan/ScanCompletedOn gt %s", fromDate))
+	q.Add("$filter", GetFilterForProjectsWithLastScan(fromDate, teamName, projectsIds))
 	q.Add("$skip", fmt.Sprintf("%d", offset))
 	q.Add("$top", fmt.Sprintf("%d", limit))
 	req.URL.RawQuery = q.Encode()

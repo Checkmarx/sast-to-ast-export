@@ -299,8 +299,10 @@ func TestAPIClient_GetProjectsWithLastScanID(t *testing.T) {
 	adapter := &HTTPClientMock{DoResponse: makeOkResponse(odataResponse), DoError: nil} //nolint:bodyclose
 	client, _ := NewSASTClient(BaseURL, adapter)
 	client.Token = mockToken
+	teamName := "TestName"
+	projectsIds := ""
 
-	result, err := client.GetProjectsWithLastScanID("2021-10-7", 0, 10)
+	result, err := client.GetProjectsWithLastScanID("2021-10-7", teamName, projectsIds, 0, 10)
 
 	expected := []ProjectWithLastScanID{
 		{ID: 1, LastScanID: 1000000},

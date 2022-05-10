@@ -21,6 +21,8 @@ const (
 	projectsActiveSinceArg = "projects-active-since"
 	debugArg               = "debug"
 	verboseArg             = "verbose"
+	projectsIds            = "project-id"
+	teamName               = "project-team"
 
 	projectsActiveSinceDefaultValue = 180
 )
@@ -103,6 +105,8 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
+	rootCmd.Flags().StringP(teamName, "", "", "Team name filter")
+	rootCmd.Flags().StringP(projectsIds, "", "", "Project ID filter")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
