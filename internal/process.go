@@ -8,18 +8,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
-
-	"github.com/checkmarxDev/ast-sast-export/internal/persistence/methodline"
-
 	"github.com/checkmarxDev/ast-sast-export/internal/app/astquery"
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/report"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/methodline"
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/queries"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/sourcefile"
 	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
 
@@ -121,19 +120,20 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	astQueryIDProvider, astQueryIDProviderErr := astquery.NewProvider()
-	if astQueryIDProviderErr != nil {
-		return errors.Wrap(astQueryIDProviderErr, "could not create AST query id provider")
+	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
+	sourceRepo := sourcefile.NewRepo(soapClient)
+	methodLineRepo := methodline.NewRepo(soapClient)
+	queriesRepo := queries.NewRepo(soapClient)
+
+	astQueryProvider, astQueryProviderErr := astquery.NewProvider(queriesRepo)
+	if astQueryProviderErr != nil {
+		return errors.Wrap(astQueryProviderErr, "could not create AST query provider")
 	}
 
 	similarityIDCalculator, similarityIDCalculatorErr := similarity.NewSimilarityIDCalculator()
 	if similarityIDCalculatorErr != nil {
 		return errors.Wrap(similarityIDCalculatorErr, "could not create similarity id calculator")
 	}
-
-	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
-	sourceRepo := sourcefile.NewRepo(soapClient)
-	methodLineRepo := methodline.NewRepo(soapClient)
 
 	metadataTempDir, metadataTempDirErr := os.MkdirTemp("", args.ProductName)
 	if metadataTempDirErr != nil {
@@ -146,10 +146,10 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := metadata.NewMetadataFactory(astQueryIDProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
+	metadataSource := metadata.NewMetadataFactory(astQueryProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
-		scanReportCreateMaxSleep, metadataSource)
+		scanReportCreateMaxSleep, metadataSource, astQueryProvider)
 	if fetchErr != nil {
 		return errors.Wrap(fetchErr, "could not fetch selected data")
 	}
@@ -206,6 +206,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 
 func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args, retryAttempts int,
 	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
+	astQueryProvider *astquery.Provider,
 ) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export2.GetOptions() {
@@ -222,6 +223,10 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 			case export2.ProjectsOption:
 				if err := fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName,
 					args.ProjectsIds); err != nil {
+					return err
+				}
+			case export2.QueriesOption:
+				if err := fetchQueriesData(astQueryProvider, exporter); err != nil {
 					return err
 				}
 			case export2.ResultsOption:
@@ -337,6 +342,25 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 		export2.NewJSONDataSource(projects)); err != nil {
 		return err
 	}
+	return nil
+}
+
+func fetchQueriesData(client *astquery.Provider, exporter export2.Exporter) error {
+	log.Info().Msg("collecting custom queries")
+	queryResp, err := client.GetCustomQueriesList()
+	if err != nil {
+		return errors.Wrap(err, "error with getting custom queries list")
+	}
+
+	queriesData, marshalErr := xml.MarshalIndent(queryResp, "  ", "    ")
+	if marshalErr != nil {
+		return errors.Wrap(marshalErr, "marshal error with getting custom queries list")
+	}
+
+	if errExp := exporter.AddFile(export2.QueriesFileName, queriesData); errExp != nil {
+		return errors.Wrap(errExp, "error with exporting custom queries list to file")
+	}
+
 	return nil
 }
 

@@ -96,4 +96,88 @@ type (
 		XMLName xml.Name `xml:"CxWSResponseSourceContent"`
 		Source  string   `xml:"Source"`
 	}
+
+	// GetQueryCollection request types
+
+	GetQueryCollectionRequest struct {
+		XMLName xml.Name `xml:"chec:GetQueryCollection"`
+	}
+
+	GetQueryCollectionResponse struct {
+		XMLName                  xml.Name                 `xml:"GetQueryCollectionResponse"`
+		GetQueryCollectionResult GetQueryCollectionResult `xml:"GetQueryCollectionResult"`
+	}
+
+	GetQueryCollectionResult struct {
+		XMLName      xml.Name    `xml:"GetQueryCollectionResult"`
+		IsSuccessful bool        `xml:"IsSuccesfull"`
+		QueryGroups  QueryGroups `xml:"QueryGroups"`
+	}
+
+	QueryGroups struct {
+		XMLName        xml.Name         `xml:"QueryGroups"`
+		CxWSQueryGroup []CxWSQueryGroup `xml:"CxWSQueryGroup"`
+	}
+
+	CxWSQueryGroup struct {
+		XMLName           xml.Name `xml:"CxWSQueryGroup"`
+		Name              string   `xml:"Name"`
+		PackageId         int      `xml:"PackageId"`
+		Queries           Queries  `xml:"Queries"`
+		IsReadOnly        bool     `xml:"IsReadOnly"`
+		IsEncrypted       bool     `xml:"IsEncrypted"`
+		Description       string   `xml:"Description"`
+		Language          int      `xml:"Language"`
+		LanguageName      string   `xml:"LanguageName"`
+		PackageTypeName   string   `xml:"PackageTypeName"`
+		ProjectId         int      `xml:"ProjectId"`
+		PackageType       string   `xml:"PackageType"`
+		PackageFullName   string   `xml:"PackageFullName"`
+		OwningTeam        int      `xml:"OwningTeam"`
+		Status            string   `xml:"Status"`
+		LanguageStateHash int64    `xml:"LanguageStateHash"`
+		LanguageStateDate string   `xml:"LanguageStateDate"`
+	}
+
+	Queries struct {
+		XMLName   xml.Name    `xml:"Queries"`
+		CxWSQuery []CxWSQuery `xml:"CxWSQuery"`
+	}
+
+	CxWSQuery struct {
+		XMLName          xml.Name   `xml:"CxWSQuery"`
+		Name             string     `xml:"Name"`
+		QueryId          int        `xml:"QueryId"`
+		Source           string     `xml:"Source"`
+		Cwe              int        `xml:"Cwe"`
+		IsExecutable     bool       `xml:"IsExecutable"`
+		IsEncrypted      bool       `xml:"IsEncrypted"`
+		Severity         int        `xml:"Severity"`
+		PackageId        int        `xml:"PackageId"`
+		Status           string     `xml:"Status"`
+		Type             string     `xml:"Type"`
+		Categories       Categories `xml:"Categories"`
+		CxDescriptionID  int        `xml:"CxDescriptionID"`
+		QueryVersionCode int        `xml:"QueryVersionCode"`
+		EngineMetadata   string     `xml:"EngineMetadata"`
+	}
+
+	Categories struct {
+		XMLName         xml.Name          `xml:"Categories"`
+		CxQueryCategory []CxQueryCategory `xml:"CxQueryCategory"`
+	}
+
+	CxQueryCategory struct {
+		XMLName      xml.Name `xml:"CxQueryCategory"`
+		Id           int      `xml:"Id"`
+		CategoryName string   `xml:"CategoryName"`
+		CategoryType int      `xml:"CategoryType"`
+	}
+
+	CategoryType struct {
+		XMLName xml.Name `xml:"CategoryType"`
+		Id      int      `xml:"Id"`
+		Name    string   `xml:"Name"`
+		Order   int      `xml:"Order"`
+	}
 )

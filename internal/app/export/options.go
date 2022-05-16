@@ -9,8 +9,10 @@ const (
 	ResultsOption = "triage"
 	// ProjectsOption represent projects
 	ProjectsOption = "projects"
+	// QueriesOption represent custom queries
+	QueriesOption = "queries"
 )
 
 func GetOptions() []string {
-	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption}
+	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption}
 }

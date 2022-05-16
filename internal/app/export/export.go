@@ -37,6 +37,8 @@ const (
 	TeamsFileName = "teams.json"
 	// ProjectsFileName projects file
 	ProjectsFileName = "projects.json"
+	// QueriesFileName queries file
+	QueriesFileName = "queries.xml"
 
 	encryptedKeyFileName = "key.enc.bin"
 
