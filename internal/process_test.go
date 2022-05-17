@@ -1,14 +1,17 @@
 package internal
 
 import (
+	"encoding/xml"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
+	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	mock_interfaces_query_common "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query"
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
@@ -1350,6 +1353,24 @@ func TestFetchProjects(t *testing.T) {
 			AnyTimes()
 
 		result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+
+		assert.NoError(t, result)
+	})
+}
+
+func TestCustomQueries(t *testing.T) {
+	t.Run("fetch custom queries", func(t *testing.T) {
+		var customQueriesObj soap.GetQueryCollectionResponse
+		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		customQueries, ioCustomErr := os.ReadFile("../test/data/queries/custom_queries.xml")
+		assert.NoError(t, ioCustomErr)
+		_ = xml.Unmarshal(customQueries, &customQueriesObj)
+		queryProvider.EXPECT().GetCustomQueriesList().Return(&customQueriesObj, nil).Times(1)
+		exporter.EXPECT().AddFile(export2.QueriesFileName, gomock.Any()).Return(nil)
+
+		result := fetchQueriesData(queryProvider, exporter)
 
 		assert.NoError(t, result)
 	})
