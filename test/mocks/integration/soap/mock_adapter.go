@@ -34,6 +34,21 @@ func (m *MockAdapter) EXPECT() *MockAdapterMockRecorder {
 	return m.recorder
 }
 
+// GetQueryCollection mocks base method.
+func (m *MockAdapter) GetQueryCollection() (*soap.GetQueryCollectionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetQueryCollection")
+	ret0, _ := ret[0].(*soap.GetQueryCollectionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetQueryCollection indicates an expected call of GetQueryCollection.
+func (mr *MockAdapterMockRecorder) GetQueryCollection() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryCollection", reflect.TypeOf((*MockAdapter)(nil).GetQueryCollection))
+}
+
 // GetResultPathsForQuery mocks base method.
 func (m *MockAdapter) GetResultPathsForQuery(arg0, arg1 string) (*soap.GetResultPathsForQueryResponse, error) {
 	m.ctrl.T.Helper()

@@ -16,11 +16,13 @@ const (
 	errRequestMarshalFailed    = "could not marshal request"
 	errResponseUnmarshalFailed = "could not unmarshal response"
 	errSoapCallFailed          = "SOAP call failed"
+	errCannotGetQueryList      = "Cannot get Query list"
 )
 
 type Adapter interface {
 	GetSourcesByScanID(scanID string, filenames []string) (*GetSourcesByScanIDResponse, error)
 	GetResultPathsForQuery(scanID string, queryID string) (*GetResultPathsForQueryResponse, error)
+	GetQueryCollection() (*GetQueryCollectionResponse, error)
 }
 
 type Client struct {
@@ -83,6 +85,26 @@ func (e *Client) GetResultPathsForQuery(scanID, queryID string) (*GetResultPaths
 	}
 	if !response.GetResultPathsForQueryResult.IsSuccessful {
 		return nil, fmt.Errorf("%s: %s", errSoapCallFailed, response.GetResultPathsForQueryResult.ErrorMessage)
+	}
+	return &response, nil
+}
+
+func (e *Client) GetQueryCollection() (*GetQueryCollectionResponse, error) {
+	requestBytes, requestMarshalErr := xml.Marshal(GetQueryCollectionRequest{})
+	if requestMarshalErr != nil {
+		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
+	}
+	envelope, callErr := e.call("GetQueryCollection", requestBytes)
+	if callErr != nil {
+		return nil, errors.Wrap(callErr, errSoapCallFailed)
+	}
+	var response GetQueryCollectionResponse
+	unmarshalErr := xml.Unmarshal(envelope.Body.Contents, &response)
+	if unmarshalErr != nil {
+		return nil, errors.Wrap(unmarshalErr, errResponseUnmarshalFailed)
+	}
+	if !response.GetQueryCollectionResult.IsSuccessful {
+		return nil, fmt.Errorf("%s: %s", errSoapCallFailed, errCannotGetQueryList)
 	}
 	return &response, nil
 }

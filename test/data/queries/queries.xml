@@ -1,0 +1,1003 @@
+<GetQueryCollectionResponse>
+    <GetQueryCollectionResult>
+        <IsSuccesfull>true</IsSuccesfull>
+        <QueryGroups>
+            <CxWSQueryGroup>
+                <Name>ASP_High_Risk</Name>
+                <PackageId>10</PackageId>
+                <Queries>
+                    <CxWSQuery>
+                        <Name>Code_Injection</Name>
+                        <QueryId>138</QueryId>
+                        <Source>List&lt;string> executers = new List&lt;string>(new string[]{"Execute","ExecuteGlobal","eval"});
+                            CxList code =
+                            FindByMemberAccess_ASP("Server.Execute") +
+                            Find_Methods().FindByShortNames(executers, false);
+                            result = Find_Interactive_Inputs().DataInfluencingOn(code);</Source>
+                        <Cwe>94</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>236</Id>
+                                <CategoryName>APSC-DV-002510 - CAT I The application must protect from command injection.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1082</CxDescriptionID>
+                        <QueryVersionCode>51414731</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>Command_Injection</Name>
+                        <QueryId>139</QueryId>
+                        <Source>// $ASP
+
+                            CxList inputs = Find_Interactive_Inputs();
+                            CxList exec = Find_Execute();
+
+                            result = exec.DataInfluencedBy(inputs);</Source>
+                        <Cwe>77</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>236</Id>
+                                <CategoryName>APSC-DV-002510 - CAT I The application must protect from command injection.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1165</CxDescriptionID>
+                        <QueryVersionCode>139</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>Connection_String_Injection</Name>
+                        <QueryId>140</QueryId>
+                        <Source>CxList con = Find_Connection_DB();
+
+                            CxList inputs = Find_Interactive_Inputs();
+
+                            result = con.DataInfluencedBy(inputs);</Source>
+                        <Cwe>99</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>241</Id>
+                                <CategoryName>APSC-DV-002560 - CAT I The application must not be subject to input handling vulnerabilities.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1161</CxDescriptionID>
+                        <QueryVersionCode>140</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>LDAP_Injection</Name>
+                        <QueryId>141</QueryId>
+                        <Source>CxList inputs = Find_Interactive_Inputs();
+                            CxList methods = Find_Methods();
+
+                            CxList sanitize = Find_Integers() + methods.FindByShortName("replace");
+
+                            CxList de = Find_LDAP();
+                            result = de.InfluencedByAndNotSanitized(inputs, sanitize);
+                            result -= result.DataInfluencedBy(result);</Source>
+                        <Cwe>90</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>241</Id>
+                                <CategoryName>APSC-DV-002560 - CAT I The application must not be subject to input handling vulnerabilities.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1302</CxDescriptionID>
+                        <QueryVersionCode>141</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>Reflected_XSS_All_Clients</Name>
+                        <QueryId>142</QueryId>
+                        <Source>CxList inputs = Find_Interactive_Inputs();
+                            CxList outputs = Find_XSS_Outputs();
+
+                            CxList sanitized = Find_XSS_Sanitize();
+
+                            result = All.FindXSS(inputs, outputs, sanitized);</Source>
+                        <Cwe>79</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>9</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.7 - Cross-site scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>15</Id>
+                                <CategoryName>A3-Cross-Site Scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>50</Id>
+                                <CategoryName>SI-15 Information Output Filtering (P0)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>58</Id>
+                                <CategoryName>A7-Cross-Site Scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>234</Id>
+                                <CategoryName>APSC-DV-002490 - CAT I The application must protect from Cross-Site Scripting (XSS) vulnerabilities.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>10</CxDescriptionID>
+                        <QueryVersionCode>142</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>Resource_Injection</Name>
+                        <QueryId>143</QueryId>
+                        <Source>CxList socket = All.FindByType(typeof(ObjectCreateExpr)).FindByShortName("tcplistener");
+                            result = Find_Interactive_Inputs().DataInfluencingOn(All.GetByAncs(socket));</Source>
+                        <Cwe>99</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>241</Id>
+                                <CategoryName>APSC-DV-002560 - CAT I The application must not be subject to input handling vulnerabilities.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>11</CxDescriptionID>
+                        <QueryVersionCode>143</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>Second_Order_SQL_Injection</Name>
+                        <QueryId>144</QueryId>
+                        <Source>CxList db = Find_DB_Out();
+                            CxList sanitize = Find_Sanitize();
+                            CxList read = Find_Read();
+                            CxList dbParams = All.GetParameters(Find_DB());
+
+                            result = All.FindSQLInjections(db + read, dbParams, sanitize);</Source>
+                        <Cwe>89</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>239</Id>
+                                <CategoryName>APSC-DV-002540 - CAT I The application must not be vulnerable to SQL Injection.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1969</CxDescriptionID>
+                        <QueryVersionCode>144</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>SQL_Injection</Name>
+                        <QueryId>145</QueryId>
+                        <Source>result = Common_High_Risk.SQL_Injection();</Source>
+                        <Cwe>89</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>239</Id>
+                                <CategoryName>APSC-DV-002540 - CAT I The application must not be vulnerable to SQL Injection.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1986</CxDescriptionID>
+                        <QueryVersionCode>51485732</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>Stored_XSS</Name>
+                        <QueryId>146</QueryId>
+                        <Source>CxList db = Find_DB_Out();
+                            CxList outputs = Find_XSS_Outputs();
+                            CxList sanitize = Find_XSS_Sanitize() - Find_LDAP();
+
+                            result = All.FindXSS(db + Find_IO(), outputs, sanitize);</Source>
+                        <Cwe>79</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>9</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.7 - Cross-site scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>15</Id>
+                                <CategoryName>A3-Cross-Site Scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>50</Id>
+                                <CategoryName>SI-15 Information Output Filtering (P0)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>58</Id>
+                                <CategoryName>A7-Cross-Site Scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>234</Id>
+                                <CategoryName>APSC-DV-002490 - CAT I The application must protect from Cross-Site Scripting (XSS) vulnerabilities.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>4</CxDescriptionID>
+                        <QueryVersionCode>146</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>UTF7_XSS</Name>
+                        <QueryId>147</QueryId>
+                        <Source>CxList UTF7 = Find_Strings().FindByName("utf-7");
+                            CxList response = All.FindByName("response.charset");
+
+                            UTF7 = response.DataInfluencedBy(UTF7);
+
+                            if(UTF7.Count > 0)
+                            {
+                            result = Find_XSS_Outputs().DataInfluencedBy(Find_Interactive_Inputs());
+                            }</Source>
+                        <Cwe>79</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>9</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.7 - Cross-site scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>15</Id>
+                                <CategoryName>A3-Cross-Site Scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>50</Id>
+                                <CategoryName>SI-15 Information Output Filtering (P0)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>58</Id>
+                                <CategoryName>A7-Cross-Site Scripting (XSS)</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>234</Id>
+                                <CategoryName>APSC-DV-002490 - CAT I The application must protect from Cross-Site Scripting (XSS) vulnerabilities.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>10</CxDescriptionID>
+                        <QueryVersionCode>147</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>XPath_Injection</Name>
+                        <QueryId>148</QueryId>
+                        <Source>CxList XPath =
+                            Find_Member_With_Target("Microsoft.XMLDOM", "SelectSingleNode") +
+                            Find_Member_With_Target("Msxml.DOMDocument*", "SelectSingleNode") +
+                            Find_Member_With_Target("Msxml2.DOMDocument*", "SelectSingleNode") +
+
+                            Find_Member_With_Target("Microsoft.XMLDOM", "SelectNodes") +
+                            Find_Member_With_Target("Msxml.DOMDocument*", "SelectNodes") +
+                            Find_Member_With_Target("Msxml2.DOMDocument*", "SelectNodes");
+
+
+                            CxList docElement =
+                            Find_Member_With_Target("Microsoft.XMLDOM", "DocumentElement") +
+                            Find_Member_With_Target("Msxml.DOMDocument*", "DocumentElement") +
+                            Find_Member_With_Target("Msxml2.DOMDocument*", "DocumentElement");
+
+                            CxList docElementXPath =
+                            docElement.GetMembersOfTarget().FindByShortName("SelectSingleNode", false) +
+                            docElement.GetMembersOfTarget().FindByShortName("SelectNodes", false);
+
+                            XPath.Add(docElementXPath);
+
+                            CxList inputs = Find_Interactive_Inputs();
+                            CxList sanitized = Find_Sanitize();
+                            result = XPath.InfluencedByAndNotSanitized(inputs, sanitized);</Source>
+                        <Cwe>643</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>241</Id>
+                                <CategoryName>APSC-DV-002560 - CAT I The application must not be subject to input handling vulnerabilities.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1242</CxDescriptionID>
+                        <QueryVersionCode>148</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                    <CxWSQuery>
+                        <Name>Dangerous_File_Upload</Name>
+                        <QueryId>151</QueryId>
+                        <Source>CxList file = All.FindByName("*.postedfile.filename");
+                            CxList inputs = Find_Interactive_Inputs();
+                            CxList save = All.FindByName("*.postedfile.saveas");
+                            CxList MapPath = All.FindByName("server.mappath");
+
+                            result = save.DataInfluencedBy(file + inputs) -
+                            save.DataInfluencedBy(MapPath);</Source>
+                        <Cwe>434</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>10</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>7</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.4 - Insecure communications</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>238</Id>
+                                <CategoryName>APSC-DV-002530 - CAT II The application must validate all input.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>309</CxDescriptionID>
+                        <QueryVersionCode>51546629</QueryVersionCode>
+                        <EngineMetadata/>
+                    </CxWSQuery>
+                </Queries>
+                <IsReadOnly>false</IsReadOnly>
+                <IsEncrypted>false</IsEncrypted>
+                <Description/>
+                <Language>128</Language>
+                <LanguageName>ASP</LanguageName>
+                <PackageTypeName>Cx</PackageTypeName>
+                <ProjectId>0</ProjectId>
+                <PackageType>Cx</PackageType>
+                <PackageFullName>ASP:Cx:ASP_High_Risk</PackageFullName>
+                <OwningTeam>0</OwningTeam>
+                <Status>Original</Status>
+                <LanguageStateHash>0131552888450479</LanguageStateHash>
+                <LanguageStateDate>2022-04-21T19:26:26.93</LanguageStateDate>
+            </CxWSQueryGroup>
+            <CxWSQueryGroup>
+                <Name>CSharp_High_Risk</Name>
+                <PackageId>100000</PackageId>
+                <Queries>
+                    <CxWSQuery>
+                        <Name>SQL_Injection</Name>
+                        <QueryId>100000</QueryId>
+                        <Source>result = base.SQL_Injection();</Source>
+                        <Cwe>89</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>100000</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>239</Id>
+                                <CategoryName>APSC-DV-002540 - CAT I The application must not be vulnerable to SQL Injection.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1502</CxDescriptionID>
+                        <QueryVersionCode>6050175002</QueryVersionCode>
+                    </CxWSQuery>
+                </Queries>
+                <IsReadOnly>false</IsReadOnly>
+                <IsEncrypted>false</IsEncrypted>
+                <Description/>
+                <Language>1</Language>
+                <LanguageName>CSharp</LanguageName>
+                <PackageTypeName>Corp</PackageTypeName>
+                <ProjectId>0</ProjectId>
+                <PackageType>Corporate</PackageType>
+                <PackageFullName>CSharp:Corp:CSharp_High_Risk</PackageFullName>
+                <OwningTeam>0</OwningTeam>
+                <Status>Original</Status>
+                <LanguageStateHash>0807066668199366</LanguageStateHash>
+                <LanguageStateDate>2022-04-21T19:26:26.93</LanguageStateDate>
+            </CxWSQueryGroup>
+        </QueryGroups>
+    </GetQueryCollectionResult>
+</GetQueryCollectionResponse>

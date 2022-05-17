@@ -1,17 +1,28 @@
 package astquery
 
 import (
+	"encoding/xml"
 	"fmt"
 	"hash/fnv"
 	"strconv"
+
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 )
 
-const queryIDIntBase = 10
+const (
+	queryIDIntBase       = 10
+	notCustomPackageType = "Cx"
+)
 
-type Provider struct{}
+type Provider struct {
+	queryProvider interfaces.QueriesRepo
+}
 
-func NewProvider() (*Provider, error) {
-	return &Provider{}, nil
+func NewProvider(queryProvider interfaces.QueriesRepo) (*Provider, error) {
+	return &Provider{
+		queryProvider: queryProvider,
+	}, nil
 }
 
 func (e *Provider) GetQueryID(language, name, group string) (string, error) {
@@ -21,6 +32,29 @@ func (e *Provider) GetQueryID(language, name, group string) (string, error) {
 		return "", queryIDErr
 	}
 	return strconv.FormatUint(queryID, queryIDIntBase), nil
+}
+
+func (e *Provider) GetCustomQueriesList() (*soap.GetQueryCollectionResponse, error) {
+	var output soap.GetQueryCollectionResponse
+	queryResponse, err := e.queryProvider.GetQueriesList()
+	if err != nil {
+		return nil, err
+	}
+
+	output.XMLName = xml.Name{Local: "GetQueryCollectionResponse"}
+	output.GetQueryCollectionResult.IsSuccessful = true
+	output.GetQueryCollectionResult.XMLName = xml.Name{Local: "GetQueryCollectionResult"}
+	output.GetQueryCollectionResult.QueryGroups.XMLName = xml.Name{Local: "QueryGroups"}
+	output.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup = []soap.CxWSQueryGroup{}
+
+	for _, v := range queryResponse.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
+		if v.PackageType != notCustomPackageType {
+			output.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup =
+				append(output.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup, v)
+		}
+	}
+
+	return &output, nil
 }
 
 func hash(s string) (uint64, error) {

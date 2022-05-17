@@ -1,14 +1,18 @@
 package internal
 
 import (
+	"encoding/xml"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
+	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
+	mock_interfaces_query_common "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query"
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
 	mock_integration_rest "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/rest"
@@ -1048,6 +1052,7 @@ func TestFetchResultsData(t *testing.T) {
 func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil)
@@ -1059,12 +1064,14 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users fails if fetch or write fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil)
@@ -1079,12 +1086,14 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.EqualError(t, result, "failed fetching roles")
 	})
 	t.Run("export users and teams success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
@@ -1097,12 +1106,14 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users and teams fail if fetch or write fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
@@ -1129,12 +1140,14 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.EqualError(t, result, "failed fetching LDAP team mappings")
 	})
 	t.Run("export users, teams and results success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		projectPage := []rest.ProjectWithLastScanID{
 			{ID: 1, LastScanID: 1},
@@ -1170,12 +1183,14 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users, teams and results fails if result processing fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
@@ -1192,12 +1207,14 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.EqualError(t, result, "error searching for results")
 	})
 	t.Run("empty export if no export options selected", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		args := Args{
@@ -1206,12 +1223,14 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("empty export if export options are invalid", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		args := Args{
@@ -1220,7 +1239,8 @@ func TestFetchSelectedData(t *testing.T) {
 		}
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
-		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond, metadataProvider)
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider)
 
 		assert.NoError(t, result)
 	})
@@ -1333,6 +1353,24 @@ func TestFetchProjects(t *testing.T) {
 			AnyTimes()
 
 		result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+
+		assert.NoError(t, result)
+	})
+}
+
+func TestCustomQueries(t *testing.T) {
+	t.Run("fetch custom queries", func(t *testing.T) {
+		var customQueriesObj soap.GetQueryCollectionResponse
+		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		customQueries, ioCustomErr := os.ReadFile("../test/data/queries/custom_queries.xml")
+		assert.NoError(t, ioCustomErr)
+		_ = xml.Unmarshal(customQueries, &customQueriesObj)
+		queryProvider.EXPECT().GetCustomQueriesList().Return(&customQueriesObj, nil).Times(1)
+		exporter.EXPECT().AddFile(export2.QueriesFileName, gomock.Any()).Return(nil)
+
+		result := fetchQueriesData(queryProvider, exporter)
 
 		assert.NoError(t, result)
 	})
