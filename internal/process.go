@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	"net/http"
 	"os"
 	"time"
@@ -206,7 +207,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 
 func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args, retryAttempts int,
 	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
-	astQueryProvider *astquery.Provider,
+	astQueryProvider interfaces.ASTQueryProvider,
 ) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export2.GetOptions() {
@@ -345,7 +346,7 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 	return nil
 }
 
-func fetchQueriesData(client *astquery.Provider, exporter export2.Exporter) error {
+func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Exporter) error {
 	log.Info().Msg("collecting custom queries")
 	queryResp, err := client.GetCustomQueriesList()
 	if err != nil {

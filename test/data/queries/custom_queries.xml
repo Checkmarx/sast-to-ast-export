@@ -1,0 +1,96 @@
+<GetQueryCollectionResponse>
+    <GetQueryCollectionResult>
+        <IsSuccesfull>true</IsSuccesfull>
+        <QueryGroups>
+            <CxWSQueryGroup>
+                <Name>CSharp_High_Risk</Name>
+                <PackageId>100000</PackageId>
+                <Queries>
+                    <CxWSQuery>
+                        <Name>SQL_Injection</Name>
+                        <QueryId>100000</QueryId>
+                        <Source>result = base.SQL_Injection();</Source>
+                        <Cwe>89</Cwe>
+                        <IsExecutable>true</IsExecutable>
+                        <IsEncrypted>false</IsEncrypted>
+                        <Severity>3</Severity>
+                        <PackageId>100000</PackageId>
+                        <Status>Original</Status>
+                        <Type>Regular</Type>
+                        <Categories>
+                            <CxQueryCategory>
+                                <Id>4</Id>
+                                <CategoryName>PCI DSS (3.2) - 6.5.1 - Injection flaws - particularly SQL injection</CategoryName>
+                                <CategoryType>
+                                    <Id>2</Id>
+                                    <Name>PCI DSS v3.2</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>13</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>3</Id>
+                                    <Name>OWASP Top 10 2013</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>29</Id>
+                                <CategoryName>System And Information Integrity</CategoryName>
+                                <CategoryType>
+                                    <Id>4</Id>
+                                    <Name>FISMA 2014</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>48</Id>
+                                <CategoryName>SI-10 Information Input Validation (P1)</CategoryName>
+                                <CategoryType>
+                                    <Id>5</Id>
+                                    <Name>NIST SP 800-53</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>52</Id>
+                                <CategoryName>A1-Injection</CategoryName>
+                                <CategoryType>
+                                    <Id>6</Id>
+                                    <Name>OWASP Top 10 2017</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                            <CxQueryCategory>
+                                <Id>239</Id>
+                                <CategoryName>APSC-DV-002540 - CAT I The application must not be vulnerable to SQL Injection.</CategoryName>
+                                <CategoryType>
+                                    <Id>8</Id>
+                                    <Name>ASD STIG 4.10</Name>
+                                    <Order>0</Order>
+                                </CategoryType>
+                            </CxQueryCategory>
+                        </Categories>
+                        <CxDescriptionID>1502</CxDescriptionID>
+                        <QueryVersionCode>6050175002</QueryVersionCode>
+                    </CxWSQuery>
+                </Queries>
+                <IsReadOnly>false</IsReadOnly>
+                <IsEncrypted>false</IsEncrypted>
+                <Description/>
+                <Language>1</Language>
+                <LanguageName>CSharp</LanguageName>
+                <PackageTypeName>Corp</PackageTypeName>
+                <ProjectId>0</ProjectId>
+                <PackageType>Corporate</PackageType>
+                <PackageFullName>CSharp:Corp:CSharp_High_Risk</PackageFullName>
+                <OwningTeam>0</OwningTeam>
+                <Status>Original</Status>
+                <LanguageStateHash>0807066668199366</LanguageStateHash>
+                <LanguageStateDate>2022-04-21T19:26:26.93</LanguageStateDate>
+            </CxWSQueryGroup>
+        </QueryGroups>
+    </GetQueryCollectionResult>
+</GetQueryCollectionResponse>

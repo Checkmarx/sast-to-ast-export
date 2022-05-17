@@ -1,6 +1,7 @@
 package astquery
 
 import (
+	"encoding/xml"
 	"fmt"
 	"hash/fnv"
 	"strconv"
@@ -40,7 +41,10 @@ func (e *Provider) GetCustomQueriesList() (*soap.GetQueryCollectionResponse, err
 		return nil, err
 	}
 
+	output.XMLName = xml.Name{Local: "GetQueryCollectionResponse"}
 	output.GetQueryCollectionResult.IsSuccessful = true
+	output.GetQueryCollectionResult.XMLName = xml.Name{Local: "GetQueryCollectionResult"}
+	output.GetQueryCollectionResult.QueryGroups.XMLName = xml.Name{Local: "QueryGroups"}
 	output.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup = []soap.CxWSQueryGroup{}
 
 	for _, v := range queryResponse.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
