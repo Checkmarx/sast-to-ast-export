@@ -109,6 +109,21 @@ func (mr *MockClientMockRecorder) GetLdapTeamMappings() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLdapTeamMappings", reflect.TypeOf((*MockClient)(nil).GetLdapTeamMappings))
 }
 
+// GetPresets mocks base method.
+func (m *MockClient) GetPresets() ([]*rest.PresetShort, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPresets")
+	ret0, _ := ret[0].([]*rest.PresetShort)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPresets indicates an expected call of GetPresets.
+func (mr *MockClientMockRecorder) GetPresets() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPresets", reflect.TypeOf((*MockClient)(nil).GetPresets))
+}
+
 // GetProjects mocks base method.
 func (m *MockClient) GetProjects(arg0, arg1, arg2 string, arg3, arg4 int) ([]*rest.Project, error) {
 	m.ctrl.T.Helper()

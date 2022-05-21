@@ -17,12 +17,14 @@ const (
 	errResponseUnmarshalFailed = "could not unmarshal response"
 	errSoapCallFailed          = "SOAP call failed"
 	errCannotGetQueryList      = "Cannot get Query list"
+	errCannotGetPresetDetail   = "Cannot get preset detail %d"
 )
 
 type Adapter interface {
 	GetSourcesByScanID(scanID string, filenames []string) (*GetSourcesByScanIDResponse, error)
 	GetResultPathsForQuery(scanID string, queryID string) (*GetResultPathsForQueryResponse, error)
 	GetQueryCollection() (*GetQueryCollectionResponse, error)
+	GetPresetDetails(ID int) (*GetPresetDetailsResponse, error)
 }
 
 type Client struct {
@@ -105,6 +107,26 @@ func (e *Client) GetQueryCollection() (*GetQueryCollectionResponse, error) {
 	}
 	if !response.GetQueryCollectionResult.IsSuccessful {
 		return nil, fmt.Errorf("%s: %s", errSoapCallFailed, errCannotGetQueryList)
+	}
+	return &response, nil
+}
+
+func (e *Client) GetPresetDetails(ID int) (*GetPresetDetailsResponse, error) {
+	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{Id: ID})
+	if requestMarshalErr != nil {
+		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
+	}
+	envelope, callErr := e.call("GetPresetDetails", requestBytes)
+	if callErr != nil {
+		return nil, errors.Wrap(callErr, errSoapCallFailed)
+	}
+	var response GetPresetDetailsResponse
+	unmarshalErr := xml.Unmarshal(envelope.Body.Contents, &response)
+	if unmarshalErr != nil {
+		return nil, errors.Wrap(unmarshalErr, errResponseUnmarshalFailed)
+	}
+	if !response.GetPresetDetailsResult.IsSuccessful {
+		return nil, fmt.Errorf("%s: "+errCannotGetPresetDetail, errSoapCallFailed, ID)
 	}
 	return &response, nil
 }

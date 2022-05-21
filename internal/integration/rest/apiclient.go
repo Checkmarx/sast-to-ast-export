@@ -16,6 +16,7 @@ const (
 	usersEndpoint         = "/CxRestAPI/auth/Users"
 	teamsEndpoint         = "/CxRestAPI/auth/Teams"
 	rolesEndpoint         = "/CxRestAPI/auth/Roles"
+	presetsEndpoint       = "/CxRestAPI/sast/presets"
 	projectsODataEndpoint = "/Cxwebinterface/odata/v1/Projects"
 
 	ldapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
@@ -39,6 +40,7 @@ type Client interface {
 	GetRoles() ([]byte, error)
 	GetTeams() ([]*Team, error)
 	GetProjects(fromDate, teamName, projectIds string, offset, limit int) ([]*Project, error)
+	GetPresets() ([]*PresetShort, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
 	GetLdapTeamMappings() ([]byte, error)
@@ -274,6 +276,12 @@ func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, l
 		projects = append(projects, project)
 	}
 	return projects, nil
+}
+
+func (c *APIClient) GetPresets() ([]*PresetShort, error) {
+	var presets []*PresetShort
+	err := c.unmarshalResponseBody(presetsEndpoint, &presets)
+	return presets, err
 }
 
 func (c *APIClient) GetLdapServers() ([]byte, error) {

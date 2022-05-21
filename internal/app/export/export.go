@@ -39,6 +39,10 @@ const (
 	ProjectsFileName = "projects.json"
 	// QueriesFileName queries file
 	QueriesFileName = "queries.xml"
+	// PresetsDirName presets directory name
+	PresetsDirName = "presets"
+	// PresetsFileName presets file
+	PresetsFileName = "presets.json"
 
 	encryptedKeyFileName = "key.enc.bin"
 
@@ -47,6 +51,7 @@ const (
 
 	symmetricKeySize = 32
 	filePerm         = 0600
+	dirPerm          = 0750
 )
 
 type Exporter interface {
@@ -55,6 +60,7 @@ type Exporter interface {
 	CreateExportPackage(prefix, outputPath string) (string, error)
 	Clean() error
 	GetTmpDir() string
+	CreateDir(dirName string) error
 }
 
 type Export struct {
@@ -194,6 +200,12 @@ func (e *Export) Clean() error {
 // CreateExportFileName creates a file name with the format: {prefix}-yyyy-mm-dd-HH-MM-SS.zip
 func CreateExportFileName(prefix string, now time.Time) string {
 	return fmt.Sprintf("%s-%s.zip", prefix, now.Format(DateTimeFormat))
+}
+
+// CreateDir creates directory inside temp directory
+func (e *Export) CreateDir(dirName string) error {
+	fullDirName := path.Join(e.tmpDir, dirName)
+	return os.Mkdir(fullDirName, dirPerm)
 }
 
 func getEncryptedKey(key []byte) (encKey []byte, err error) {

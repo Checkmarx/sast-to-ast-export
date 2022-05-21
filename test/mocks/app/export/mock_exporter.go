@@ -75,6 +75,20 @@ func (mr *MockExporterMockRecorder) Clean() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clean", reflect.TypeOf((*MockExporter)(nil).Clean))
 }
 
+// CreateDir mocks base method.
+func (m *MockExporter) CreateDir(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDir", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateDir indicates an expected call of CreateDir.
+func (mr *MockExporterMockRecorder) CreateDir(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDir", reflect.TypeOf((*MockExporter)(nil).CreateDir), arg0)
+}
+
 // CreateExportPackage mocks base method.
 func (m *MockExporter) CreateExportPackage(arg0, arg1 string) (string, error) {
 	m.ctrl.T.Helper()

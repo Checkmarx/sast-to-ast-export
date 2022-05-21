@@ -1,0 +1,16 @@
+<GetPresetDetailsResponse>
+    <GetPresetDetailsResult>
+        <IsSuccesfull>true</IsSuccesfull>
+        <preset>
+            <queryIds/>
+            <id>100000</id>
+            <name>My_new_preset</name>
+            <owningteam>12321</owningteam>
+            <isPublic>true</isPublic>
+            <owner>ssd</owner>
+            <isUserAllowToUpdate>true</isUserAllowToUpdate>
+            <isUserAllowToDelete>true</isUserAllowToDelete>
+            <IsDuplicate>false</IsDuplicate>
+        </preset>
+    </GetPresetDetailsResult>
+</GetPresetDetailsResponse>

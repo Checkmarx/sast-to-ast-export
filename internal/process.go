@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/astquery"
@@ -13,12 +14,14 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/permissions"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/preset"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/report"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/methodline"
+	presetrepo "github.com/checkmarxDev/ast-sast-export/internal/persistence/preset"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/queries"
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/sourcefile"
 	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
@@ -41,6 +44,10 @@ const (
 	scanReportCreateAttempts = 10
 	scanReportCreateMinSleep = 1 * time.Second
 	scanReportCreateMaxSleep = 5 * time.Minute
+
+	presetCreateAttempts = 10
+	presetCreateMinSleep = 1 * time.Second
+	presetCreateMaxSleep = 5 * time.Minute
 )
 
 type ReportConsumeOutput struct {
@@ -125,11 +132,14 @@ func RunExport(args *Args) error {
 	sourceRepo := sourcefile.NewRepo(soapClient)
 	methodLineRepo := methodline.NewRepo(soapClient)
 	queriesRepo := queries.NewRepo(soapClient)
+	presetRepo := presetrepo.NewRepo(soapClient)
 
 	astQueryProvider, astQueryProviderErr := astquery.NewProvider(queriesRepo)
 	if astQueryProviderErr != nil {
 		return errors.Wrap(astQueryProviderErr, "could not create AST query provider")
 	}
+
+	presetProvider := preset.NewProvider(presetRepo)
 
 	similarityIDCalculator, similarityIDCalculatorErr := similarity.NewSimilarityIDCalculator()
 	if similarityIDCalculatorErr != nil {
@@ -150,7 +160,7 @@ func RunExport(args *Args) error {
 	metadataSource := metadata.NewMetadataFactory(astQueryProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
-		scanReportCreateMaxSleep, metadataSource, astQueryProvider)
+		scanReportCreateMaxSleep, metadataSource, astQueryProvider, presetProvider)
 	if fetchErr != nil {
 		return errors.Wrap(fetchErr, "could not fetch selected data")
 	}
@@ -207,7 +217,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 
 func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args, retryAttempts int,
 	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
-	astQueryProvider interfaces.ASTQueryProvider,
+	astQueryProvider interfaces.ASTQueryProvider, presetProvider interfaces.PresetProvider,
 ) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	for _, exportOption := range export2.GetOptions() {
@@ -228,6 +238,10 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 				}
 			case export2.QueriesOption:
 				if err := fetchQueriesData(astQueryProvider, exporter); err != nil {
+					return err
+				}
+			case export2.PresetsOption:
+				if err := fetchPresetsData(client, presetProvider, exporter); err != nil {
 					return err
 				}
 			case export2.ResultsOption:
@@ -360,6 +374,56 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 
 	if errExp := exporter.AddFile(export2.QueriesFileName, queriesData); errExp != nil {
 		return errors.Wrap(errExp, "error with exporting custom queries list to file")
+	}
+
+	return nil
+}
+
+func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, exporter export2.Exporter) error {
+	log.Info().Msg("collecting presets")
+	consumerCount := worker.GetNumCPU()
+	presetJobs := make(chan PresetJob)
+
+	presetList, listErr := client.GetPresets()
+	if listErr != nil {
+		return errors.Wrap(listErr, "error with getting preset list")
+	}
+	if err := exporter.CreateDir(export2.PresetsDirName); err != nil {
+		return err
+	}
+	if err := exporter.AddFileWithDataSource(getPresetFileName(export2.PresetsFileName),
+		export2.NewJSONDataSource(presetList)); err != nil {
+		return err
+	}
+
+	// create and fetch preset by the list
+	go producePresets(presetList, presetJobs)
+
+	presetCount := len(presetList)
+	presetConsumeOutputs := make(chan PresetConsumeOutput, presetCount)
+
+	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
+		go consumePresets(soapClient, exporter, consumerID, presetJobs, presetConsumeOutputs)
+	}
+
+	presetConsumeErrorCount := 0
+	for i := 0; i < presetCount; i++ {
+		presetOutput := <-presetConsumeOutputs
+		presetIndex := i + 1
+		if presetOutput.Err == nil {
+			log.Info().
+				Int("presetID", presetOutput.PresetID).
+				Msgf("collected preset %d/%d", presetIndex, presetCount)
+		} else {
+			presetConsumeErrorCount++
+			log.Warn().
+				Int("presetID", presetOutput.PresetID).
+				Msgf("failed collecting preset %d/%d", presetIndex, presetCount)
+		}
+	}
+
+	if presetConsumeErrorCount > 0 {
+		log.Warn().Msgf("failed collecting %d/%d presets", presetConsumeErrorCount, presetCount)
 	}
 
 	return nil
@@ -559,4 +623,65 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 		}
 	}
+}
+
+func getPresetFileName(fileName string) string {
+	return path.Join(export2.PresetsDirName, fileName)
+}
+
+func producePresets(presetList []*rest.PresetShort, presetJobs chan<- PresetJob) {
+	for _, v := range presetList {
+		presetJobs <- PresetJob{
+			PresetID: v.ID,
+		}
+	}
+	close(presetJobs)
+}
+
+func consumePresets(soapClient interfaces.PresetProvider, exporter export2.Exporter, workerID int,
+	presetJobs <-chan PresetJob, done chan<- PresetConsumeOutput) {
+	for presetJob := range presetJobs {
+		l := log.With().
+			Int("PresetID", presetJob.PresetID).
+			Int("worker", workerID).
+			Logger()
+		presetData, presetErr := getPresetData(soapClient, presetJob.PresetID, workerID)
+		if presetErr != nil {
+			l.Debug().Err(presetErr).Msgf("failed creating preset after %d attempts", presetCreateAttempts)
+			done <- PresetConsumeOutput{Err: presetErr, PresetID: presetJob.PresetID}
+			continue
+		}
+
+		if errExp := exporter.AddFile(getPresetFileName(fmt.Sprintf("%d.xml", presetJob.PresetID)), presetData); errExp != nil {
+			err := errors.Wrapf(errExp, "error with exporting preset %d list to file", presetJob.PresetID)
+			done <- PresetConsumeOutput{Err: err, PresetID: presetJob.PresetID}
+			continue
+		}
+
+		done <- PresetConsumeOutput{Err: nil, PresetID: presetJob.PresetID}
+	}
+}
+
+func getPresetData(soapClient interfaces.PresetProvider, presetID, workerID int) ([]byte, error) {
+	var presetErr error
+	for i := 1; i <= presetCreateAttempts; i++ {
+		presetResponse, err := soapClient.GetPresetDetails(presetID)
+		if err != nil {
+			log.Debug().Err(err).
+				Int("PresetID", presetID).
+				Int("worker", workerID).
+				Int("attempt", i).
+				Msg("failed creating preset")
+			time.Sleep(retryablehttp.DefaultBackoff(presetCreateMinSleep, presetCreateMaxSleep, i, nil))
+		} else {
+			presetData, marshalErr := xml.MarshalIndent(presetResponse, "  ", "    ")
+			if marshalErr != nil {
+				return nil, errors.Wrapf(marshalErr, "marshal error with getting preset %d", presetID)
+			}
+			return presetData, nil
+		}
+		presetErr = err
+	}
+
+	return nil, presetErr
 }

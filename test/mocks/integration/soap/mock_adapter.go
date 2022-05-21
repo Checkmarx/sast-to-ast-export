@@ -34,6 +34,21 @@ func (m *MockAdapter) EXPECT() *MockAdapterMockRecorder {
 	return m.recorder
 }
 
+// GetPresetDetails mocks base method.
+func (m *MockAdapter) GetPresetDetails(arg0 int) (*soap.GetPresetDetailsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPresetDetails", arg0)
+	ret0, _ := ret[0].(*soap.GetPresetDetailsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPresetDetails indicates an expected call of GetPresetDetails.
+func (mr *MockAdapterMockRecorder) GetPresetDetails(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPresetDetails", reflect.TypeOf((*MockAdapter)(nil).GetPresetDetails), arg0)
+}
+
 // GetQueryCollection mocks base method.
 func (m *MockAdapter) GetQueryCollection() (*soap.GetQueryCollectionResponse, error) {
 	m.ctrl.T.Helper()

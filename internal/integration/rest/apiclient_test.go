@@ -518,6 +518,35 @@ func TestAPIClient_CreateScanReport(t *testing.T) {
 	})
 }
 
+func TestAPIClient_GetPresets(t *testing.T) {
+	t.Run("returns presets response", func(t *testing.T) {
+		responseJSON := `[{"id": 1, "name": "All", "ownerName": "CxUser"},
+						  {"id": 9, "name": "Android", "ownerName": "CxUser"},
+						  {"id": 100000, "name": "New_custom_preset", "ownerName": "Custom_user"}]`
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetPresets()
+
+		assert.NoError(t, err)
+		expected := []*PresetShort{
+			{ID: 1, Name: "All", OwnerName: "CxUser"},
+			{ID: 9, Name: "Android", OwnerName: "CxUser"},
+			{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
+		}
+		assert.Equal(t, expected, result)
+	})
+	t.Run("returns error for presets if response is not HTTP OK", func(t *testing.T) {
+		client, clientErr := newMockClient(makeBadRequestResponse(ErrorResponseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetPresets()
+
+		assert.Error(t, err)
+		assert.Len(t, result, 0)
+	})
+}
+
 func makeOkResponse(body string) *http.Response {
 	return &http.Response{
 		StatusCode: 200,

@@ -100,6 +100,12 @@ type (
 		CustomFields []*CustomField `json:"CustomFields"`
 	}
 
+	PresetShort struct {
+		ID        int    `json:"id"`
+		Name      string `json:"name"`
+		OwnerName string `json:"ownerName"`
+	}
+
 	User struct {
 		ID                       int      `json:"id"`
 		UserName                 string   `json:"userName"`

@@ -194,3 +194,21 @@ func TestCreateExportFileName(t *testing.T) {
 	expected := fmt.Sprintf("%s-2021-08-18-12-27-34.zip", prefix)
 	assert.Equal(t, expected, result)
 }
+
+func TestCreateDir(t *testing.T) {
+	prefix := "cxsast-get-tmp-dir"
+	export, err := CreateExport(prefix)
+	assert.NoError(t, err)
+	defer func() {
+		closeErr := export.Clean()
+		assert.NoError(t, closeErr)
+	}()
+
+	testDirName := "test_name"
+	errDir := export.CreateDir(testDirName)
+
+	assert.NoError(t, errDir)
+	tempDirName := export.GetTmpDir()
+
+	assert.DirExists(t, path.Join(tempDirName, testDirName))
+}

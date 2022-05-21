@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	mock_interfaces_query_common "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query"
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
+	mock_preset_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/preset"
 	mock_integration_rest "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/rest"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
@@ -1053,6 +1055,7 @@ func TestFetchSelectedData(t *testing.T) {
 	t.Run("export users success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil)
@@ -1065,13 +1068,14 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users fails if fetch or write fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil)
@@ -1087,13 +1091,14 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.EqualError(t, result, "failed fetching roles")
 	})
 	t.Run("export users and teams success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
@@ -1107,13 +1112,14 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users and teams fail if fetch or write fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
@@ -1141,13 +1147,14 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.EqualError(t, result, "failed fetching LDAP team mappings")
 	})
 	t.Run("export users, teams and results success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		projectPage := []rest.ProjectWithLastScanID{
 			{ID: 1, LastScanID: 1},
@@ -1184,13 +1191,14 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("export users, teams and results fails if result processing fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
@@ -1208,13 +1216,14 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.EqualError(t, result, "error searching for results")
 	})
 	t.Run("empty export if no export options selected", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		args := Args{
@@ -1224,13 +1233,14 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.NoError(t, result)
 	})
 	t.Run("empty export if export options are invalid", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		args := Args{
@@ -1240,7 +1250,7 @@ func TestFetchSelectedData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, queryProvider)
+			metadataProvider, queryProvider, presetProvider)
 
 		assert.NoError(t, result)
 	})
@@ -1373,5 +1383,59 @@ func TestCustomQueries(t *testing.T) {
 		result := fetchQueriesData(queryProvider, exporter)
 
 		assert.NoError(t, result)
+	})
+}
+
+func TestPresets(t *testing.T) {
+	presetList := []*rest.PresetShort{
+		{ID: 1, Name: "All", OwnerName: "CxUser"},
+		{ID: 9, Name: "Android", OwnerName: "CxUser"},
+		{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
+	}
+
+	t.Run("fetch presets successfully", func(t *testing.T) {
+		var preset1, preset9, preset100000 soap.GetPresetDetailsResponse
+		ctrl := gomock.NewController(t)
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		presetXML1, io1Err := os.ReadFile("../test/data/presets/1.xml")
+		assert.NoError(t, io1Err)
+		_ = xml.Unmarshal(presetXML1, &preset1)
+		presetXML9, io9Err := os.ReadFile("../test/data/presets/9.xml")
+		assert.NoError(t, io9Err)
+		_ = xml.Unmarshal(presetXML9, &preset9)
+		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
+		assert.NoError(t, io100000Err)
+		_ = xml.Unmarshal(presetXML100000, &preset100000)
+		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
+		presetProvider.EXPECT().GetPresetDetails(1).Return(&preset1, nil)
+		presetProvider.EXPECT().GetPresetDetails(9).Return(&preset9, nil)
+		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
+		exporter.EXPECT().CreateDir(export2.PresetsDirName).Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(path.Join(export2.PresetsDirName, export2.PresetsFileName), gomock.Any()).
+			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
+				_, callbackErr := callback()
+				return callbackErr
+			}).AnyTimes()
+		exporter.EXPECT().AddFile(path.Join(export2.PresetsDirName, "1.xml"), gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(path.Join(export2.PresetsDirName, "9.xml"), gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(path.Join(export2.PresetsDirName, "100000.xml"), gomock.Any()).Return(nil)
+
+		err := fetchPresetsData(client, presetProvider, exporter)
+
+		assert.NoError(t, err)
+	})
+	t.Run("error with fetching presets in REST client", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().GetPresets().Return(nil, fmt.Errorf("failed getting preset list")).Times(1)
+
+		err := fetchPresetsData(client, presetProvider, exporter)
+
+		assert.EqualError(t, err, "error with getting preset list: failed getting preset list")
+		assert.Error(t, err)
 	})
 }
