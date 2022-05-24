@@ -44,10 +44,6 @@ const (
 	scanReportCreateAttempts = 10
 	scanReportCreateMinSleep = 1 * time.Second
 	scanReportCreateMaxSleep = 5 * time.Minute
-
-	presetCreateAttempts = 10
-	presetCreateMinSleep = 1 * time.Second
-	presetCreateMaxSleep = 5 * time.Minute
 )
 
 type ReportConsumeOutput struct {
@@ -67,30 +63,9 @@ func RunExport(args *Args) error {
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
+	retryHttpClient := getRetryHttpClient()
 	// create api client
-	client, err := rest.NewSASTClient(args.URL, &retryablehttp.Client{
-		HTTPClient:   cleanhttp.DefaultPooledClient(),
-		Logger:       nil,
-		RetryWaitMin: httpRetryWaitMin,
-		RetryWaitMax: httpRetryWaitMax,
-		RetryMax:     httpRetryMax,
-		CheckRetry:   retryablehttp.DefaultRetryPolicy,
-		Backoff:      retryablehttp.DefaultBackoff,
-		RequestLogHook: func(logger retryablehttp.Logger, request *http.Request, i int) {
-			log.Debug().
-				Str("method", request.Method).
-				Str("url", request.URL.String()).
-				Int("attempt", i+1).
-				Msg("request")
-		},
-		ResponseLogHook: func(logger retryablehttp.Logger, response *http.Response) {
-			log.Debug().
-				Str("method", response.Request.Method).
-				Str("url", response.Request.URL.String()).
-				Int("status", response.StatusCode).
-				Msg("response")
-		},
-	})
+	client, err := rest.NewSASTClient(args.URL, retryHttpClient)
 	if err != nil {
 		return errors.Wrap(err, "could not create REST client")
 	}
@@ -128,7 +103,7 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	soapClient := soap.NewClient(args.URL, client.Token, &http.Client{})
+	soapClient := soap.NewClient(args.URL, client.Token, retryHttpClient)
 	sourceRepo := sourcefile.NewRepo(soapClient)
 	methodLineRepo := methodline.NewRepo(soapClient)
 	queriesRepo := queries.NewRepo(soapClient)
@@ -645,9 +620,9 @@ func consumePresets(soapClient interfaces.PresetProvider, exporter export2.Expor
 			Int("PresetID", presetJob.PresetID).
 			Int("worker", workerID).
 			Logger()
-		presetData, presetErr := getPresetData(soapClient, presetJob.PresetID, workerID)
+		presetData, presetErr := getPresetData(soapClient, presetJob.PresetID)
 		if presetErr != nil {
-			l.Debug().Err(presetErr).Msgf("failed creating preset after %d attempts", presetCreateAttempts)
+			l.Debug().Err(presetErr).Msgf("failed creating preset %d", presetJob.PresetID)
 			done <- PresetConsumeOutput{Err: presetErr, PresetID: presetJob.PresetID}
 			continue
 		}
@@ -662,26 +637,41 @@ func consumePresets(soapClient interfaces.PresetProvider, exporter export2.Expor
 	}
 }
 
-func getPresetData(soapClient interfaces.PresetProvider, presetID, workerID int) ([]byte, error) {
-	var presetErr error
-	for i := 1; i <= presetCreateAttempts; i++ {
-		presetResponse, err := soapClient.GetPresetDetails(presetID)
-		if err != nil {
-			log.Debug().Err(err).
-				Int("PresetID", presetID).
-				Int("worker", workerID).
-				Int("attempt", i).
-				Msg("failed creating preset")
-			time.Sleep(retryablehttp.DefaultBackoff(presetCreateMinSleep, presetCreateMaxSleep, i, nil))
-		} else {
-			presetData, marshalErr := xml.MarshalIndent(presetResponse, "  ", "    ")
-			if marshalErr != nil {
-				return nil, errors.Wrapf(marshalErr, "marshal error with getting preset %d", presetID)
-			}
-			return presetData, nil
-		}
-		presetErr = err
+func getPresetData(soapClient interfaces.PresetProvider, presetID int) ([]byte, error) {
+	presetResponse, err := soapClient.GetPresetDetails(presetID)
+	if err != nil {
+		return nil, errors.Wrap(err, "error with getting getPresetDetails")
 	}
 
-	return nil, presetErr
+	presetData, marshalErr := xml.MarshalIndent(presetResponse, "  ", "    ")
+	if marshalErr != nil {
+		return nil, errors.Wrapf(marshalErr, "marshal error with getting preset %d", presetID)
+	}
+	return presetData, nil
+}
+
+func getRetryHttpClient() *retryablehttp.Client {
+	return &retryablehttp.Client{
+		HTTPClient:   cleanhttp.DefaultPooledClient(),
+		Logger:       nil,
+		RetryWaitMin: httpRetryWaitMin,
+		RetryWaitMax: httpRetryWaitMax,
+		RetryMax:     httpRetryMax,
+		CheckRetry:   retryablehttp.DefaultRetryPolicy,
+		Backoff:      retryablehttp.DefaultBackoff,
+		RequestLogHook: func(logger retryablehttp.Logger, request *http.Request, i int) {
+			log.Debug().
+				Str("method", request.Method).
+				Str("url", request.URL.String()).
+				Int("attempt", i+1).
+				Msg("request")
+		},
+		ResponseLogHook: func(logger retryablehttp.Logger, response *http.Response) {
+			log.Debug().
+				Str("method", response.Request.Method).
+				Str("url", response.Request.URL.String()).
+				Int("status", response.StatusCode).
+				Msg("response")
+		},
+	}
 }
