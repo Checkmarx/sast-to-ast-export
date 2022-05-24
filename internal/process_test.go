@@ -1413,7 +1413,7 @@ func TestPresets(t *testing.T) {
 		presetProvider.EXPECT().GetPresetDetails(9).Return(&preset9, nil)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
 		exporter.EXPECT().CreateDir(export2.PresetsDirName).Return(nil)
-		exporter.EXPECT().AddFileWithDataSource(path.Join(export2.PresetsDirName, export2.PresetsFileName), gomock.Any()).
+		exporter.EXPECT().AddFileWithDataSource(export2.PresetsFileName, gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
 				return callbackErr
