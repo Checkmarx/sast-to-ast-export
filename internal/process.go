@@ -366,7 +366,7 @@ func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, 
 	if err := exporter.CreateDir(export2.PresetsDirName); err != nil {
 		return err
 	}
-	if err := exporter.AddFileWithDataSource(getPresetFileName(export2.PresetsFileName),
+	if err := exporter.AddFileWithDataSource(export2.PresetsFileName,
 		export2.NewJSONDataSource(presetList)); err != nil {
 		return err
 	}
