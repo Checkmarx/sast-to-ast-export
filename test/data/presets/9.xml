@@ -1,0 +1,19 @@
+<GetPresetDetailsResponse>
+    <GetPresetDetailsResult>
+        <IsSuccesfull>true</IsSuccesfull>
+        <preset>
+            <queryIds>
+                <long>503</long>
+                <long>504</long>
+            </queryIds>
+            <id>9</id>
+            <name>Android</name>
+            <owningteam>12321</owningteam>
+            <isPublic>true</isPublic>
+            <owner>CxUser</owner>
+            <isUserAllowToUpdate>true</isUserAllowToUpdate>
+            <isUserAllowToDelete>true</isUserAllowToDelete>
+            <IsDuplicate>false</IsDuplicate>
+        </preset>
+    </GetPresetDetailsResult>
+</GetPresetDetailsResponse>

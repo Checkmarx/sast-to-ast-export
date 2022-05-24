@@ -180,4 +180,40 @@ type (
 		Name    string   `xml:"Name"`
 		Order   int      `xml:"Order"`
 	}
+
+	// GetPresetDetails request types
+
+	GetPresetDetailsRequest struct {
+		XMLName xml.Name `xml:"chec:GetPresetDetails"`
+		Id      int      `xml:"chec:id"`
+	}
+
+	GetPresetDetailsResponse struct {
+		XMLName                xml.Name               `xml:"GetPresetDetailsResponse"`
+		GetPresetDetailsResult GetPresetDetailsResult `xml:"GetPresetDetailsResult"`
+	}
+
+	GetPresetDetailsResult struct {
+		XMLName      xml.Name `xml:"GetPresetDetailsResult"`
+		IsSuccessful bool     `xml:"IsSuccesfull"`
+		Preset       Preset   `xml:"preset"`
+	}
+
+	Preset struct {
+		XMLName             xml.Name `xml:"preset"`
+		QueryIds            QueryIds `xml:"queryIds"`
+		Id                  int      `xml:"id"`
+		Name                string   `xml:"name"`
+		OwningTeam          int      `xml:"owningteam"`
+		IsPublic            bool     `xml:"isPublic"`
+		Owner               string   `xml:"owner"`
+		IsUserAllowToUpdate bool     `xml:"isUserAllowToUpdate"`
+		IsUserAllowToDelete bool     `xml:"isUserAllowToDelete"`
+		IsDuplicate         bool     `xml:"IsDuplicate"`
+	}
+
+	QueryIds struct {
+		XMLName xml.Name `xml:"queryIds"`
+		Long    []int    `xml:"long"`
+	}
 )

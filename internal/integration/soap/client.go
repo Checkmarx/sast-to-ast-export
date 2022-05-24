@@ -4,10 +4,10 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"net/http"
 	"strings"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -17,21 +17,23 @@ const (
 	errResponseUnmarshalFailed = "could not unmarshal response"
 	errSoapCallFailed          = "SOAP call failed"
 	errCannotGetQueryList      = "Cannot get Query list"
+	errCannotGetPresetDetail   = "Cannot get preset detail %d"
 )
 
 type Adapter interface {
 	GetSourcesByScanID(scanID string, filenames []string) (*GetSourcesByScanIDResponse, error)
 	GetResultPathsForQuery(scanID string, queryID string) (*GetResultPathsForQueryResponse, error)
 	GetQueryCollection() (*GetQueryCollectionResponse, error)
+	GetPresetDetails(ID int) (*GetPresetDetailsResponse, error)
 }
 
 type Client struct {
 	requestURL string
-	httpClient *http.Client
+	httpClient rest.RetryableHTTPAdapter
 	authToken  *rest.AccessToken
 }
 
-func NewClient(baseURL string, authToken *rest.AccessToken, adapter *http.Client) *Client {
+func NewClient(baseURL string, authToken *rest.AccessToken, adapter rest.RetryableHTTPAdapter) *Client {
 	return &Client{
 		requestURL: fmt.Sprintf("%s/Cxwebinterface/Portal/CxWebService.asmx", baseURL),
 		authToken:  authToken,
@@ -109,6 +111,26 @@ func (e *Client) GetQueryCollection() (*GetQueryCollectionResponse, error) {
 	return &response, nil
 }
 
+func (e *Client) GetPresetDetails(ID int) (*GetPresetDetailsResponse, error) {
+	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{Id: ID})
+	if requestMarshalErr != nil {
+		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
+	}
+	envelope, callErr := e.call("GetPresetDetails", requestBytes)
+	if callErr != nil {
+		return nil, errors.Wrap(callErr, errSoapCallFailed)
+	}
+	var response GetPresetDetailsResponse
+	unmarshalErr := xml.Unmarshal(envelope.Body.Contents, &response)
+	if unmarshalErr != nil {
+		return nil, errors.Wrap(unmarshalErr, errResponseUnmarshalFailed)
+	}
+	if !response.GetPresetDetailsResult.IsSuccessful {
+		return nil, fmt.Errorf("%s: "+errCannotGetPresetDetail, errSoapCallFailed, ID)
+	}
+	return &response, nil
+}
+
 func (e *Client) call(soapAction string, requestBytes []byte) (*Envelope, error) {
 	body := fmt.Sprintf(`
 <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:chec="http://Checkmarx.com">
@@ -118,12 +140,13 @@ func (e *Client) call(soapAction string, requestBytes []byte) (*Envelope, error)
    </soap:Body>
 </soap:Envelope>
 `, string(requestBytes))
-	req, reqErr := http.NewRequest("POST", e.requestURL, strings.NewReader(body))
-	req.Header.Add("Authorization", fmt.Sprintf("%s %s", e.authToken.TokenType, e.authToken.AccessToken))
-	req.Header.Add("Content-type", fmt.Sprintf("application/soap+xml;charset=UTF-8;action=http://Checkmarx.com/%s", soapAction))
+	req, reqErr := retryablehttp.NewRequest("POST", e.requestURL, strings.NewReader(body))
 	if reqErr != nil {
 		return nil, errors.Wrap(reqErr, "could not create request")
 	}
+	req.Header.Add("Authorization", fmt.Sprintf("%s %s", e.authToken.TokenType, e.authToken.AccessToken))
+	req.Header.Add("Content-type", fmt.Sprintf("application/soap+xml;charset=UTF-8;action=http://Checkmarx.com/%s", soapAction))
+
 	resp, doErr := e.httpClient.Do(req)
 	if doErr != nil {
 		return nil, errors.Wrap(doErr, "request failed")

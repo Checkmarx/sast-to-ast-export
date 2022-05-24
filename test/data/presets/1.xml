@@ -1,0 +1,20 @@
+<GetPresetDetailsResponse>
+    <GetPresetDetailsResult>
+        <IsSuccesfull>true</IsSuccesfull>
+        <preset>
+            <queryIds>
+                <long>51</long>
+                <long>52</long>
+                <long>53</long>
+            </queryIds>
+            <id>1</id>
+            <name>All</name>
+            <owningteam>12321</owningteam>
+            <isPublic>true</isPublic>
+            <owner>CxUser</owner>
+            <isUserAllowToUpdate>true</isUserAllowToUpdate>
+            <isUserAllowToDelete>true</isUserAllowToDelete>
+            <IsDuplicate>false</IsDuplicate>
+        </preset>
+    </GetPresetDetailsResult>
+</GetPresetDetailsResponse>

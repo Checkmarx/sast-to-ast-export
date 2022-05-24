@@ -11,8 +11,10 @@ const (
 	ProjectsOption = "projects"
 	// QueriesOption represent custom queries
 	QueriesOption = "queries"
+	// PresetsOption represent presets
+	PresetsOption = "presets"
 )
 
 func GetOptions() []string {
-	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption}
+	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption, PresetsOption}
 }

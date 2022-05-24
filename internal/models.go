@@ -24,3 +24,12 @@ type TriagedScan struct {
 	ProjectID int
 	ScanID    int
 }
+
+type PresetJob struct {
+	PresetID int
+}
+
+type PresetConsumeOutput struct {
+	Err      error
+	PresetID int
+}
