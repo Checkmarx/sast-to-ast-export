@@ -23,6 +23,7 @@ const (
 	verboseArg             = "verbose"
 	projectsIds            = "project-id"
 	teamName               = "project-team"
+	queryMapping           = "query-mapping"
 
 	projectsActiveSinceDefaultValue = 180
 )
@@ -105,6 +106,7 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
+	rootCmd.Flags().StringP(queryMapping, "", "", "Path to file query mapping IDs from AST for triage")
 	rootCmd.Flags().StringP(teamName, "", "", "Team name filter")
 	rootCmd.Flags().StringP(projectsIds, "", "", "Project ID filter")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")

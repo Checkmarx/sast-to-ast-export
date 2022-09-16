@@ -44,6 +44,8 @@ const (
 	scanReportCreateAttempts = 10
 	scanReportCreateMinSleep = 1 * time.Second
 	scanReportCreateMaxSleep = 5 * time.Minute
+
+	destQueryMappingFile = "query_mapping.json"
 )
 
 type ReportConsumeOutput struct {
@@ -58,6 +60,7 @@ func RunExport(args *Args) error {
 	log.Debug().
 		Str("url", args.URL).
 		Str("export", fmt.Sprintf("%v", args.Export)).
+		Str("queryMapping", args.QueryMappingFile).
 		Int("projectsActiveSince", args.ProjectsActiveSince).
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
@@ -109,7 +112,7 @@ func RunExport(args *Args) error {
 	queriesRepo := queries.NewRepo(soapClient)
 	presetRepo := presetrepo.NewRepo(soapClient)
 
-	astQueryProvider, astQueryProviderErr := astquery.NewProvider(queriesRepo)
+	astQueryProvider, astQueryProviderErr := astquery.NewProvider(queriesRepo, args.QueryMappingFile)
 	if astQueryProviderErr != nil {
 		return errors.Wrap(astQueryProviderErr, "could not create AST query provider")
 	}
@@ -133,6 +136,11 @@ func RunExport(args *Args) error {
 	}()
 
 	metadataSource := metadata.NewMetadataFactory(astQueryProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
+
+	copyErr := copyQueryMappingFile(args.QueryMappingFile, &exportValues)
+	if copyErr != nil {
+		return errors.Wrap(copyErr, "could not copy query mapping file")
+	}
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource, astQueryProvider, presetProvider)
@@ -674,4 +682,12 @@ func getRetryHttpClient() *retryablehttp.Client {
 				Msg("response")
 		},
 	}
+}
+
+func copyQueryMappingFile(queryFileMapping string, exporter export2.Exporter) error {
+	if queryFileMapping == "" {
+		log.Info().Msg("not set query mapping file param")
+		return nil
+	}
+	return exporter.CopyFile(destQueryMappingFile, queryFileMapping)
 }

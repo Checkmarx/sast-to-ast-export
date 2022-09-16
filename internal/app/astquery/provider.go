@@ -1,9 +1,11 @@
 package astquery
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"hash/fnv"
+	"os"
 	"strconv"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
@@ -15,17 +17,47 @@ const (
 	notCustomPackageType = "Cx"
 )
 
-type Provider struct {
-	queryProvider interfaces.QueriesRepo
-}
+type (
+	QueryMap struct {
+		AstID  string `json:"astId"`
+		SastID string `json:"sastId"`
+	}
 
-func NewProvider(queryProvider interfaces.QueriesRepo) (*Provider, error) {
+	MapSource struct {
+		Mappings []QueryMap `json:"mappings"`
+	}
+
+	Provider struct {
+		queryProvider interfaces.QueriesRepo
+		mapping       []QueryMap
+	}
+)
+
+func NewProvider(queryProvider interfaces.QueriesRepo, queryMappingPath string) (*Provider, error) {
+	var mapping []QueryMap
+	if queryMappingPath != "" {
+		var mapSource MapSource
+		data, err := os.ReadFile(queryMappingPath)
+		if err != nil {
+			return nil, err
+		}
+		if jsonErr := json.Unmarshal(data, &mapSource); jsonErr != nil {
+			return nil, jsonErr
+		}
+		mapping = mapSource.Mappings
+	}
+
 	return &Provider{
 		queryProvider: queryProvider,
+		mapping:       mapping,
 	}, nil
 }
 
-func (e *Provider) GetQueryID(language, name, group string) (string, error) {
+func (e *Provider) GetQueryID(language, name, group, sastQueryID string) (string, error) {
+	mappedAstID := e.getMappedID(sastQueryID)
+	if mappedAstID != "" {
+		return mappedAstID, nil
+	}
 	sourcePath := fmt.Sprintf("queries/%s/%s/%s/%s.cs", language, group, name, name)
 	queryID, queryIDErr := hash(sourcePath)
 	if queryIDErr != nil {
@@ -55,6 +87,15 @@ func (e *Provider) GetCustomQueriesList() (*soap.GetQueryCollectionResponse, err
 	}
 
 	return &output, nil
+}
+
+func (e *Provider) getMappedID(sastID string) string {
+	for _, queryMap := range e.mapping {
+		if queryMap.SastID == sastID {
+			return queryMap.AstID
+		}
+	}
+	return ""
 }
 
 func hash(s string) (uint64, error) {

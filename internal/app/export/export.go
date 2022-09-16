@@ -57,6 +57,7 @@ const (
 type Exporter interface {
 	AddFile(fileName string, data []byte) error
 	AddFileWithDataSource(fileName string, dataSource func() ([]byte, error)) error
+	CopyFile(destName, sourceName string) error
 	CreateExportPackage(prefix, outputPath string) (string, error)
 	Clean() error
 	GetTmpDir() string
@@ -97,6 +98,33 @@ func (e *Export) AddFileWithDataSource(fileName string, dataSource func() ([]byt
 		return err
 	}
 	return e.AddFile(fileName, content)
+}
+
+func (e *Export) CopyFile(destName, sourceName string) error {
+	sourceFileStat, err := os.Stat(sourceName)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", sourceName)
+	}
+
+	source, err := os.Open(sourceName)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	filePath := path.Join(e.tmpDir, destName)
+	destination, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, filePerm)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+	e.fileList = append(e.fileList, destName)
+	_, err = io.Copy(destination, source)
+	return err
 }
 
 // CreateExportPackage compresses and encrypts all files added so far

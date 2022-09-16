@@ -12,6 +12,7 @@ type Args struct {
 	DBConnectionString,
 	ProjectsIds,
 	TeamName string
+	QueryMappingFile string
 }
 
 type ReportJob struct {

@@ -43,7 +43,7 @@ func (e *MetadataFactory) GetMetadataRecord(scanID string, queries []*Query) (*R
 
 	for queryIdx, query := range queries {
 		output.Queries = append(output.Queries, &RecordQuery{QueryID: query.QueryID})
-		astQueryID, astQueryIDErr := e.astQueryIDProvider.GetQueryID(query.Language, query.Name, query.Group)
+		astQueryID, astQueryIDErr := e.astQueryIDProvider.GetQueryID(query.Language, query.Name, query.Group, query.QueryID)
 		if astQueryIDErr != nil {
 			return nil, errors.Wrapf(
 				astQueryIDErr,

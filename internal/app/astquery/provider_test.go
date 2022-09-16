@@ -13,7 +13,7 @@ import (
 )
 
 type QueryIDTest struct {
-	Language, Group, Name, Expected string
+	Language, Group, Name, SastID, Expected string
 }
 
 type CustomQueriesListTest struct {
@@ -25,17 +25,17 @@ func TestProvider_GetQueryID(t *testing.T) {
 	queryProvider := mock_interfaces_queries.NewMockQueriesRepo(ctrl)
 
 	queryIDTests := []QueryIDTest{
-		{"Kotlin", "Kotlin_High_Risk", "Code_Injection", "15158446363146771540"},
-		{"CSharp", "General", "Find_SQL_Injection_Evasion_Attack", "8984835614866342550"},
-		{"Go", "General", "Find_Command_Injection_Sanitize", "9498204717545098527"},
+		{"Kotlin", "Kotlin_High_Risk", "Code_Injection", "1", "15158446363146771540"},
+		{"CSharp", "General", "Find_SQL_Injection_Evasion_Attack", "2", "8984835614866342550"},
+		{"Go", "General", "Find_Command_Injection_Sanitize", "3", "9498204717545098527"},
 	}
 	for _, test := range queryIDTests {
 		testName := fmt.Sprintf("%s %s %s", test.Language, test.Group, test.Name)
 		t.Run(testName, func(t *testing.T) {
-			repo, repoErr := NewProvider(queryProvider)
+			repo, repoErr := NewProvider(queryProvider, "")
 			assert.NoError(t, repoErr)
 
-			result, err := repo.GetQueryID(test.Language, test.Name, test.Group)
+			result, err := repo.GetQueryID(test.Language, test.Name, test.Group, test.SastID)
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, result)
 		})
@@ -46,7 +46,7 @@ func TestProvider_GetCustomQueries(t *testing.T) {
 	var queriesObj, customQueriesObj soap.GetQueryCollectionResponse
 	ctrl := gomock.NewController(t)
 	queryProvider := mock_interfaces_queries.NewMockQueriesRepo(ctrl)
-	repo, repoErr := NewProvider(queryProvider)
+	repo, repoErr := NewProvider(queryProvider, "")
 	assert.NoError(t, repoErr)
 
 	t.Run("Successful getting custom queries", func(t *testing.T) {

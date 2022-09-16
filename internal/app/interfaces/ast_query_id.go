@@ -1,7 +1,7 @@
 package interfaces
 
 type ASTQueryIDProvider interface {
-	GetQueryID(language, name, group string) (string, error)
+	GetQueryID(language, name, group, sastQueryID string) (string, error)
 }
 
 type ASTQuery struct {
