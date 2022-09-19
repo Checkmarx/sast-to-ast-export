@@ -50,6 +50,18 @@ Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-
 
 NOTE the minimum supported SAST version is 9.3. SAST installations below this version should be upgraded in order to run this export tool. 
 `,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		exportsArray, err := cmd.Flags().GetStringSlice(exportArg)
+		if err != nil {
+			panic(err)
+		}
+
+		if len(exportsArray) == 0 || internal.IsTriageIncluded(exportsArray) {
+			if err := cmd.MarkFlagRequired(queryMapping); err != nil {
+				panic(err)
+			}
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// setup logging
 		verbose, flagErr := cmd.Flags().GetBool(verboseArg)
