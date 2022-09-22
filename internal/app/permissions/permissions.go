@@ -64,7 +64,7 @@ func getFromJwtClaim(claims jwt.MapClaims, key string) ([]interface{}, error) {
 	if ok {
 		return multiplePermissions, nil
 	}
-	singlePermission, ok := claimValue.(interface{})
+	singlePermission, ok := claimValue.(interface{}) //nolint:gosimple
 	if ok {
 		return []interface{}{singlePermission}, nil
 	}

@@ -2,9 +2,10 @@ package encryption
 
 import (
 	"crypto/rand"
-	_ "embed"
-	"github.com/checkmarxDev/ast-sast-export/pkg/aesctr"
+	_ "embed" //nolint:revive
 	"io"
+
+	"github.com/checkmarxDev/ast-sast-export/pkg/aesctr"
 )
 
 // EncryptSymmetric uses AES-CRT with HMAC inside using single key for both

@@ -6,7 +6,6 @@ import (
 	"compress/flate"
 	"encoding/base64"
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/app/encryption"
 	"io"
 	"os"
 	"path"
@@ -14,11 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/encryption"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateExport(t *testing.T) {
-	prefix := "cxsast-create-export"
+	prefix := "cxsast-test-create-export"
 	export, err := CreateExport(prefix, time.Now())
 	assert.NoError(t, err)
 	defer func() {
@@ -33,7 +33,7 @@ func TestCreateExport(t *testing.T) {
 }
 
 func TestExport_GetTmpDir(t *testing.T) {
-	prefix := "cxsast-get-tmp-dir"
+	prefix := "cxsast-test-export-get-tmp-dir"
 	export, err := CreateExport(prefix, time.Now())
 	assert.NoError(t, err)
 	defer func() {
@@ -48,7 +48,7 @@ func TestExport_GetTmpDir(t *testing.T) {
 }
 
 func TestExport_AddFileWithDataSource(t *testing.T) {
-	prefix := "cxsast-add-file-with-data-source"
+	prefix := "cxsast-test-export-add-file-with-data-source"
 	runTime := time.Now()
 
 	t.Run("success case", func(t *testing.T) {
@@ -92,7 +92,7 @@ func TestExport_AddFileWithDataSource(t *testing.T) {
 }
 
 func TestExport_CreateExportPackage(t *testing.T) {
-	prefix := "cxsast-create-export-package"
+	prefix := "cxsast-test-export-create-export-package"
 	runTime := time.Now()
 
 	t.Run("success case", func(t *testing.T) {
@@ -192,7 +192,7 @@ func TestExport_CreateExportPackage(t *testing.T) {
 }
 
 func TestExport_Clean(t *testing.T) {
-	prefix := "cxsast-clean"
+	prefix := "cxsast-test-export-clean"
 	export, err := CreateExport(prefix, time.Now())
 	assert.NoError(t, err)
 
@@ -228,7 +228,7 @@ func TestCreateExportFileName(t *testing.T) {
 }
 
 func TestCreateDir(t *testing.T) {
-	prefix := "cxsast-get-tmp-dir"
+	prefix := "cxsast-test-create-dir"
 	export, err := CreateExport(prefix, time.Now())
 	assert.NoError(t, err)
 	defer func() {
@@ -280,7 +280,7 @@ func createTmpDir(t *testing.T, prefix string) string {
 	return tmpDir
 }
 
-func clearTmpDir(t *testing.T, path string) {
-	removeErr := os.RemoveAll(path)
+func clearTmpDir(t *testing.T, tmpPath string) {
+	removeErr := os.RemoveAll(tmpPath)
 	assert.NoError(t, removeErr)
 }

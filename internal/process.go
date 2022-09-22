@@ -52,6 +52,7 @@ type ReportConsumeOutput struct {
 	ScanID    int
 }
 
+//nolint:funlen
 func RunExport(args *Args) error {
 	consumerCount := worker.GetNumCPU()
 

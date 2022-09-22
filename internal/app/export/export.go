@@ -99,7 +99,7 @@ func (e *Export) AddFileWithDataSource(fileName string, dataSource func() ([]byt
 }
 
 // CreateExportPackage compresses and encrypts all files added so far
-func (e *Export) CreateExportPackage(prefix, outputPath string) (string, string, error) {
+func (e *Export) CreateExportPackage(prefix, outputPath string) (string, string, error) { //nolint:gocritic
 	keyFileName := path.Join(outputPath, CreateExportFileName(prefix, "key", "txt", e.runTime))
 	exportFileName := path.Join(outputPath, CreateExportFileName(prefix, "", "zip", e.runTime))
 	// create zip
