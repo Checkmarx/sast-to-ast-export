@@ -1,5 +1,7 @@
 package internal
 
+import "time"
+
 type Args struct {
 	URL,
 	Username,
@@ -12,6 +14,7 @@ type Args struct {
 	DBConnectionString,
 	ProjectsIds,
 	TeamName string
+	RunTime time.Time
 }
 
 type ReportJob struct {

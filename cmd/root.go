@@ -44,8 +44,10 @@ var rootCmd = &cobra.Command{
 
 cxsast_exporter --user username --pass password --url http://localhost
 
-Produces a zip file containing the encrypted SAST triaged results, e.g. cxsast_exporter-2021-09-10-15-42-35.zip
-Also produces a log file with diagnostic information, e.g. cxsast_exporter-2021-09-10-15-42-35.log
+Produces:
+1. a zip file containing the encrypted SAST triaged results, e.g. cxsast_exporter-2021-09-10-15-42-35.zip
+2. a key file containing base64 encoded password for decrypting the contents of zip file, e.g. cxsast_exporter-2021-09-10-15-42-35.txt
+3. a log file with diagnostic information, e.g. cxsast_exporter-2021-09-10-15-42-35.log
 
 NOTE the minimum supported SAST version is 9.3. SAST installations below this version should be upgraded in order to run this export tool. 
 `,
@@ -84,6 +86,7 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 
 		// start export
 		allArgs := GetArgs(cmd, productName)
+		allArgs.RunTime = now
 		exportErr := internal.RunExport(&allArgs)
 		if exportErr != nil {
 			log.Error().Err(exportErr)

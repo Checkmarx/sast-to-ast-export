@@ -2,10 +2,6 @@ package encryption
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
 	"testing"
 
 	"github.com/checkmarxDev/ast-sast-export/pkg/aesctr"
@@ -13,40 +9,9 @@ import (
 )
 
 const (
-	plaintext           = "this is a test"
-	asymmetricKeyLength = 4096
-	symmetricKeyLength  = 32
+	plaintext          = "this is a test"
+	symmetricKeyLength = 32
 )
-
-func TestCreatePublicKeyFromKeyBytes(t *testing.T) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, asymmetricKeyLength)
-	assert.NoError(t, err)
-
-	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
-	assert.NoError(t, err)
-
-	result, err := CreatePublicKeyFromKeyBytes(publicKeyBytes)
-
-	assert.NoError(t, err)
-	assert.Equal(t, rsaKey.PublicKey.E, result.E)
-	assert.Equal(t, rsaKey.PublicKey.N, result.N)
-}
-
-func TestEncryptAsymmetric(t *testing.T) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, asymmetricKeyLength)
-	assert.NoError(t, err)
-
-	// encrypt
-	ciphertext, encryptErr := EncryptAsymmetric(&rsaKey.PublicKey, []byte(plaintext))
-	assert.NoError(t, encryptErr)
-
-	// decrypt
-	result, decryptErr := rsa.DecryptOAEP(sha256.New(), rand.Reader, rsaKey, ciphertext, []byte{})
-	assert.NoError(t, decryptErr)
-
-	// check decrypted matches plaintext
-	assert.Equal(t, plaintext, string(result))
-}
 
 func TestEncryptSymmetric(t *testing.T) {
 	key, keyErr := CreateSymmetricKey(symmetricKeyLength)

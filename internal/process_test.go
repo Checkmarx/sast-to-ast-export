@@ -1267,7 +1267,7 @@ func TestExportResultsToFile(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
 		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
-			Return("/path/to/output/export.zip", nil).
+			Return("/path/to/output/export.zip", "/path/to/output/key.txt", nil).
 			MinTimes(1).
 			MaxTimes(1)
 
@@ -1286,7 +1286,7 @@ func TestExportResultsToFile(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
 		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
-			Return("", fmt.Errorf("failed creating export package")).
+			Return("", "", fmt.Errorf("failed creating export package")).
 			MinTimes(1).
 			MaxTimes(1)
 
