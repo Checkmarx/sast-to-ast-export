@@ -33,14 +33,12 @@ func TestEncryptSymmetric(t *testing.T) {
 }
 
 func TestCreateSymmetricKey(t *testing.T) {
-	length := 32
-
-	result1, err1 := CreateSymmetricKey(length)
-	result2, err2 := CreateSymmetricKey(length)
+	result1, err1 := CreateSymmetricKey(symmetricKeyLength)
+	result2, err2 := CreateSymmetricKey(symmetricKeyLength)
 
 	assert.NoError(t, err1)
 	assert.NoError(t, err2)
 	assert.NotEqual(t, result1, result2)
-	assert.Equal(t, length, len(result1))
-	assert.Equal(t, length, len(result2))
+	assert.Equal(t, symmetricKeyLength, len(result1))
+	assert.Equal(t, symmetricKeyLength, len(result2))
 }

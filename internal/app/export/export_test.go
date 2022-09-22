@@ -96,12 +96,8 @@ func TestExport_CreateExportPackage(t *testing.T) {
 	runTime := time.Now()
 
 	t.Run("success case", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp(os.TempDir(), prefix)
-		assert.NoError(t, err)
-		defer func(path string) {
-			removeErr := os.RemoveAll(path)
-			assert.NoError(t, removeErr)
-		}(tmpDir)
+		tmpDir := createTmpDir(t, prefix)
+		defer clearTmpDir(t, tmpDir)
 
 		export, err := CreateExport(prefix, runTime)
 		assert.NoError(t, err)
