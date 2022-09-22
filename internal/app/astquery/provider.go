@@ -1,14 +1,13 @@
 package astquery
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"hash/fnv"
-	"os"
 	"strconv"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 )
 
@@ -18,38 +17,16 @@ const (
 )
 
 type (
-	QueryMap struct {
-		AstID  string `json:"astId"`
-		SastID string `json:"sastId"`
-	}
-
-	MapSource struct {
-		Mappings []QueryMap `json:"mappings"`
-	}
-
 	Provider struct {
 		queryProvider interfaces.QueriesRepo
-		mapping       []QueryMap
+		mapping       []querymapping.QueryMap
 	}
 )
 
-func NewProvider(queryProvider interfaces.QueriesRepo, queryMappingPath string) (*Provider, error) {
-	var mapping []QueryMap
-	if queryMappingPath != "" {
-		var mapSource MapSource
-		data, err := os.ReadFile(queryMappingPath)
-		if err != nil {
-			return nil, err
-		}
-		if jsonErr := json.Unmarshal(data, &mapSource); jsonErr != nil {
-			return nil, jsonErr
-		}
-		mapping = mapSource.Mappings
-	}
-
+func NewProvider(queryProvider interfaces.QueriesRepo, queryMappingProvider interfaces.QueryMappingRepo) (*Provider, error) {
 	return &Provider{
 		queryProvider: queryProvider,
-		mapping:       mapping,
+		mapping:       queryMappingProvider.GetMapping(),
 	}, nil
 }
 

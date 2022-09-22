@@ -15,6 +15,7 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/permissions"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/preset"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/report"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
@@ -112,7 +113,12 @@ func RunExport(args *Args) error {
 	queriesRepo := queries.NewRepo(soapClient)
 	presetRepo := presetrepo.NewRepo(soapClient)
 
-	astQueryProvider, astQueryProviderErr := astquery.NewProvider(queriesRepo, args.QueryMappingFile)
+	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile)
+	if astQueryMappingProviderErr != nil {
+		return errors.Wrap(astQueryMappingProviderErr, "could not create AST query mapping provider")
+	}
+
+	astQueryProvider, astQueryProviderErr := astquery.NewProvider(queriesRepo, astQueryMappingProvider)
 	if astQueryProviderErr != nil {
 		return errors.Wrap(astQueryProviderErr, "could not create AST query provider")
 	}
@@ -137,7 +143,7 @@ func RunExport(args *Args) error {
 
 	metadataSource := metadata.NewMetadataFactory(astQueryProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
 
-	copyErr := copyQueryMappingFile(args.QueryMappingFile, &exportValues)
+	copyErr := copyQueryMappingFile(astQueryMappingProvider, &exportValues)
 	if copyErr != nil {
 		return errors.Wrap(copyErr, "could not copy query mapping file")
 	}
@@ -684,10 +690,20 @@ func getRetryHttpClient() *retryablehttp.Client {
 	}
 }
 
-func copyQueryMappingFile(queryFileMapping string, exporter export2.Exporter) error {
-	if queryFileMapping == "" {
-		log.Info().Msg("not set query mapping file param")
+func copyQueryMappingFile(queryMappingProvider interfaces.QueryMappingRepo, exporter export2.Exporter) error {
+	copyErr := exporter.CopyFile(destQueryMappingFile, queryMappingProvider.GetQueryMappingFilePath())
+	delErr := queryMappingProvider.Clean()
+	if copyErr == nil && delErr == nil {
 		return nil
 	}
-	return exporter.CopyFile(destQueryMappingFile, queryFileMapping)
+
+	err := errors.New("Copy query mapping file error")
+	if copyErr != nil {
+		err = copyErr
+	}
+	if delErr != nil {
+		err = errors.Wrap(delErr, err.Error())
+	}
+
+	return err
 }

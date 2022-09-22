@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"os/exec"
 	"runtime"
 	"time"
@@ -24,14 +23,4 @@ func OpenPathInExplorer(path string) error {
 		}
 	}
 	return nil
-}
-
-func IsTriageIncluded(list []string) bool {
-	for _, item := range list {
-		if item == export.ResultsOption {
-			return true
-		}
-	}
-
-	return false
 }
