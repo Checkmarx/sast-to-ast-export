@@ -24,7 +24,7 @@ const (
 	projectsIds             = "project-id"
 	teamName                = "project-team"
 	queryMapping            = "query-mapping"
-	queryMappingPathDefault = "./data/mapping.json"
+	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
 
 	projectsActiveSinceDefaultValue = 180
 )

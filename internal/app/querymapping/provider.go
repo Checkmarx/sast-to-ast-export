@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+
+	"github.com/rs/zerolog/log"
 )
 
 type (
@@ -30,14 +32,17 @@ func NewProvider(queryMappingPath string) (*Provider, error) {
 		var tmpFileErr error
 		queryMappingPath, tmpDir, tmpFileErr = createTmpFile(queryMappingPath)
 		if tmpFileErr != nil {
+			removeTmpDir(tmpDir)
 			return nil, tmpFileErr
 		}
 	}
 	data, err := os.ReadFile(queryMappingPath)
 	if err != nil {
+		removeTmpDir(tmpDir)
 		return nil, err
 	}
 	if jsonErr := json.Unmarshal(data, &mapSource); jsonErr != nil {
+		removeTmpDir(tmpDir)
 		return nil, jsonErr
 	}
 	mapping := mapSource.Mappings
@@ -74,17 +79,27 @@ func createTmpFile(fileUrl string) (string, string, error) {
 	tmpFileName := path.Join(tmpQueryMappingDir, fileName)
 	out, err := os.Create(tmpFileName)
 	if err != nil {
-		return "", "", err
+		return "", tmpQueryMappingDir, err
 	}
 	defer out.Close()
 	resp, err := http.Get(fileUrl)
 	if err != nil {
-		return "", "", err
+		return "", tmpQueryMappingDir, err
 	}
 	defer resp.Body.Close()
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return "", "", err
+		return "", tmpQueryMappingDir, err
 	}
 	return tmpFileName, tmpQueryMappingDir, nil
+}
+
+func removeTmpDir(tmpDir string) {
+	if tmpDir == "" {
+		return
+	}
+	delErr := os.RemoveAll(tmpDir)
+	if delErr != nil {
+		log.Error().Err(delErr).Msgf("Could not remove temporary directory with query mapping file %s", tmpDir)
+	}
 }
