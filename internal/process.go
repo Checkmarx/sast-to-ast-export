@@ -114,7 +114,7 @@ func RunExport(args *Args) error {
 	queriesRepo := queries.NewRepo(soapClient)
 	presetRepo := presetrepo.NewRepo(soapClient)
 
-	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile)
+	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile, retryHttpClient)
 	if astQueryMappingProviderErr != nil {
 		return errors.Wrap(astQueryMappingProviderErr, "could not create AST query mapping provider")
 	}

@@ -11,6 +11,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type RetryableHTTPAdapter interface {
+	Get(url string) (*http.Response, error)
+}
+
 type (
 	Provider struct {
 		queryMappings    []QueryMap
@@ -24,13 +28,13 @@ const (
 	fileName     = "mapping.json"
 )
 
-func NewProvider(queryMappingPath string) (*Provider, error) {
+func NewProvider(queryMappingPath string, client RetryableHTTPAdapter) (*Provider, error) {
 	var mapSource MapSource
 	tmpDir := ""
 	_, urlErr := url.ParseRequestURI(queryMappingPath)
 	if urlErr == nil {
 		var tmpFileErr error
-		queryMappingPath, tmpDir, tmpFileErr = createTmpFile(queryMappingPath)
+		queryMappingPath, tmpDir, tmpFileErr = createTmpFile(queryMappingPath, client)
 		if tmpFileErr != nil {
 			removeTmpDir(tmpDir)
 			return nil, tmpFileErr
@@ -70,7 +74,7 @@ func (p *Provider) Clean() error {
 	return nil
 }
 
-func createTmpFile(fileUrl string) (string, string, error) {
+func createTmpFile(fileUrl string, client RetryableHTTPAdapter) (string, string, error) {
 	tmpDir := os.TempDir()
 	tmpQueryMappingDir, err := os.MkdirTemp(tmpDir, tmpDirPrefix)
 	if err != nil {
@@ -82,7 +86,7 @@ func createTmpFile(fileUrl string) (string, string, error) {
 		return "", tmpQueryMappingDir, err
 	}
 	defer out.Close()
-	resp, err := http.Get(fileUrl)
+	resp, err := client.Get(fileUrl)
 	if err != nil {
 		return "", tmpQueryMappingDir, err
 	}
