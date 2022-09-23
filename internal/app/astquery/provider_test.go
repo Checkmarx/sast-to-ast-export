@@ -82,5 +82,4 @@ func TestProvider_GetCustomQueries(t *testing.T) {
 		_, err := repo.GetCustomQueriesList()
 		assert.EqualError(t, err, "failed getting custom queries")
 	})
-
 }

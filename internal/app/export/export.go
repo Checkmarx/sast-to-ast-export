@@ -44,8 +44,6 @@ const (
 	// PresetsFileName presets file
 	PresetsFileName = "presets.json"
 
-	encryptedKeyFileName = "key.enc.bin"
-
 	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"
 
@@ -58,7 +56,7 @@ type Exporter interface {
 	AddFile(fileName string, data []byte) error
 	AddFileWithDataSource(fileName string, dataSource func() ([]byte, error)) error
 	CopyFile(destName, sourceName string) error
-	CreateExportPackage(prefix, outputPath string) (string, error)
+	CreateExportPackage(prefix, outputPath string) (string, string, error)
 	Clean() error
 	GetTmpDir() string
 	CreateDir(dirName string) error
@@ -67,15 +65,16 @@ type Exporter interface {
 type Export struct {
 	tmpDir   string
 	fileList []string
+	runTime  time.Time
 }
 
 // CreateExport creates ExportProducer structure and temporary directory
 // The caller is responsible for calling the Export.Clear function
 // when it's done with the ExportProducer
-func CreateExport(prefix string) (Export, error) {
+func CreateExport(prefix string, runTime time.Time) (Export, error) {
 	tmpDir := os.TempDir()
 	tmpExportDir, err := os.MkdirTemp(tmpDir, prefix)
-	return Export{tmpDir: tmpExportDir, fileList: []string{}}, err
+	return Export{tmpDir: tmpExportDir, fileList: []string{}, runTime: runTime}, err
 }
 
 func (e *Export) GetTmpDir() string {
@@ -128,12 +127,13 @@ func (e *Export) CopyFile(destName, sourceName string) error {
 }
 
 // CreateExportPackage compresses and encrypts all files added so far
-func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) {
+func (e *Export) CreateExportPackage(prefix, outputPath string) (string, string, error) { //nolint:gocritic
+	keyFileName := path.Join(outputPath, CreateExportFileName(prefix, "key", "txt", e.runTime))
+	exportFileName := path.Join(outputPath, CreateExportFileName(prefix, "", "zip", e.runTime))
 	// create zip
-	exportFileName := path.Join(outputPath, CreateExportFileName(prefix, time.Now()))
 	exportFile, ioErr := os.Create(exportFileName)
 	if ioErr != nil {
-		return "", errors.Wrap(ioErr, "failed to create file for encrypted data")
+		return "", "", errors.Wrap(ioErr, "failed to create file for encrypted data")
 	}
 	defer func() {
 		if closeErr := exportFile.Close(); closeErr != nil {
@@ -144,29 +144,22 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 	// get key
 	symmetricKey, keyErr := encryption.CreateSymmetricKey(symmetricKeySize)
 	if keyErr != nil {
-		return "", errors.Wrap(keyErr, "failed to create key for aes")
-	}
-	encKey, err := getEncryptedKey(symmetricKey)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to generate encrypted key for archive")
+		return "", "", errors.Wrap(keyErr, "failed to create key for aes")
 	}
 
 	zipWriter := zip.NewWriter(exportFile)
 	defer zipWriter.Close()
 
-	zipKeyWriter, err := zipWriter.Create(encryptedKeyFileName)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to open zip writer for key")
-	}
-	_, err = zipKeyWriter.Write(encKey)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to write to zip key file")
+	keyWriteErr := writeSymmetricKeyToFile(keyFileName, symmetricKey)
+	if keyWriteErr != nil {
+		return "", "", errors.Wrap(keyWriteErr, "failed to write symmetric key to file")
 	}
 
 	// chain deflate and encryption and then deflate of the zip archive itself
 	// the first deflate is needed to reduce the encrypted file size
-	// otherwise if file is encrypted and then deflated, the deflate won't be able to reduce the size
+	// otherwise if file is encrypted and then deflated, deflate won't be able to reduce the size
 	// because of the chaoric bytes of encrypted data
+	var err error
 	for _, fileName := range e.fileList {
 		err = func() error {
 			// files are added to the tmp
@@ -213,11 +206,11 @@ func (e *Export) CreateExportPackage(prefix, outputPath string) (string, error) 
 			return <-errChan
 		}()
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 
-	return exportFileName, nil
+	return exportFileName, keyFileName, nil
 }
 
 // Clean removes ExportProducer's temporary directory and it's contents
@@ -225,9 +218,12 @@ func (e *Export) Clean() error {
 	return os.RemoveAll(e.tmpDir)
 }
 
-// CreateExportFileName creates a file name with the format: {prefix}-yyyy-mm-dd-HH-MM-SS.zip
-func CreateExportFileName(prefix string, now time.Time) string {
-	return fmt.Sprintf("%s-%s.zip", prefix, now.Format(DateTimeFormat))
+// CreateExportFileName creates a file name with the format: {prefix}-yyyy-mm-dd-HH-MM-SS.{extension}
+func CreateExportFileName(prefix, suffix, extension string, now time.Time) string {
+	if suffix != "" {
+		return fmt.Sprintf("%s-%s-%s.%s", prefix, now.Format(DateTimeFormat), suffix, extension)
+	}
+	return fmt.Sprintf("%s-%s.%s", prefix, now.Format(DateTimeFormat), extension)
 }
 
 // CreateDir creates directory inside temp directory
@@ -236,23 +232,13 @@ func (e *Export) CreateDir(dirName string) error {
 	return os.Mkdir(fullDirName, dirPerm)
 }
 
-func getEncryptedKey(key []byte) (encKey []byte, err error) {
-	keyBytes, err := base64.StdEncoding.DecodeString(encryption.BuildTimeRSAPublicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 decode RSA public key")
-	}
-
-	publicKey, err := encryption.CreatePublicKeyFromKeyBytes(keyBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encrypt key")
-	}
-
-	encKey, err = encryption.EncryptAsymmetric(publicKey, key)
-	return
-}
-
 func NewJSONDataSource(obj interface{}) func() ([]byte, error) {
 	return func() ([]byte, error) {
 		return json.Marshal(obj)
 	}
+}
+
+func writeSymmetricKeyToFile(fileName string, key []byte) error {
+	encodedKey := base64.StdEncoding.EncodeToString(key)
+	return os.WriteFile(fileName, []byte(encodedKey), filePerm)
 }

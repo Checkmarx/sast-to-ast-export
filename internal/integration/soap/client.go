@@ -111,8 +111,8 @@ func (e *Client) GetQueryCollection() (*GetQueryCollectionResponse, error) {
 	return &response, nil
 }
 
-func (e *Client) GetPresetDetails(ID int) (*GetPresetDetailsResponse, error) {
-	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{Id: ID})
+func (e *Client) GetPresetDetails(id int) (*GetPresetDetailsResponse, error) {
+	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{Id: id})
 	if requestMarshalErr != nil {
 		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
 	}
@@ -126,7 +126,7 @@ func (e *Client) GetPresetDetails(ID int) (*GetPresetDetailsResponse, error) {
 		return nil, errors.Wrap(unmarshalErr, errResponseUnmarshalFailed)
 	}
 	if !response.GetPresetDetailsResult.IsSuccessful {
-		return nil, fmt.Errorf("%s: "+errCannotGetPresetDetail, errSoapCallFailed, ID)
+		return nil, fmt.Errorf("%s: "+errCannotGetPresetDetail, errSoapCallFailed, id)
 	}
 	return &response, nil
 }
