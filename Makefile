@@ -1,11 +1,8 @@
-KEYS_PATH = ./keys
 EXTERNAL_PATH = ./external
 BUILD_PATH = ./build
-ENV ?= prod
 PRODUCT_NAME = cxsast_exporter
 PRODUCT_VERSION = $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
-PUBLIC_KEY = "internal/app/encryption/public.key"
 LD_FLAGS = -ldflags="-s -w -X github.com/checkmarxDev/ast-sast-export/cmd.productName=$(PRODUCT_NAME) -X github.com/checkmarxDev/ast-sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X github.com/checkmarxDev/ast-sast-export/cmd.productBuild=$(PRODUCT_BUILD)"
 
 SAST_EXPORT_USER = '###########'
@@ -15,14 +12,10 @@ lint:
 	go fmt ./...
 	golangci-lint run
 
-build: public_key windows_amd64
+build: windows_amd64
 
 package: build
-ifeq ($(ENV),prod)
 	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_windows_amd64.zip ./build/windows/amd64/*
-else
-	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_$(PRODUCT_BUILD)_$(ENV)_windows_amd64.zip ./build/windows/amd64/*
-endif
 
 run: windows_amd64 run_windows
 
@@ -37,12 +30,6 @@ clean:
 windows_amd64:
 	env GOOS=windows GOARCH=amd64 go build -o $(BUILD_PATH)/windows/amd64/$(PRODUCT_NAME).exe $(LD_FLAGS)
 	cp -v $(EXTERNAL_PATH)/windows/amd64/SimilarityCalculator.exe $(BUILD_PATH)/windows/amd64/
-
-public_key:
-	cp -v $(KEYS_PATH)/$(ENV).key $(PUBLIC_KEY)
-
-download_public_key:
-	aws kms get-public-key --key-id alias/sast-migration-key --region eu-west-1 --output json | jq -r .PublicKey | tr -d '\r' | tr -d '\n' > $(KEYS_PATH)/$(ENV).key
 
 run_windows:
 	build/windows/amd64/cxsast_exporter --user $(SAST_EXPORT_USER) --pass $(SAST_EXPORT_PASS) --url http://localhost --export users,results,teams,projects --project-active-since 1

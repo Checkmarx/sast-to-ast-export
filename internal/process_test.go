@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
-	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
@@ -1267,7 +1266,7 @@ func TestExportResultsToFile(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
 		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
-			Return("/path/to/output/export.zip", nil).
+			Return("/path/to/output/export.zip", "/path/to/output/key.txt", nil).
 			MinTimes(1).
 			MaxTimes(1)
 
@@ -1286,7 +1285,7 @@ func TestExportResultsToFile(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().GetTmpDir().Return("/path/to/tmp/folder").MinTimes(1).MaxTimes(1)
 		exporter.EXPECT().CreateExportPackage(gomock.Eq(args.ProductName), gomock.Eq(args.OutputPath)).
-			Return("", fmt.Errorf("failed creating export package")).
+			Return("", "", fmt.Errorf("failed creating export package")).
 			MinTimes(1).
 			MaxTimes(1)
 
@@ -1378,7 +1377,7 @@ func TestCustomQueries(t *testing.T) {
 		assert.NoError(t, ioCustomErr)
 		_ = xml.Unmarshal(customQueries, &customQueriesObj)
 		queryProvider.EXPECT().GetCustomQueriesList().Return(&customQueriesObj, nil).Times(1)
-		exporter.EXPECT().AddFile(export2.QueriesFileName, gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(export.QueriesFileName, gomock.Any()).Return(nil)
 
 		result := fetchQueriesData(queryProvider, exporter)
 
@@ -1412,15 +1411,15 @@ func TestPresets(t *testing.T) {
 		presetProvider.EXPECT().GetPresetDetails(1).Return(&preset1, nil)
 		presetProvider.EXPECT().GetPresetDetails(9).Return(&preset9, nil)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
-		exporter.EXPECT().CreateDir(export2.PresetsDirName).Return(nil)
-		exporter.EXPECT().AddFileWithDataSource(export2.PresetsFileName, gomock.Any()).
+		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(export.PresetsFileName, gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
 				return callbackErr
 			}).AnyTimes()
-		exporter.EXPECT().AddFile(path.Join(export2.PresetsDirName, "1.xml"), gomock.Any()).Return(nil)
-		exporter.EXPECT().AddFile(path.Join(export2.PresetsDirName, "9.xml"), gomock.Any()).Return(nil)
-		exporter.EXPECT().AddFile(path.Join(export2.PresetsDirName, "100000.xml"), gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "1.xml"), gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "9.xml"), gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "100000.xml"), gomock.Any()).Return(nil)
 
 		err := fetchPresetsData(client, presetProvider, exporter)
 

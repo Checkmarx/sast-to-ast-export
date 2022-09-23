@@ -52,6 +52,7 @@ type ReportConsumeOutput struct {
 	ScanID    int
 }
 
+//nolint:funlen
 func RunExport(args *Args) error {
 	consumerCount := worker.GetNumCPU()
 
@@ -89,7 +90,7 @@ func RunExport(args *Args) error {
 
 	// collect export data
 	log.Info().Msg("collecting data from SAST")
-	exportValues, exportCreateErr := export2.CreateExport(args.ProductName)
+	exportValues, exportCreateErr := export2.CreateExport(args.ProductName, args.RunTime)
 	if exportCreateErr != nil {
 		return errors.Wrap(exportCreateErr, "could not create export package")
 	}
@@ -161,7 +162,7 @@ func exportResultsToFile(args *Args, exportValues export2.Exporter) (string, err
 		return tmpDir, nil
 	}
 
-	exportFileName, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
+	exportFileName, _, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
 	if exportErr != nil {
 		return exportFileName, exportErr
 	}

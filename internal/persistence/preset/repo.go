@@ -10,6 +10,6 @@ func NewRepo(soapClient soap.Adapter) *Repo {
 	return &Repo{soapClient: soapClient}
 }
 
-func (e *Repo) GetPresetDetails(ID int) (*soap.GetPresetDetailsResponse, error) {
-	return e.soapClient.GetPresetDetails(ID)
+func (e *Repo) GetPresetDetails(id int) (*soap.GetPresetDetailsResponse, error) {
+	return e.soapClient.GetPresetDetails(id)
 }

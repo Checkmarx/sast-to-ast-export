@@ -15,6 +15,6 @@ func NewProvider(presetProvider interfaces.PresetProvider) *Provider {
 	}
 }
 
-func (e *Provider) GetPresetDetails(ID int) (*soap.GetPresetDetailsResponse, error) {
-	return e.presetProvider.GetPresetDetails(ID)
+func (e *Provider) GetPresetDetails(id int) (*soap.GetPresetDetailsResponse, error) {
+	return e.presetProvider.GetPresetDetails(id)
 }
