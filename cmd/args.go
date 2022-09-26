@@ -45,6 +45,10 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
+	args.QueryMappingFile, err = cmd.Flags().GetString(queryMapping)
+	if err != nil {
+		panic(err)
+	}
 
 	args.OutputPath, err = os.Getwd()
 	if err != nil {

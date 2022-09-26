@@ -15,6 +15,7 @@ type Args struct {
 	ProjectsIds,
 	TeamName string
 	RunTime time.Time
+	QueryMappingFile string
 }
 
 type ReportJob struct {

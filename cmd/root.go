@@ -14,15 +14,17 @@ import (
 )
 
 const (
-	userArg                = "user"
-	passArg                = "pass"
-	urlArg                 = "url"
-	exportArg              = "export"
-	projectsActiveSinceArg = "projects-active-since"
-	debugArg               = "debug"
-	verboseArg             = "verbose"
-	projectsIds            = "project-id"
-	teamName               = "project-team"
+	userArg                 = "user"
+	passArg                 = "pass"
+	urlArg                  = "url"
+	exportArg               = "export"
+	projectsActiveSinceArg  = "projects-active-since"
+	debugArg                = "debug"
+	verboseArg              = "verbose"
+	projectsIds             = "project-id"
+	teamName                = "project-team"
+	queryMapping            = "query-mapping"
+	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
 
 	projectsActiveSinceDefaultValue = 180
 )
@@ -108,6 +110,7 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
+	rootCmd.Flags().StringP(queryMapping, "", queryMappingPathDefault, "Path to file query mapping IDs from AST for triage")
 	rootCmd.Flags().StringP(teamName, "", "", "Team name filter")
 	rootCmd.Flags().StringP(projectsIds, "", "", "Project ID filter")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")

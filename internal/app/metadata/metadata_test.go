@@ -74,7 +74,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tmpDir := t.TempDir()
 	astQueryIDProviderMock := mock_app_ast_query_id.NewMockASTQueryIDProvider(ctrl)
-	astQueryIDProviderMock.EXPECT().GetQueryID(metaQuery.Language, metaQuery.Name, metaQuery.Group).Return(astQueryID, nil)
+	astQueryIDProviderMock.EXPECT().GetQueryID(metaQuery.Language, metaQuery.Name, metaQuery.Group, metaQuery.QueryID).Return(astQueryID, nil)
 	similarityIDProviderMock := mock_integration_similarity.NewMockSimilarityIDProvider(ctrl)
 	similarityIDProviderMock.EXPECT().Calculate(
 		gomock.Any(), metaResult1.FirstNode.Name, metaResult1.FirstNode.Line, metaResult1.FirstNode.Column, metaResult1Data.MethodLines[0],
