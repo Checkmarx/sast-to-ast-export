@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"net/http"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +26,6 @@ func TestQueryMappingProvider(t *testing.T) {
 		provider, err := NewProvider("../../../data/mapping.json", adapter)
 		assert.NoError(t, err)
 
-		assert.Equal(t, "../../../data/mapping.json", provider.GetQueryMappingFilePath())
 		assert.Equal(t, "11", provider.GetMapping()[0].SastID)
 	})
 
@@ -40,13 +38,7 @@ func TestQueryMappingProvider(t *testing.T) {
 		provider, err := NewProvider("https://raw.githubusercontent.com/mapping.json", adapter)
 		assert.NoError(t, err)
 
-		var name string
-		_, name = path.Split(provider.GetQueryMappingFilePath())
-
-		assert.Equal(t, fileName, name)
 		assert.Equal(t, "11", provider.GetMapping()[0].SastID)
-		delErr := provider.Clean()
-		assert.NoError(t, delErr)
 	})
 
 	t.Run("Test error with wrong path", func(t *testing.T) {

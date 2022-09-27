@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/astquery"
@@ -144,9 +145,14 @@ func RunExport(args *Args) error {
 
 	metadataSource := metadata.NewMetadataFactory(astQueryProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
 
-	copyErr := copyQueryMappingFile(astQueryMappingProvider, &exportValues)
-	if copyErr != nil {
-		return errors.Wrap(copyErr, "could not copy query mapping file")
+	addErr := addCustomQueryIDs(astQueryProvider, astQueryMappingProvider)
+	if addErr != nil {
+		return errors.Wrap(addErr, "could not add custom query ids to mapping")
+	}
+
+	addFileErr := addQueryMappingFile(astQueryMappingProvider, &exportValues)
+	if addFileErr != nil {
+		return errors.Wrap(addFileErr, "could not add query mapping file")
 	}
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
@@ -691,20 +697,26 @@ func getRetryHttpClient() *retryablehttp.Client {
 	}
 }
 
-func copyQueryMappingFile(queryMappingProvider interfaces.QueryMappingRepo, exporter export2.Exporter) error {
-	copyErr := exporter.CopyFile(destQueryMappingFile, queryMappingProvider.GetQueryMappingFilePath())
-	delErr := queryMappingProvider.Clean()
-	if copyErr == nil && delErr == nil {
-		return nil
+func addQueryMappingFile(queryMappingProvider interfaces.QueryMappingRepo, exporter export2.Exporter) error {
+	mapping := querymapping.MapSource{
+		Mappings: queryMappingProvider.GetMapping(),
+	}
+	return exporter.AddFileWithDataSource(destQueryMappingFile, export2.NewJSONDataSource(mapping))
+}
+
+func addCustomQueryIDs(astQueryProvider interfaces.ASTQueryProvider, astQueryMappingProvider interfaces.QueryMappingRepo) error {
+	customQueryResp, errResp := astQueryProvider.GetCustomQueriesList()
+	if errResp != nil {
+		return errResp
+	}
+	for _, queryGroup := range customQueryResp.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
+		for _, query := range queryGroup.Queries.CxWSQuery {
+			if err := astQueryMappingProvider.AddQueryMapping(queryGroup.LanguageName, query.Name,
+				queryGroup.Name, strconv.Itoa(query.QueryId)); err != nil {
+				return err
+			}
+		}
 	}
 
-	err := errors.New("Copy query mapping file error")
-	if copyErr != nil {
-		err = copyErr
-	}
-	if delErr != nil {
-		err = errors.Wrap(delErr, err.Error())
-	}
-
-	return err
+	return nil
 }

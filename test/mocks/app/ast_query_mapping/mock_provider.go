@@ -34,18 +34,18 @@ func (m *MockQueryMappingRepo) EXPECT() *MockQueryMappingRepoMockRecorder {
 	return m.recorder
 }
 
-// Clean mocks base method.
-func (m *MockQueryMappingRepo) Clean() error {
+// AddQueryMapping mocks base method.
+func (m *MockQueryMappingRepo) AddQueryMapping(arg0, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Clean")
+	ret := m.ctrl.Call(m, "AddQueryMapping", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Clean indicates an expected call of Clean.
-func (mr *MockQueryMappingRepoMockRecorder) Clean() *gomock.Call {
+// AddQueryMapping indicates an expected call of AddQueryMapping.
+func (mr *MockQueryMappingRepoMockRecorder) AddQueryMapping(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clean", reflect.TypeOf((*MockQueryMappingRepo)(nil).Clean))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddQueryMapping", reflect.TypeOf((*MockQueryMappingRepo)(nil).AddQueryMapping), arg0, arg1, arg2, arg3)
 }
 
 // GetMapping mocks base method.
@@ -60,18 +60,4 @@ func (m *MockQueryMappingRepo) GetMapping() []querymapping.QueryMap {
 func (mr *MockQueryMappingRepoMockRecorder) GetMapping() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMapping", reflect.TypeOf((*MockQueryMappingRepo)(nil).GetMapping))
-}
-
-// GetQueryMappingFilePath mocks base method.
-func (m *MockQueryMappingRepo) GetQueryMappingFilePath() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetQueryMappingFilePath")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetQueryMappingFilePath indicates an expected call of GetQueryMappingFilePath.
-func (mr *MockQueryMappingRepoMockRecorder) GetQueryMappingFilePath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryMappingFilePath", reflect.TypeOf((*MockQueryMappingRepo)(nil).GetQueryMappingFilePath))
 }

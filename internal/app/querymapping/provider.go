@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/common"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -17,9 +19,7 @@ type RetryableHTTPAdapter interface {
 
 type (
 	Provider struct {
-		queryMappings    []QueryMap
-		queryMappingPath string
-		tmpDir           string
+		queryMappings []QueryMap
 	}
 )
 
@@ -41,20 +41,16 @@ func NewProvider(queryMappingPath string, client RetryableHTTPAdapter) (*Provide
 		}
 	}
 	data, err := os.ReadFile(queryMappingPath)
+	removeTmpDir(tmpDir)
 	if err != nil {
-		removeTmpDir(tmpDir)
 		return nil, err
 	}
 	if jsonErr := json.Unmarshal(data, &mapSource); jsonErr != nil {
-		removeTmpDir(tmpDir)
 		return nil, jsonErr
 	}
-	mapping := mapSource.Mappings
 
 	return &Provider{
-		queryMappingPath: queryMappingPath,
-		queryMappings:    mapping,
-		tmpDir:           tmpDir,
+		queryMappings: mapSource.Mappings,
 	}, nil
 }
 
@@ -62,15 +58,22 @@ func (p *Provider) GetMapping() []QueryMap {
 	return p.queryMappings
 }
 
-func (p *Provider) GetQueryMappingFilePath() string {
-	return p.queryMappingPath
-}
-
-func (p *Provider) Clean() error {
-	if p.tmpDir != "" {
-		return os.RemoveAll(p.tmpDir)
+func (p *Provider) AddQueryMapping(language, name, group, sastQueryID string) error {
+	for _, mapping := range p.queryMappings {
+		if mapping.SastID == sastQueryID {
+			return nil
+		}
 	}
 
+	astID, err := common.GetAstQueryID(language, name, group)
+	if err != nil {
+		return err
+	}
+
+	p.queryMappings = append(p.queryMappings, QueryMap{
+		AstID:  astID,
+		SastID: sastQueryID,
+	})
 	return nil
 }
 
