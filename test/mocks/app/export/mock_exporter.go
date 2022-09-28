@@ -75,20 +75,6 @@ func (mr *MockExporterMockRecorder) Clean() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clean", reflect.TypeOf((*MockExporter)(nil).Clean))
 }
 
-// CopyFile mocks base method.
-func (m *MockExporter) CopyFile(arg0, arg1 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopyFile", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CopyFile indicates an expected call of CopyFile.
-func (mr *MockExporterMockRecorder) CopyFile(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyFile", reflect.TypeOf((*MockExporter)(nil).CopyFile), arg0, arg1)
-}
-
 // CreateDir mocks base method.
 func (m *MockExporter) CreateDir(arg0 string) error {
 	m.ctrl.T.Helper()

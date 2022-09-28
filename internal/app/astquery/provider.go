@@ -2,17 +2,14 @@ package astquery
 
 import (
 	"encoding/xml"
-	"fmt"
-	"hash/fnv"
-	"strconv"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/common"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 )
 
 const (
-	queryIDIntBase       = 10
 	notCustomPackageType = "Cx"
 )
 
@@ -35,12 +32,7 @@ func (e *Provider) GetQueryID(language, name, group, sastQueryID string) (string
 	if mappedAstID != "" {
 		return mappedAstID, nil
 	}
-	sourcePath := fmt.Sprintf("queries/%s/%s/%s/%s.cs", language, group, name, name)
-	queryID, queryIDErr := hash(sourcePath)
-	if queryIDErr != nil {
-		return "", queryIDErr
-	}
-	return strconv.FormatUint(queryID, queryIDIntBase), nil
+	return common.GetAstQueryID(language, name, group)
 }
 
 func (e *Provider) GetCustomQueriesList() (*soap.GetQueryCollectionResponse, error) {
@@ -73,10 +65,4 @@ func (e *Provider) getMappedID(sastID string) string {
 		}
 	}
 	return ""
-}
-
-func hash(s string) (uint64, error) {
-	h := fnv.New64()
-	_, err := h.Write([]byte(s))
-	return h.Sum64(), err
 }
