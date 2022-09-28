@@ -10,9 +10,11 @@ import (
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
+	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	mock_interfaces_query_common "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query"
+	mock_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_mapping"
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
 	mock_preset_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/preset"
@@ -1436,5 +1438,49 @@ func TestPresets(t *testing.T) {
 
 		assert.EqualError(t, err, "error with getting preset list: failed getting preset list")
 		assert.Error(t, err)
+	})
+}
+
+func TestQueryMappingFunc(t *testing.T) {
+	t.Run("test add query mapping file", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		queryMappingProvider := mock_interfaces.NewMockQueryMappingRepo(ctrl)
+		exporter.EXPECT().AddFileWithDataSource(destQueryMappingFile, gomock.Any()).
+			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
+				_, callbackErr := callback()
+				return callbackErr
+			}).Times(1)
+		queryMappingProvider.EXPECT().GetMapping().Return([]querymapping.QueryMap{}).Times(1)
+
+		err := addQueryMappingFile(queryMappingProvider, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("test add custom query to mapping", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		queryMappingProvider := mock_interfaces.NewMockQueryMappingRepo(ctrl)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		queryProvider.EXPECT().GetCustomQueriesList().Return(&soap.GetQueryCollectionResponse{
+			GetQueryCollectionResult: soap.GetQueryCollectionResult{
+				QueryGroups: soap.QueryGroups{
+					CxWSQueryGroup: []soap.CxWSQueryGroup{
+						{
+							Name:         "Test_group",
+							LanguageName: "Go",
+							Queries: soap.Queries{
+								CxWSQuery: []soap.CxWSQuery{
+									{QueryId: 1, Name: "Test_query"},
+								},
+							},
+						},
+					},
+				},
+			},
+		}, nil).Times(1)
+		queryMappingProvider.EXPECT().AddQueryMapping("Go", "Test_query", "Test_group", "1").Return(nil).Times(1)
+
+		err := addCustomQueryIDs(queryProvider, queryMappingProvider)
+		assert.NoError(t, err)
 	})
 }
