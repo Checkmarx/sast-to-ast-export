@@ -1441,7 +1441,7 @@ func TestPresets(t *testing.T) {
 	})
 }
 
-func TestQueryMappingFunc(t *testing.T) {
+func TestAddQueryMappingFile(t *testing.T) {
 	t.Run("test add query mapping file", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		exporter := mock_app_export.NewMockExporter(ctrl)
@@ -1456,7 +1456,9 @@ func TestQueryMappingFunc(t *testing.T) {
 		err := addQueryMappingFile(queryMappingProvider, exporter)
 		assert.NoError(t, err)
 	})
+}
 
+func TestAddCustomQueryIDs(t *testing.T) {
 	t.Run("test add custom query to mapping", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryMappingProvider := mock_interfaces.NewMockQueryMappingRepo(ctrl)
