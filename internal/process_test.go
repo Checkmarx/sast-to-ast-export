@@ -1486,3 +1486,18 @@ func TestAddCustomQueryIDs(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestFilterPresetList(t *testing.T) {
+	t.Run("test filtering default preset", func(t *testing.T) {
+		inputList := []*rest.PresetShort{
+			{ID: 1},
+			{ID: 56},
+		}
+		outputList := []*rest.PresetShort{
+			{ID: 56},
+		}
+		result := filterPresetList(inputList)
+
+		assert.Equal(t, outputList, result)
+	})
+}

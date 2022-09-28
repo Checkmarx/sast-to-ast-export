@@ -15,7 +15,7 @@ func TestIsDefaultPreset(t *testing.T) {
 	testCases := []TestCases{
 		{id: 1, result: true},
 		{id: 20, result: true},
-		{id: 7, result: false},
+		{id: 18, result: false},
 		{id: 0, result: false},
 		{id: 52, result: true},
 		{id: 53, result: false},
