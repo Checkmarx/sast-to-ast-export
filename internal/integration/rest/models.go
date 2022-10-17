@@ -72,6 +72,7 @@ type (
 		TeamID       int            `json:"OwningTeamId"`
 		Name         string         `json:"Name"`
 		IsPublic     bool           `json:"IsPublic"`
+		PresetID     int            `json:"PresetId"`
 		CreatedDate  string         `json:"CreatedDate"`
 		CustomFields []*CustomField `json:"CustomFields"`
 	}
@@ -81,6 +82,7 @@ type (
 		TeamID        int            `json:"teamId"`
 		Name          string         `json:"name"`
 		IsPublic      bool           `json:"isPublic"`
+		PresetID      int            `json:"presetId"`
 		CreatedDate   string         `json:"createdDate"`
 		Configuration *Configuration `json:"configuration"`
 	}
