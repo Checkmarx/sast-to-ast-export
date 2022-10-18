@@ -547,6 +547,54 @@ func TestAPIClient_GetPresets(t *testing.T) {
 	})
 }
 
+func TestAPIClient_GetProjects(t *testing.T) {
+	t.Run("returns projects response", func(t *testing.T) {
+		responseJSON := `{
+    "@odata.context": "http://test-host.com/CxWebInterface/odata/v1/$metadata#Projects(Id,OwningTeamId,Name,IsPublic,CreatedDate,CustomFields,PresetId,CustomFields(FieldName,FieldValue))",
+    "value": [
+        {
+            "Id": 1,
+            "OwningTeamId": 1,
+            "Name": "Test_all_vuln",
+            "IsPublic": true,
+            "CreatedDate": "2022-04-21T20:30:59.39+03:00",
+            "PresetId": 36,
+            "CustomFields": []
+        },
+        {
+            "Id": 2,
+            "OwningTeamId": 1,
+            "Name": "Other project",
+            "IsPublic": true,
+            "CreatedDate": "2022-04-21T21:47:03.7166667+03:00",
+            "PresetId": 36,
+            "CustomFields": [
+                {
+                    "FieldName": "Creator_custom_field",
+                    "FieldValue": "ssd"
+                },
+                {
+                    "FieldName": "Email_custom_field",
+                    "FieldValue": "test@test.com"
+                }
+            ]
+        } 
+      ]
+    }`
+
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetProjects("2022-04-01", "", "", 0, 10)
+		assert.NoError(t, err)
+
+		assert.Len(t, result, 2)
+		assert.Equal(t, "Test_all_vuln", result[0].Name)
+		assert.Equal(t, 36, result[0].PresetID)
+		assert.Equal(t, "test@test.com", result[1].Configuration.CustomFields[1].FieldValue)
+	})
+}
+
 func makeOkResponse(body string) *http.Response {
 	return &http.Response{
 		StatusCode: 200,

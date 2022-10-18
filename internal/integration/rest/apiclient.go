@@ -247,7 +247,7 @@ func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, l
 		return nil, requestErr
 	}
 	q := req.URL.Query()
-	q.Add("$select", "Id,OwningTeamId,Name,IsPublic,CreatedDate,CustomFields")
+	q.Add("$select", "Id,OwningTeamId,Name,IsPublic,CreatedDate,CustomFields,PresetId")
 	q.Add("$expand", "CustomFields($select=FieldName,FieldValue)")
 	q.Add("$filter", GetFilterForProjects(fromDate, teamName, projectIds))
 	q.Add("$skip", fmt.Sprintf("%d", offset))
@@ -268,6 +268,7 @@ func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, l
 			Name:        v.Name,
 			TeamID:      v.TeamID,
 			IsPublic:    v.IsPublic,
+			PresetID:    v.PresetID,
 			CreatedDate: v.CreatedDate,
 			Configuration: &Configuration{
 				CustomFields: v.CustomFields,
