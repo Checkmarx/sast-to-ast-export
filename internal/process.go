@@ -623,7 +623,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 }
 
 func filterPresetList(list []*rest.PresetShort) []*rest.PresetShort {
-	var out []*rest.PresetShort
+	out := []*rest.PresetShort{}
 	for _, item := range list {
 		if preset.IsDefaultPreset(item.ID) {
 			continue
