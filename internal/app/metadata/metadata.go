@@ -10,13 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type MetadataProvider interface {
+type Provider interface {
 	GetMetadataRecord(scanID string, queries []*Query) (*Record, error)
 }
 
-type MetadataFactory struct {
+type Factory struct {
 	astQueryIDProvider   interfaces.ASTQueryIDProvider
-	similarityIDProvider similarity.SimilarityIDProvider
+	similarityIDProvider similarity.IDProvider
 	sourceProvider       interfaces.SourceFileRepo
 	methodLineProvider   interfaces.MethodLineRepo
 	tmpDir               string
@@ -24,12 +24,12 @@ type MetadataFactory struct {
 
 func NewMetadataFactory(
 	astQueryIDProvider interfaces.ASTQueryIDProvider,
-	similarityIDProvider similarity.SimilarityIDProvider,
+	similarityIDProvider similarity.IDProvider,
 	sourceProvider interfaces.SourceFileRepo,
 	methodLineProvider interfaces.MethodLineRepo,
 	tmpDir string,
-) *MetadataFactory {
-	return &MetadataFactory{
+) *Factory {
+	return &Factory{
 		astQueryIDProvider,
 		similarityIDProvider,
 		sourceProvider,
@@ -38,7 +38,8 @@ func NewMetadataFactory(
 	}
 }
 
-func (e *MetadataFactory) GetMetadataRecord(scanID string, queries []*Query) (*Record, error) {
+//nolint:funlen,gocyclo
+func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, error) {
 	output := &Record{Queries: []*RecordQuery{}}
 
 	for queryIdx, query := range queries {

@@ -13,7 +13,7 @@ const (
 	calculatorCmd = "SimilarityCalculator.exe"
 )
 
-type SimilarityIDProvider interface {
+type IDProvider interface {
 	Calculate(
 		filename1, name1, line1, column1, methodLine1,
 		filename2, name2, line2, column2, methodLine2,
@@ -21,21 +21,21 @@ type SimilarityIDProvider interface {
 	) (string, error)
 }
 
-type SimilarityIDCalculator struct {
+type IDCalculator struct {
 	calculatorCmd string
 }
 
-func NewSimilarityIDCalculator() (*SimilarityIDCalculator, error) {
+func NewSimilarityIDCalculator() (*IDCalculator, error) {
 	executableFilename, executableErr := os.Executable()
 	if executableErr != nil {
 		return nil, executableErr
 	}
 	executablePath := filepath.Dir(executableFilename)
 	cmd := filepath.Join(executablePath, calculatorCmd)
-	return &SimilarityIDCalculator{calculatorCmd: cmd}, nil
+	return &IDCalculator{calculatorCmd: cmd}, nil
 }
 
-func (e *SimilarityIDCalculator) Calculate(
+func (e *IDCalculator) Calculate(
 	filename1, name1, line1, column1, methodLine1,
 	filename2, name2, line2, column2, methodLine2,
 	queryID string,

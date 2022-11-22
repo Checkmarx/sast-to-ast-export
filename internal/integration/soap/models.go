@@ -122,7 +122,7 @@ type (
 	CxWSQueryGroup struct {
 		XMLName           xml.Name `xml:"CxWSQueryGroup"`
 		Name              string   `xml:"Name"`
-		PackageId         int      `xml:"PackageId"`
+		PackageID         int      `xml:"PackageId"`
 		Queries           Queries  `xml:"Queries"`
 		IsReadOnly        bool     `xml:"IsReadOnly"`
 		IsEncrypted       bool     `xml:"IsEncrypted"`
@@ -130,7 +130,7 @@ type (
 		Language          int      `xml:"Language"`
 		LanguageName      string   `xml:"LanguageName"`
 		PackageTypeName   string   `xml:"PackageTypeName"`
-		ProjectId         int      `xml:"ProjectId"`
+		ProjectID         int      `xml:"ProjectId"`
 		PackageType       string   `xml:"PackageType"`
 		PackageFullName   string   `xml:"PackageFullName"`
 		OwningTeam        int      `xml:"OwningTeam"`
@@ -147,13 +147,13 @@ type (
 	CxWSQuery struct {
 		XMLName          xml.Name   `xml:"CxWSQuery"`
 		Name             string     `xml:"Name"`
-		QueryId          int        `xml:"QueryId"`
+		QueryID          int        `xml:"QueryId"`
 		Source           string     `xml:"Source"`
 		Cwe              int        `xml:"Cwe"`
 		IsExecutable     bool       `xml:"IsExecutable"`
 		IsEncrypted      bool       `xml:"IsEncrypted"`
 		Severity         int        `xml:"Severity"`
-		PackageId        int        `xml:"PackageId"`
+		PackageID        int        `xml:"PackageId"`
 		Status           string     `xml:"Status"`
 		Type             string     `xml:"Type"`
 		Categories       Categories `xml:"Categories"`
@@ -169,14 +169,14 @@ type (
 
 	CxQueryCategory struct {
 		XMLName      xml.Name `xml:"CxQueryCategory"`
-		Id           int      `xml:"Id"`
+		ID           int      `xml:"Id"`
 		CategoryName string   `xml:"CategoryName"`
 		CategoryType int      `xml:"CategoryType"`
 	}
 
 	CategoryType struct {
 		XMLName xml.Name `xml:"CategoryType"`
-		Id      int      `xml:"Id"`
+		ID      int      `xml:"Id"`
 		Name    string   `xml:"Name"`
 		Order   int      `xml:"Order"`
 	}
@@ -185,7 +185,7 @@ type (
 
 	GetPresetDetailsRequest struct {
 		XMLName xml.Name `xml:"chec:GetPresetDetails"`
-		Id      int      `xml:"chec:id"`
+		ID      int      `xml:"chec:id"`
 	}
 
 	GetPresetDetailsResponse struct {
@@ -202,7 +202,7 @@ type (
 	Preset struct {
 		XMLName             xml.Name `xml:"preset"`
 		QueryIds            QueryIds `xml:"queryIds"`
-		Id                  int      `xml:"id"`
+		ID                  int      `xml:"id"`
 		Name                string   `xml:"name"`
 		OwningTeam          int      `xml:"owningteam"`
 		IsPublic            bool     `xml:"isPublic"`

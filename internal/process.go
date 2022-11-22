@@ -56,7 +56,7 @@ type ReportConsumeOutput struct {
 	ScanID    int
 }
 
-//nolint:funlen
+//nolint:gocyclo,funlen
 func RunExport(args *Args) error {
 	consumerCount := worker.GetNumCPU()
 
@@ -69,9 +69,9 @@ func RunExport(args *Args) error {
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
-	retryHttpClient := getRetryHttpClient()
+	retryHTTPClient := getRetryHTTPClient()
 	// create api client
-	client, err := rest.NewSASTClient(args.URL, retryHttpClient)
+	client, err := rest.NewSASTClient(args.URL, retryHTTPClient)
 	if err != nil {
 		return errors.Wrap(err, "could not create REST client")
 	}
@@ -109,13 +109,13 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	soapClient := soap.NewClient(args.URL, client.Token, retryHttpClient)
+	soapClient := soap.NewClient(args.URL, client.Token, retryHTTPClient)
 	sourceRepo := sourcefile.NewRepo(soapClient)
 	methodLineRepo := methodline.NewRepo(soapClient)
 	queriesRepo := queries.NewRepo(soapClient)
 	presetRepo := presetrepo.NewRepo(soapClient)
 
-	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile, retryHttpClient)
+	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile, retryHTTPClient)
 	if astQueryMappingProviderErr != nil {
 		return errors.Wrap(astQueryMappingProviderErr, "could not create AST query mapping provider")
 	}
@@ -212,7 +212,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 }
 
 func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args, retryAttempts int,
-	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
+	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
 	astQueryProvider interfaces.ASTQueryProvider, presetProvider interfaces.PresetProvider,
 ) error {
 	options := sliceutils.ConvertStringToInterface(args.Export)
@@ -427,7 +427,7 @@ func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, 
 }
 
 func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
-	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
+	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
 	teamName, projectsIds string,
 ) error {
 	consumerCount := worker.GetNumCPU()
@@ -545,7 +545,7 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 
 func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
-	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
+	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.Provider,
 ) {
 	for reportJob := range reportJobs {
 		l := log.With().
@@ -683,7 +683,7 @@ func getPresetData(soapClient interfaces.PresetProvider, presetID int) ([]byte, 
 	return presetData, nil
 }
 
-func getRetryHttpClient() *retryablehttp.Client {
+func getRetryHTTPClient() *retryablehttp.Client {
 	return &retryablehttp.Client{
 		HTTPClient:   cleanhttp.DefaultPooledClient(),
 		Logger:       nil,
@@ -721,10 +721,12 @@ func addCustomQueryIDs(astQueryProvider interfaces.ASTQueryProvider, astQueryMap
 	if errResp != nil {
 		return errResp
 	}
-	for _, queryGroup := range customQueryResp.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
-		for _, query := range queryGroup.Queries.CxWSQuery {
+	for i := range customQueryResp.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
+		queryGroup := customQueryResp.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup[i]
+		for j := range queryGroup.Queries.CxWSQuery {
+			query := queryGroup.Queries.CxWSQuery[j]
 			if err := astQueryMappingProvider.AddQueryMapping(queryGroup.LanguageName, query.Name,
-				queryGroup.Name, strconv.Itoa(query.QueryId)); err != nil {
+				queryGroup.Name, strconv.Itoa(query.QueryID)); err != nil {
 				return err
 			}
 		}
