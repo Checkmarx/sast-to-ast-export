@@ -48,6 +48,7 @@ func (e *Provider) GetCustomQueriesList() (*soap.GetQueryCollectionResponse, err
 	output.GetQueryCollectionResult.QueryGroups.XMLName = xml.Name{Local: "QueryGroups"}
 	output.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup = []soap.CxWSQueryGroup{}
 
+	//nolint:gocritic
 	for _, v := range queryResponse.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
 		if v.PackageType != notCustomPackageType {
 			output.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup =

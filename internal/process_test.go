@@ -24,6 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	TeamName   = "TestTeam"
+	projectIDs = "1,2"
+)
+
 type validatePermissionTest struct {
 	JwtClaims     jwt.MapClaims
 	ExportOptions []string
@@ -807,7 +812,7 @@ func TestGetTriagedScans(t *testing.T) {
 			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
 			expectedErr:    fmt.Errorf("failed getting result for scanID 2"),
 			msg:            "fails if can't get second result",
-			projectIds:     "1,2",
+			projectIds:     projectIDs,
 		},
 	}
 	fromDate := "2021-9-7"
@@ -906,7 +911,7 @@ func TestConsumeReports(t *testing.T) {
 		Return(nil).
 		MinTimes(1).
 		MaxTimes(1)
-	metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+	metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 	metadataRecord := &metadata.Record{
 		Queries: []*metadata.RecordQuery{},
 	}
@@ -940,8 +945,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		teamName := "TestTeam"
-		projectsIds := "1,2"
+		teamName := TeamName
+		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
@@ -970,7 +975,7 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, teamName, projectsIds)
@@ -982,8 +987,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		teamName := "TestTeam"
-		projectsIds := "1,2"
+		teamName := TeamName
+		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
@@ -1001,7 +1006,7 @@ func TestFetchResultsData(t *testing.T) {
 			Return(nil, fmt.Errorf("failed getting triaged scan")).
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
 			time.Millisecond, metadataProvider, teamName, projectsIds)
 
@@ -1012,8 +1017,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		teamName := "TestTeam"
-		projectsIds := "1,2"
+		teamName := TeamName
+		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
@@ -1042,7 +1047,7 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
 			time.Millisecond, metadataProvider, teamName, projectsIds)
@@ -1066,7 +1071,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1089,7 +1094,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1110,7 +1115,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1145,7 +1150,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1189,7 +1194,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{export.UsersOption, export.TeamsOption, export.ResultsOption},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1214,7 +1219,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{export.UsersOption, export.TeamsOption, export.ResultsOption},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1231,7 +1236,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1248,7 +1253,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"test1", "test2"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1299,8 +1304,8 @@ func TestExportResultsToFile(t *testing.T) {
 }
 
 func TestFetchProjects(t *testing.T) {
-	teamName := "TestTeam"
-	projectsIds := "1,2"
+	teamName := TeamName
+	projectsIds := projectIDs
 	t.Run("fetch projects successfully", func(t *testing.T) {
 		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
 			CreatedDate: "2022-04-21T20:30:59.39+03:00",
@@ -1462,7 +1467,7 @@ func TestAddCustomQueryIDs(t *testing.T) {
 							LanguageName: "Go",
 							Queries: soap.Queries{
 								CxWSQuery: []soap.CxWSQuery{
-									{QueryId: 1, Name: "Test_query"},
+									{QueryID: 1, Name: "Test_query"},
 								},
 							},
 						},

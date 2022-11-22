@@ -112,7 +112,7 @@ func (e *Client) GetQueryCollection() (*GetQueryCollectionResponse, error) {
 }
 
 func (e *Client) GetPresetDetails(id int) (*GetPresetDetailsResponse, error) {
-	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{Id: id})
+	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{ID: id})
 	if requestMarshalErr != nil {
 		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
 	}

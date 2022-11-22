@@ -56,7 +56,7 @@ type ReportConsumeOutput struct {
 	ScanID    int
 }
 
-//nolint:funlen
+//nolint:gocyclo,funlen
 func RunExport(args *Args) error {
 	consumerCount := worker.GetNumCPU()
 
@@ -69,7 +69,7 @@ func RunExport(args *Args) error {
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
-	retryHttpClient := getRetryHttpClient()
+	retryHTTPClient := getRetryHTTPClient()
 	// create api client
 	client, err := rest.NewSASTClient(args.URL, retryHttpClient)
 	if err != nil {

@@ -77,19 +77,19 @@ func (p *Provider) AddQueryMapping(language, name, group, sastQueryID string) er
 	return nil
 }
 
-func createTmpFile(fileUrl string, client RetryableHTTPAdapter) (string, string, error) {
+func createTmpFile(fileURL string, client RetryableHTTPAdapter) (tmpFileName, tmpQueryMappingDir string, err error) {
 	tmpDir := os.TempDir()
-	tmpQueryMappingDir, err := os.MkdirTemp(tmpDir, tmpDirPrefix)
+	tmpQueryMappingDir, err = os.MkdirTemp(tmpDir, tmpDirPrefix)
 	if err != nil {
 		return "", "", err
 	}
-	tmpFileName := path.Join(tmpQueryMappingDir, fileName)
+	tmpFileName = path.Join(tmpQueryMappingDir, fileName)
 	out, err := os.Create(tmpFileName)
 	if err != nil {
 		return "", tmpQueryMappingDir, err
 	}
 	defer out.Close()
-	resp, err := client.Get(fileUrl)
+	resp, err := client.Get(fileURL)
 	if err != nil {
 		return "", tmpQueryMappingDir, err
 	}

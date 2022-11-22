@@ -14,7 +14,7 @@ type Args struct {
 	DBConnectionString,
 	ProjectsIds,
 	TeamName string
-	RunTime time.Time
+	RunTime          time.Time
 	QueryMappingFile string
 }
 

@@ -549,6 +549,7 @@ func TestAPIClient_GetPresets(t *testing.T) {
 
 func TestAPIClient_GetProjects(t *testing.T) {
 	t.Run("returns projects response", func(t *testing.T) {
+		//nolint:lll
 		responseJSON := `{
     "@odata.context": "http://test-host.com/CxWebInterface/odata/v1/$metadata#Projects(Id,OwningTeamId,Name,IsPublic,CreatedDate,CustomFields,PresetId,CustomFields(FieldName,FieldValue))",
     "value": [

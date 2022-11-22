@@ -74,9 +74,7 @@ func getMinMax(ids []string) (min, max int) {
 	min, _ = strconv.Atoi(strings.Trim(ids[0], " "))
 	max, _ = strconv.Atoi(strings.Trim(ids[1], " "))
 	if min > max {
-		swap := min
-		min = max
-		max = swap
+		min, max = max, min
 	}
 
 	return min, max
