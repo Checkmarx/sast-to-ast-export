@@ -47,3 +47,7 @@ mocks:
 	mockgen -package mock_app_method_line -destination test/mocks/app/method_line/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces MethodLineRepo
 	mockgen -package mock_app_metadata -destination test/mocks/app/metadata/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/metadata Provider
 	mockgen -package mock_app_export -destination test/mocks/app/export/mock_exporter.go github.com/checkmarxDev/ast-sast-export/internal/app/export Exporter
+	mockgen -package mock_interfaces_queries -destination test/mocks/app/queries/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces QueriesRepo
+	mockgen -package mock_interfaces -destination test/mocks/app/ast_query_mapping/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces QueryMappingRepo
+	mockgen -package mock_interfaces -destination test/mocks/app/ast_query/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces ASTQueryProvider
+	mockgen -package mock_preset_interfaces -destination test/mocks/app/preset/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces PresetProvider
