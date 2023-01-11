@@ -1491,7 +1491,7 @@ func TestFilterPresetList(t *testing.T) {
 		outputList := []*rest.PresetShort{
 			{ID: 56},
 		}
-		result := filterPresetList(inputList)
+		result := filterPresetList(inputList, false)
 
 		assert.Equal(t, outputList, result)
 	})
@@ -1502,8 +1502,28 @@ func TestFilterPresetList(t *testing.T) {
 			{ID: 2},
 		}
 		outputList := []*rest.PresetShort{}
-		result := filterPresetList(inputList)
+		result := filterPresetList(inputList, false)
 
 		assert.Equal(t, outputList, result)
+	})
+
+	t.Run("test ignoring filtering with custom preset", func(t *testing.T) {
+		inputList := []*rest.PresetShort{
+			{ID: 1},
+			{ID: 2},
+		}
+		result := filterPresetList(inputList, true)
+
+		assert.Equal(t, inputList, result)
+	})
+
+	t.Run("test ignoring filtering without custom preset", func(t *testing.T) {
+		inputList := []*rest.PresetShort{
+			{ID: 1},
+			{ID: 2},
+		}
+		result := filterPresetList(inputList, true)
+
+		assert.Equal(t, inputList, result)
 	})
 }
