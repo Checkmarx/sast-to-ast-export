@@ -34,6 +34,21 @@ func (m *MockAdapter) EXPECT() *MockAdapterMockRecorder {
 	return m.recorder
 }
 
+// GetInstallationSettings mocks base method.
+func (m *MockAdapter) GetInstallationSettings() (*soap.GetInstallationSettingsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstallationSettings")
+	ret0, _ := ret[0].(*soap.GetInstallationSettingsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstallationSettings indicates an expected call of GetInstallationSettings.
+func (mr *MockAdapterMockRecorder) GetInstallationSettings() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstallationSettings", reflect.TypeOf((*MockAdapter)(nil).GetInstallationSettings))
+}
+
 // GetPresetDetails mocks base method.
 func (m *MockAdapter) GetPresetDetails(arg0 int) (*soap.GetPresetDetailsResponse, error) {
 	m.ctrl.T.Helper()
