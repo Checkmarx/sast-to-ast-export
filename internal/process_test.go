@@ -1402,27 +1402,17 @@ func TestPresets(t *testing.T) {
 		{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
 	}
 
-	t.Run("fetch custom and default presets successfully", func(t *testing.T) {
+	t.Run("fetch presets successfully", func(t *testing.T) {
 		var preset100000 soap.GetPresetDetailsResponse
-		var preset1 soap.GetPresetDetailsResponse
-		var preset9 soap.GetPresetDetailsResponse
 		ctrl := gomock.NewController(t)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
 		assert.NoError(t, io100000Err)
-		presetXML1, io1Err := os.ReadFile("../test/data/presets/1.xml")
-		assert.NoError(t, io1Err)
-		presetXML9, io9Err := os.ReadFile("../test/data/presets/9.xml")
-		assert.NoError(t, io9Err)
 		_ = xml.Unmarshal(presetXML100000, &preset100000)
-		_ = xml.Unmarshal(presetXML1, &preset1)
-		_ = xml.Unmarshal(presetXML9, &preset9)
 		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
-		presetProvider.EXPECT().GetPresetDetails(1).Return(&preset1, nil)
-		presetProvider.EXPECT().GetPresetDetails(9).Return(&preset9, nil)
 		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
 		exporter.EXPECT().AddFileWithDataSource(export.PresetsFileName, gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
@@ -1430,8 +1420,6 @@ func TestPresets(t *testing.T) {
 				return callbackErr
 			}).AnyTimes()
 		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "100000.xml"), gomock.Any()).Return(nil)
-		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "1.xml"), gomock.Any()).Return(nil)
-		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "9.xml"), gomock.Any()).Return(nil)
 
 		err := fetchPresetsData(client, presetProvider, exporter)
 
@@ -1506,7 +1494,7 @@ func TestFilterPresetList(t *testing.T) {
 		outputList := []*rest.PresetShort{
 			{ID: 56},
 		}
-		result := filterPresetList(inputList, false)
+		result := filterPresetList(inputList)
 
 		assert.Equal(t, outputList, result)
 	})
@@ -1517,29 +1505,9 @@ func TestFilterPresetList(t *testing.T) {
 			{ID: 2},
 		}
 		outputList := []*rest.PresetShort{}
-		result := filterPresetList(inputList, false)
+		result := filterPresetList(inputList)
 
 		assert.Equal(t, outputList, result)
-	})
-
-	t.Run("test ignoring filtering with custom preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 2},
-		}
-		result := filterPresetList(inputList, true)
-
-		assert.Equal(t, inputList, result)
-	})
-
-	t.Run("test ignoring filtering without custom preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 2},
-		}
-		result := filterPresetList(inputList, true)
-
-		assert.Equal(t, inputList, result)
 	})
 }
 

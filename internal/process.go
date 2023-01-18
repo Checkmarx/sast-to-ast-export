@@ -407,7 +407,7 @@ func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, 
 	if listErr != nil {
 		return errors.Wrap(listErr, "error with getting preset list")
 	}
-	presetList = filterPresetList(presetList, true)
+	presetList = filterPresetList(presetList)
 	if err := exporter.CreateDir(export2.PresetsDirName); err != nil {
 		return err
 	}
@@ -645,10 +645,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 	}
 }
 
-func filterPresetList(list []*rest.PresetShort, isDisable bool) []*rest.PresetShort {
-	if isDisable {
-		return list
-	}
+func filterPresetList(list []*rest.PresetShort) []*rest.PresetShort {
 	out := []*rest.PresetShort{}
 	for _, item := range list {
 		if preset.IsDefaultPreset(item.ID) {
