@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/installation"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/app/astquery"
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
@@ -114,6 +116,12 @@ func RunExport(args *Args) error {
 	methodLineRepo := methodline.NewRepo(soapClient)
 	queriesRepo := queries.NewRepo(soapClient)
 	presetRepo := presetrepo.NewRepo(soapClient)
+	installationRepo := installation.NewRepo(soapClient)
+
+	fetchInstallationErr := fetchInstallationData(installationRepo, &exportValues)
+	if fetchInstallationErr != nil {
+		return errors.Wrap(fetchInstallationErr, "could not fetch installation data")
+	}
 
 	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile, retryHTTPClient)
 	if astQueryMappingProviderErr != nil {
@@ -353,6 +361,21 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 		export2.NewJSONDataSource(projects)); err != nil {
 		return err
 	}
+	return nil
+}
+
+func fetchInstallationData(client interfaces.InstallationProvider, exporter export2.Exporter) error {
+	log.Info().Msg("collecting installation details")
+	installationResp, err := client.GetInstallationSettings()
+	if err != nil {
+		return errors.Wrap(err, "error with getting installation details")
+	}
+
+	installationMappingsDataSource := export2.NewJSONDataSource(export2.TransformXMLInstallationMappings(installationResp))
+	if errMapping := exporter.AddFileWithDataSource(export2.InstallationFileName, installationMappingsDataSource); err != nil {
+		return errMapping
+	}
+
 	return nil
 }
 
