@@ -324,7 +324,7 @@ func TestTransformXMLInstallationMappings(t *testing.T) {
 			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
 				IsSuccesfull: "true",
 				InstallationSettingsList: soap.InstallationSettingsList{
-					InstallationSetting: soap.InstallationSetting{
+					InstallationSetting: []*soap.InstallationSetting{
 						{
 							Name:    "Checkmarx Engine Service",
 							Version: "9.3.4.1111",
@@ -352,7 +352,7 @@ func TestTransformXMLInstallationMappings(t *testing.T) {
 			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
 				IsSuccesfull: "true",
 				InstallationSettingsList: soap.InstallationSettingsList{
-					InstallationSetting: soap.InstallationSetting{
+					InstallationSetting: []*soap.InstallationSetting{
 						{
 							Name:    "Checkmarx Queries Pack",
 							Version: "9.3.4.5111",
@@ -380,7 +380,7 @@ func TestTransformXMLInstallationMappings(t *testing.T) {
 			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
 				IsSuccesfull: "true",
 				InstallationSettingsList: soap.InstallationSettingsList{
-					InstallationSetting: soap.InstallationSetting{
+					InstallationSetting: []*soap.InstallationSetting{
 						{
 							Name:    "Checkmarx Engine Service",
 							Version: "9.3.4.1111",

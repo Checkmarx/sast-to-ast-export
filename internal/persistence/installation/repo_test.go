@@ -15,7 +15,7 @@ var (
 		GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
 			IsSuccesfull: "true",
 			InstallationSettingsList: soap.InstallationSettingsList{
-				InstallationSetting: soap.InstallationSetting{
+				InstallationSetting: []*soap.InstallationSetting{
 					{
 						Name:    "Checkmarx Engine Service",
 						Version: "9.3.4.1111",

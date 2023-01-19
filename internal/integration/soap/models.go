@@ -223,7 +223,7 @@ type (
 		XMLName xml.Name `xml:"chec:GetInstallationSettings"`
 	}
 
-	InstallationSetting []struct {
+	InstallationSetting struct {
 		XMLName         xml.Name `xml:"InstallationSetting"`
 		Text            string   `xml:",chardata"`
 		Name            string   `xml:"Name"`
@@ -238,8 +238,8 @@ type (
 	}
 
 	InstallationSettingsList struct {
-		XMLName             xml.Name            `xml:"InstallationSettingsList"`
-		InstallationSetting InstallationSetting `xml:"InstallationSetting"`
+		XMLName             xml.Name               `xml:"InstallationSettingsList"`
+		InstallationSetting []*InstallationSetting `xml:"InstallationSetting"`
 	}
 
 	GetInstallationSettingsResult struct {

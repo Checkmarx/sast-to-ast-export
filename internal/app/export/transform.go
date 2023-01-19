@@ -56,6 +56,7 @@ func TransformXMLInstallationMappings(installationMappings *soap.GetInstallation
 	if installationMappings == nil {
 		return []*soap.InstallationMapping{}
 	}
+
 	for _, e := range installationMappings.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting {
 		if e.Name == installationEngineServiceName || e.Name == installationContentPackName {
 			out = append(out, &soap.InstallationMapping{
