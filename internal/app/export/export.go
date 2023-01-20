@@ -43,6 +43,8 @@ const (
 	PresetsDirName = "presets"
 	// PresetsFileName presets file
 	PresetsFileName = "presets.json"
+	// InstallationFileName file
+	InstallationFileName = "installation.json"
 
 	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"

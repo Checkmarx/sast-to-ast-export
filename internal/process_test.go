@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/installation"
+	mock_preset_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/preset"
+	mock_integration_soap "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/soap"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
@@ -17,7 +21,6 @@ import (
 	mock_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_mapping"
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
-	mock_preset_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/preset"
 	mock_integration_rest "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/rest"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
@@ -1505,5 +1508,43 @@ func TestFilterPresetList(t *testing.T) {
 		result := filterPresetList(inputList)
 
 		assert.Equal(t, outputList, result)
+	})
+}
+
+func TestFetchInstallationData(t *testing.T) {
+	soapResponseSuccess := &soap.GetInstallationSettingsResponse{
+		GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
+			IsSuccesfull: "true",
+			InstallationSettingsList: soap.InstallationSettingsList{
+				InstallationSetting: []*soap.InstallationSetting{
+					{
+						Name:    "Checkmarx Engine Service",
+						Version: "9.3.4.1111",
+						Hotfix:  "Hotfix",
+					},
+					{
+						Name:    "Checkmarx Queries Pack",
+						Version: "9.3.4.5111",
+						Hotfix:  "Hotfix",
+					},
+				},
+			},
+		},
+	}
+	t.Run("test add installation version", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
+
+		instance := installation.NewRepo(soapClientMock)
+
+		err := fetchInstallationData(instance, exporter)
+		assert.NoError(t, err)
 	})
 }
