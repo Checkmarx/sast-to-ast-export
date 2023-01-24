@@ -1061,11 +1061,22 @@ func TestFetchResultsData(t *testing.T) {
 
 //nolint:funlen
 func TestFetchSelectedData(t *testing.T) {
+	teamName := TeamName
+	projectsIds := projectIDs
+	projectPage := []rest.ProjectWithLastScanID{
+		{ID: 1, LastScanID: 1},
+		{ID: 2, LastScanID: 2},
+	}
 	t.Run("export users success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(TeamName), gomock.Eq(projectIDs),
+				gomock.Eq(0), gomock.Eq(resultsPageLimit)).
+			Return(&projectPage, nil).
+			AnyTimes()
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil)
 		exporter := mock_app_export.NewMockExporter(ctrl)
@@ -1074,6 +1085,93 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider, presetProvider)
+
+		assert.NoError(t, result)
+	})
+	t.Run("export projects and presets success case", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		var preset100000 soap.GetPresetDetailsResponse
+		presetList := []*rest.PresetShort{
+			{ID: 1, Name: "All", OwnerName: "CxUser"},
+			{ID: 9, Name: "Android", OwnerName: "CxUser"},
+			{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
+			{ID: 100001, Name: "New_custom_preset_2", OwnerName: "Custom_user"}, // this one should be ignored
+		}
+		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
+			CreatedDate: "2022-04-21T20:30:59.39+03:00", PresetID: 100000,
+			Configuration: &rest.Configuration{
+				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
+			}}}
+		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
+		assert.NoError(t, io100000Err)
+		unmarshal100000Err := xml.Unmarshal(presetXML100000, &preset100000)
+		assert.NoError(t, unmarshal100000Err)
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
+		client := mock_integration_rest.NewMockClient(ctrl)
+
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
+			gomock.Any()).Return(projects, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
+			gomock.Any()).Return([]*rest.Project{}, nil)
+		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
+		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
+		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		args := Args{
+			Export:              []string{"presets", "projects"},
+			ProjectsIds:         projectIDs,
+			TeamName:            teamName,
+			ProjectsActiveSince: 100,
+		}
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider, presetProvider)
+
+		assert.NoError(t, result)
+	})
+	t.Run("export all presets success case", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		var preset100000 soap.GetPresetDetailsResponse
+		var preset100001 soap.GetPresetDetailsResponse
+		presetList := []*rest.PresetShort{
+			{ID: 1, Name: "All", OwnerName: "CxUser"},
+			{ID: 9, Name: "Android", OwnerName: "CxUser"},
+			{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
+			{ID: 100001, Name: "New_custom_preset_2", OwnerName: "Custom_user"}, // this one should not be ignored
+		}
+		args := Args{
+			Export:              []string{"presets"},
+			TeamName:            teamName,
+			ProjectsActiveSince: 100,
+		}
+		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
+		assert.NoError(t, io100000Err)
+		unmarshal100000Err := xml.Unmarshal(presetXML100000, &preset100000)
+		assert.NoError(t, unmarshal100000Err)
+		presetXML100001, io100001Err := os.ReadFile("../test/data/presets/100001.xml")
+		assert.NoError(t, io100001Err)
+		unmarshal100001Err := xml.Unmarshal(presetXML100001, &preset100001)
+		assert.NoError(t, unmarshal100001Err)
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
+		client := mock_integration_rest.NewMockClient(ctrl)
+
+		client.EXPECT().GetPresets().Return(presetList, nil).AnyTimes()
+		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
+		presetProvider.EXPECT().GetPresetDetails(100001).Return(&preset100001, nil)
+		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
@@ -1328,9 +1426,10 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
 
-		assert.NoError(t, result)
+		assert.NoError(t, errProjects)
+		assert.Equal(t, projects, projectsList)
 	})
 
 	t.Run("fetch projects with error", func(t *testing.T) {
@@ -1339,7 +1438,7 @@ func TestFetchProjects(t *testing.T) {
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
 			gomock.Any()).Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
 
-		err := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		_, err := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
 
 		assert.EqualError(t, err, "failed getting projects: failed fetching project")
 	})
@@ -1356,6 +1455,7 @@ func TestFetchProjects(t *testing.T) {
 			Configuration: &rest.Configuration{
 				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test 4"}},
 			}}}
+		expectedList := []*rest.Project{projectsFirst[0], projectsSecond[0]}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
@@ -1371,9 +1471,10 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
 
-		assert.NoError(t, result)
+		assert.NoError(t, errProjects)
+		assert.Equal(t, expectedList, projectsList)
 	})
 }
 
@@ -1421,7 +1522,7 @@ func TestPresets(t *testing.T) {
 			}).AnyTimes()
 		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "100000.xml"), gomock.Any()).Return(nil)
 
-		err := fetchPresetsData(client, presetProvider, exporter)
+		err := fetchPresetsData(client, presetProvider, exporter, nil, "")
 
 		assert.NoError(t, err)
 	})
@@ -1432,7 +1533,7 @@ func TestPresets(t *testing.T) {
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetPresets().Return(nil, fmt.Errorf("failed getting preset list")).Times(1)
 
-		err := fetchPresetsData(client, presetProvider, exporter)
+		err := fetchPresetsData(client, presetProvider, exporter, nil, "")
 
 		assert.EqualError(t, err, "error with getting preset list: failed getting preset list")
 		assert.Error(t, err)

@@ -225,7 +225,15 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
 	astQueryProvider interfaces.ASTQueryProvider, presetProvider interfaces.PresetProvider,
 ) error {
+	var errProjects error
+	var projects []*rest.Project
 	options := sliceutils.ConvertStringToInterface(args.Export)
+	if sliceutils.Contains(export2.ProjectsOption, options) {
+		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIds)
+		if errProjects != nil {
+			return errProjects
+		}
+	}
 	for _, exportOption := range export2.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
 			switch exportOption {
@@ -237,17 +245,12 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 				if err := fetchTeamsData(client, exporter); err != nil {
 					return err
 				}
-			case export2.ProjectsOption:
-				if err := fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName,
-					args.ProjectsIds); err != nil {
-					return err
-				}
 			case export2.QueriesOption:
 				if err := fetchQueriesData(astQueryProvider, exporter); err != nil {
 					return err
 				}
 			case export2.PresetsOption:
-				if err := fetchPresetsData(client, presetProvider, exporter); err != nil {
+				if err := fetchPresetsData(client, presetProvider, exporter, projects, args.ProjectsIds); err != nil {
 					return err
 				}
 			case export2.ResultsOption:
@@ -332,7 +335,7 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 }
 
 func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
-	teamName, projectsIds string) error {
+	teamName, projectsIds string) ([]*rest.Project, error) {
 	log.Info().Msg("collecting projects")
 	var projects []*rest.Project
 	projectOffset := 0
@@ -348,7 +351,7 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 
 		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIds, projectOffset, projectLimit)
 		if projectsErr != nil {
-			return errors.Wrap(projectsErr, "failed getting projects")
+			return nil, errors.Wrap(projectsErr, "failed getting projects")
 		}
 		if len(projectsItems) == 0 {
 			break
@@ -361,9 +364,9 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 	}
 	if err := exporter.AddFileWithDataSource(export2.ProjectsFileName,
 		export2.NewJSONDataSource(projects)); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return projects, nil
 }
 
 func fetchInstallationData(client interfaces.InstallationProvider, exporter export2.Exporter) error {
@@ -400,7 +403,11 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 	return nil
 }
 
-func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, exporter export2.Exporter) error {
+func fetchPresetsData(
+	client rest.Client,
+	soapClient interfaces.PresetProvider,
+	exporter export2.Exporter,
+	projects []*rest.Project, projectsIds string) error {
 	log.Info().Msg("collecting presets")
 	consumerCount := worker.GetNumCPU()
 	presetJobs := make(chan PresetJob)
@@ -410,6 +417,10 @@ func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, 
 		return errors.Wrap(listErr, "error with getting preset list")
 	}
 	presetList = filterPresetList(presetList)
+	if len(projects) > 0 && projectsIds != "" {
+		log.Info().Msg("filtering presets, only export associated to projects")
+		presetList = filterPresetByProjectList(presetList, projects)
+	}
 	if err := exporter.CreateDir(export2.PresetsDirName); err != nil {
 		return err
 	}
@@ -656,6 +667,25 @@ func filterPresetList(list []*rest.PresetShort) []*rest.PresetShort {
 		out = append(out, item)
 	}
 	return out
+}
+
+func filterPresetByProjectList(presets []*rest.PresetShort, projects []*rest.Project) []*rest.PresetShort {
+	out := make([]*rest.PresetShort, 0)
+	for _, item := range presets {
+		if isIncludedPreset(projects, item) {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+func isIncludedPreset(projects []*rest.Project, value *rest.PresetShort) bool {
+	for _, project := range projects {
+		if project.PresetID == value.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func getPresetFileName(fileName string) string {
