@@ -1426,9 +1426,10 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		_, result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
 
-		assert.NoError(t, result)
+		assert.NoError(t, errProjects)
+		assert.Equal(t, projects, projectsList)
 	})
 
 	t.Run("fetch projects with error", func(t *testing.T) {
@@ -1454,6 +1455,7 @@ func TestFetchProjects(t *testing.T) {
 			Configuration: &rest.Configuration{
 				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test 4"}},
 			}}}
+		expectedList := []*rest.Project{projectsFirst[0], projectsSecond[0]}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
@@ -1469,9 +1471,10 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		_, err := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
 
-		assert.NoError(t, err)
+		assert.NoError(t, errProjects)
+		assert.Equal(t, expectedList, projectsList)
 	})
 }
 
