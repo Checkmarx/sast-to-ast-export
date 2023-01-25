@@ -1139,8 +1139,7 @@ func TestFetchSelectedData(t *testing.T) {
 	})
 	t.Run("export all presets success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		var preset100000 soap.GetPresetDetailsResponse
-		var preset100001 soap.GetPresetDetailsResponse
+		var preset1, preset9, preset100000, preset100001 soap.GetPresetDetailsResponse
 		presetList := []*rest.PresetShort{
 			{ID: 1, Name: "All", OwnerName: "CxUser"},
 			{ID: 9, Name: "Android", OwnerName: "CxUser"},
@@ -1152,6 +1151,14 @@ func TestFetchSelectedData(t *testing.T) {
 			TeamName:            teamName,
 			ProjectsActiveSince: 100,
 		}
+		presetXML1, io1Err := os.ReadFile("../test/data/presets/1.xml")
+		assert.NoError(t, io1Err)
+		unmarshal1Err := xml.Unmarshal(presetXML1, &preset1)
+		assert.NoError(t, unmarshal1Err)
+		presetXML9, io9Err := os.ReadFile("../test/data/presets/9.xml")
+		assert.NoError(t, io9Err)
+		unmarshal9Err := xml.Unmarshal(presetXML9, &preset9)
+		assert.NoError(t, unmarshal9Err)
 		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
 		assert.NoError(t, io100000Err)
 		unmarshal100000Err := xml.Unmarshal(presetXML100000, &preset100000)
@@ -1166,6 +1173,8 @@ func TestFetchSelectedData(t *testing.T) {
 		client := mock_integration_rest.NewMockClient(ctrl)
 
 		client.EXPECT().GetPresets().Return(presetList, nil).AnyTimes()
+		presetProvider.EXPECT().GetPresetDetails(1).Return(&preset1, nil)
+		presetProvider.EXPECT().GetPresetDetails(9).Return(&preset9, nil)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
 		presetProvider.EXPECT().GetPresetDetails(100001).Return(&preset100001, nil)
 		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
