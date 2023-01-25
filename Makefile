@@ -51,3 +51,4 @@ mocks:
 	mockgen -package mock_interfaces -destination test/mocks/app/ast_query_mapping/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces QueryMappingRepo
 	mockgen -package mock_interfaces -destination test/mocks/app/ast_query/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces ASTQueryProvider
 	mockgen -package mock_preset_interfaces -destination test/mocks/app/preset/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces PresetProvider
+	mockgen -package mock_installation_interfaces -destination test/mocks/app/installation/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces InstallationProvider
