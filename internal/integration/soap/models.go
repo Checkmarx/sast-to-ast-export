@@ -216,4 +216,47 @@ type (
 		XMLName xml.Name `xml:"queryIds"`
 		Long    []int    `xml:"long"`
 	}
+
+	// GetInstallationSettings request types
+
+	GetInstallationSettingsRequest struct {
+		XMLName xml.Name `xml:"chec:GetInstallationSettings"`
+	}
+
+	InstallationSetting struct {
+		XMLName         xml.Name `xml:"InstallationSetting"`
+		Text            string   `xml:",chardata"`
+		Name            string   `xml:"Name"`
+		ID              string   `xml:"ID"`
+		DNSName         string   `xml:"DNSName"`
+		IP              string   `xml:"IP"`
+		State           string   `xml:"State"`
+		Version         string   `xml:"Version"`
+		Hotfix          string   `xml:"Hotfix"`
+		InstllationPath string   `xml:"InstllationPath"`
+		IsInstalled     string   `xml:"IsInstalled"`
+	}
+
+	InstallationSettingsList struct {
+		XMLName             xml.Name               `xml:"InstallationSettingsList"`
+		InstallationSetting []*InstallationSetting `xml:"InstallationSetting"`
+	}
+
+	GetInstallationSettingsResult struct {
+		XMLName                  xml.Name                 `xml:"GetInstallationSettingsResult"`
+		IsSuccesfull             string                   `xml:"IsSuccesfull"`
+		InstallationSettingsList InstallationSettingsList `xml:"InstallationSettingsList"`
+	}
+
+	GetInstallationSettingsResponse struct {
+		Text                          string                        `xml:",chardata"`
+		Xmlns                         string                        `xml:"xmlns,attr"`
+		GetInstallationSettingsResult GetInstallationSettingsResult `xml:"GetInstallationSettingsResult"`
+	}
+
+	InstallationMapping struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+		Hotfix  string `json:"hotFix"`
+	}
 )

@@ -5,7 +5,14 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
+)
+
+const (
+	installationEngineServiceName = "Checkmarx Engine Service"
+	installationContentPackName   = "Checkmarx Queries Pack"
 )
 
 // TransformTeams flattens teams.
@@ -39,6 +46,25 @@ func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping) []*rest
 	for _, e := range samlTeamMappings {
 		e.TeamFullPath = "/" + strings.ReplaceAll(strings.TrimLeft(e.TeamFullPath, "/"), "/", "_")
 		out = append(out, e)
+	}
+	return out
+}
+
+// TransformXMLInstallationMappings updates installation mapping.
+func TransformXMLInstallationMappings(installationMappings *soap.GetInstallationSettingsResponse) []*soap.InstallationMapping {
+	out := make([]*soap.InstallationMapping, 0)
+	if installationMappings == nil {
+		return []*soap.InstallationMapping{}
+	}
+
+	for _, e := range installationMappings.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting {
+		if e.Name == installationEngineServiceName || e.Name == installationContentPackName {
+			out = append(out, &soap.InstallationMapping{
+				Name:    e.Name,
+				Version: e.Version,
+				Hotfix:  e.Hotfix,
+			})
+		}
 	}
 	return out
 }
