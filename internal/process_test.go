@@ -1598,52 +1598,6 @@ func TestAddCustomQueryIDs(t *testing.T) {
 	})
 }
 
-func TestFilterPresetList(t *testing.T) {
-	t.Run("test filtering default preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 56},
-		}
-		outputList := []*rest.PresetShort{
-			{ID: 56},
-		}
-		result := filterPresetList(inputList, false)
-
-		assert.Equal(t, outputList, result)
-	})
-
-	t.Run("test filtering without custom preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 2},
-		}
-		outputList := []*rest.PresetShort{}
-		result := filterPresetList(inputList, false)
-
-		assert.Equal(t, outputList, result)
-	})
-
-	t.Run("test ignoring filtering with custom preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 2},
-		}
-		result := filterPresetList(inputList, true)
-
-		assert.Equal(t, inputList, result)
-	})
-
-	t.Run("test ignoring filtering without custom preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 2},
-		}
-		result := filterPresetList(inputList, true)
-
-		assert.Equal(t, inputList, result)
-	})
-}
-
 func TestFetchInstallationData(t *testing.T) {
 	soapResponseSuccess := &soap.GetInstallationSettingsResponse{
 		GetInstallationSettingsResult: soap.GetInstallationSettingsResult{

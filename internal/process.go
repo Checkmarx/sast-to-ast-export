@@ -416,7 +416,6 @@ func fetchPresetsData(
 	if listErr != nil {
 		return errors.Wrap(listErr, "error with getting preset list")
 	}
-	presetList = filterPresetList(presetList)
 	if len(projects) > 0 && projectsIds != "" {
 		log.Info().Msg("filtering presets, only export associated to projects")
 		presetList = filterPresetByProjectList(presetList, projects)
@@ -656,20 +655,6 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 		}
 	}
-}
-
-func filterPresetList(list []*rest.PresetShort, isDisable bool) []*rest.PresetShort {
-	if isDisable {
-		return list
-	}
-	out := []*rest.PresetShort{}
-	for _, item := range list {
-		if preset.IsDefaultPreset(item.ID) {
-			continue
-		}
-		out = append(out, item)
-	}
-	return out
 }
 
 func filterPresetByProjectList(presets []*rest.PresetShort, projects []*rest.Project) []*rest.PresetShort {
