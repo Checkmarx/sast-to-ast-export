@@ -417,9 +417,9 @@ func fetchPresetsData(
 		return errors.Wrap(listErr, "error with getting preset list")
 	}
 	presetList = filterPresetList(presetList)
-	if len(projects) > 0 && projectsIds != "" {
-		log.Info().Msg("filtering presets, only export associated to projects")
+	if projectsIds != "" {
 		presetList = filterPresetByProjectList(presetList, projects)
+		log.Info().Msgf("%d associated presets found", len(presetList))
 	}
 	if err := exporter.CreateDir(export2.PresetsDirName); err != nil {
 		return err
