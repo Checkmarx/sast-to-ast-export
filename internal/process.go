@@ -416,9 +416,15 @@ func fetchPresetsData(
 	if listErr != nil {
 		return errors.Wrap(listErr, "error with getting preset list")
 	}
+<<<<<<< feature/AST-20679-sast-exporter-when-exporting-presets-export-all-the-existing-presets-currently-it-is-only-exporting-custom-presets
 	if len(projects) > 0 && projectsIds != "" {
 		log.Info().Msg("filtering presets, only export associated to projects")
+=======
+	presetList = filterPresetList(presetList)
+	if projectsIds != "" {
+>>>>>>> master
 		presetList = filterPresetByProjectList(presetList, projects)
+		log.Info().Msgf("%d associated presets found", len(presetList))
 	}
 	if err := exporter.CreateDir(export2.PresetsDirName); err != nil {
 		return err
