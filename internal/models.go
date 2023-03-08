@@ -7,6 +7,8 @@ type Args struct {
 	Username,
 	Password,
 	OutputPath,
+	OutputFolder,
+	InputFolder,
 	ProductName string
 	Export              []string
 	ProjectsActiveSince int

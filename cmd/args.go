@@ -33,6 +33,15 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
+	args.OutputFolder, err = cmd.Flags().GetString(outputFolderArg)
+	if err != nil {
+		panic(err)
+	}
+	args.InputFolder, err = cmd.Flags().GetString(inputFolderArg)
+	if err != nil {
+		panic(err)
+	}
+
 	args.ProjectsActiveSince, err = cmd.Flags().GetInt(projectsActiveSinceArg)
 	if err != nil {
 		panic(err)
