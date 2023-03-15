@@ -14,19 +14,20 @@ import (
 )
 
 const (
-	userArg                         = "user"
-	passArg                         = "pass"
-	urlArg                          = "url"
-	exportArg                       = "export"
-	projectsActiveSinceArg          = "projects-active-since"
-	debugArg                        = "debug"
-	verboseArg                      = "verbose"
-	projectsIds                     = "project-id"
-	teamName                        = "project-team"
-	queryMapping                    = "query-mapping"
-	queryMappingPathDefault         = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
-	outputFolderArg                 = "output"
-	inputFolderArg                  = "input"
+	userArg                 = "user"
+	passArg                 = "pass"
+	urlArg                  = "url"
+	exportArg               = "export"
+	projectsActiveSinceArg  = "projects-active-since"
+	debugArg                = "debug"
+	verboseArg              = "verbose"
+	projectsIds             = "project-id"
+	teamName                = "project-team"
+	queryMapping            = "query-mapping"
+	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
+	outputFolderArg         = "output"
+	inputFolderArg          = "input"
+
 	projectsActiveSinceDefaultValue = 180
 )
 
