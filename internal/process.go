@@ -377,7 +377,8 @@ func fetchInstallationData(client interfaces.InstallationProvider, exporter expo
 	}
 
 	installationMappingsDataSource := export2.NewJSONDataSource(export2.TransformXMLInstallationMappings(installationResp))
-	if errMapping := exporter.AddFileWithDataSource(export2.InstallationFileName, installationMappingsDataSource); err != nil {
+	errMapping := exporter.AddFileWithDataSource(export2.InstallationFileName, installationMappingsDataSource)
+	if errMapping != nil {
 		return errMapping
 	}
 
@@ -626,20 +627,21 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
 			done <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
-		} else {
-			metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
-			if metadataRecordJSONErr != nil {
-				l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
-				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-				continue
-			}
-			exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
-			if exportMetadataErr != nil {
-				l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
-				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-				continue
-			}
 		}
+
+		metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
+		if metadataRecordJSONErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
+		if exportMetadataErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+
 		// export report
 		transformedReportData, transformErr := export2.TransformScanReport(reportData)
 		if transformErr != nil {
