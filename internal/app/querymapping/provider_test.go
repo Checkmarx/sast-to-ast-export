@@ -14,7 +14,7 @@ type HTTPClientMock struct {
 	GetError    error
 }
 
-func (c *HTTPClientMock) Get(url string) (*http.Response, error) {
+func (c *HTTPClientMock) Get(_ string) (*http.Response, error) {
 	return c.GetResponse, c.GetError
 }
 
