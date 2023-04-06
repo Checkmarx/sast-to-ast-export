@@ -213,47 +213,50 @@ func writeTeamsSetupExpects(exporter *mock_app_export.MockExporter, expect *team
 
 func TestValidatePermissions(t *testing.T) {
 	tests := []validatePermissionTest{
-		{jwt.MapClaims{}, []string{}, false, "empty claims and export options"},
-		{jwt.MapClaims{}, []string{export.UsersOption}, true, "empty claims"},
+		{jwt.MapClaims{"sast-permissions": "manage-system-settings"}, []string{}, false, "empty claims and export options"},
+		{jwt.MapClaims{"sast-permissions": "manage-system-settings"}, []string{export.UsersOption}, true, "empty claims"},
 		{
-			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers"},
+			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers", "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			false,
 			"single, correct permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": "invalid"},
+			jwt.MapClaims{"access-control-permissions": "invalid", "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			true,
 			"single, incorrect permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": nil},
+			jwt.MapClaims{"access-control-permissions": nil, "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			true,
 			"single, invalid permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers"},
+			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers", "sast-permissions": "manage-system-settings"},
 			[]string{export.UsersOption},
 			true,
 			"missing one permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": []interface{}{"manage-authentication-providers", "manage-roles"}},
+			jwt.MapClaims{
+				"access-control-permissions": []interface{}{"manage-authentication-providers", "manage-roles"},
+				"sast-permissions":           "manage-system-settings",
+			},
 			[]string{export.UsersOption},
 			false,
 			"permission list with correct permissions",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": []interface{}{"invalid", "manage-roles"}},
+			jwt.MapClaims{"access-control-permissions": []interface{}{"invalid", "manage-roles"}, "sast-permissions": "manage-system-settings"},
 			[]string{export.UsersOption},
 			true,
 			"permission list with incorrect permissions",
 		},
 		{
 			jwt.MapClaims{
-				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results"},
+				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results", "manage-system-settings"},
 				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
 			},
 			[]string{export.UsersOption, export.ResultsOption},
@@ -262,22 +265,34 @@ func TestValidatePermissions(t *testing.T) {
 		},
 		{
 			jwt.MapClaims{
-				"sast-permissions":           []interface{}{"invalid", "generate-scan-report"},
+				"sast-permissions":           []interface{}{"invalid", "generate-scan-report", "manage-system-settings"},
 				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
 			},
 			[]string{export.UsersOption, export.ResultsOption},
 			true,
 			"multiple permission lists with incorrect permissions",
 		},
+		{
+			jwt.MapClaims{
+				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results"},
+				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
+			},
+			[]string{export.UsersOption, export.ResultsOption},
+			true,
+			"multiple permission lists with correct permissions missing manage-system-settings",
+		},
 	}
-	for _, test := range tests {
-		err := validatePermissions(test.JwtClaims, test.ExportOptions)
+	for i, e := range tests {
+		test := e
+		t.Run(fmt.Sprintf("#%d", i+1), func(t *testing.T) {
+			err := validatePermissions(test.JwtClaims, test.ExportOptions)
 
-		if test.ExpectErr {
-			assert.Error(t, err, test.Message)
-		} else {
-			assert.NoError(t, err, test.Message)
-		}
+			if test.ExpectErr {
+				assert.Error(t, err, test.Message)
+			} else {
+				assert.NoError(t, err, test.Message)
+			}
+		})
 	}
 }
 

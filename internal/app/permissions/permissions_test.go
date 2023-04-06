@@ -14,7 +14,7 @@ func TestGetFromExportOptions(t *testing.T) {
 		exportOptions := []string{export.UsersOption}
 		result := GetFromExportOptions(exportOptions)
 
-		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission}
+		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission, manageSystemSettings}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -22,7 +22,7 @@ func TestGetFromExportOptions(t *testing.T) {
 		exportOptions := []string{export.TeamsOption}
 		result := GetFromExportOptions(exportOptions)
 
-		expected := []interface{}{manageAuthProviderPermission}
+		expected := []interface{}{manageAuthProviderPermission, manageSystemSettings}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -30,7 +30,7 @@ func TestGetFromExportOptions(t *testing.T) {
 		exportOptions := []string{export.ResultsOption}
 		result := GetFromExportOptions(exportOptions)
 
-		expected := []interface{}{useOdataPermission, generateScanReportPermission, viewResults}
+		expected := []interface{}{useOdataPermission, generateScanReportPermission, viewResults, manageSystemSettings}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -38,7 +38,7 @@ func TestGetFromExportOptions(t *testing.T) {
 		exportOptions := []string{export.UsersOption, export.TeamsOption}
 		result := GetFromExportOptions(exportOptions)
 
-		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission}
+		expected := []interface{}{manageAuthProviderPermission, manageRolesPermission, manageSystemSettings}
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -48,7 +48,7 @@ func TestGetFromExportOptions(t *testing.T) {
 
 		expected := []interface{}{
 			manageAuthProviderPermission, manageRolesPermission, useOdataPermission, generateScanReportPermission,
-			viewResults,
+			viewResults, manageSystemSettings,
 		}
 		assert.ElementsMatch(t, expected, result)
 	})
@@ -59,7 +59,7 @@ func TestGetFromExportOptions(t *testing.T) {
 
 		expected := []interface{}{
 			manageAuthProviderPermission, manageRolesPermission, useOdataPermission, generateScanReportPermission,
-			viewResults,
+			viewResults, manageSystemSettings,
 		}
 		assert.ElementsMatch(t, expected, result)
 	})
@@ -70,6 +70,7 @@ func TestGetFromExportOptions(t *testing.T) {
 
 		expected := []interface{}{
 			manageAuthProviderPermission, useOdataPermission, generateScanReportPermission, viewResults,
+			manageSystemSettings,
 		}
 		assert.ElementsMatch(t, expected, result)
 	})
