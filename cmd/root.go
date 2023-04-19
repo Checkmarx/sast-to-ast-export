@@ -25,6 +25,7 @@ const (
 	teamName                = "project-team"
 	queryMapping            = "query-mapping"
 	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
+	nestedTeams             = "nested-teams"
 
 	projectsActiveSinceDefaultValue = 180
 )
@@ -117,6 +118,7 @@ func init() {
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
+	rootCmd.Flags().Bool(nestedTeams, false, "include original team structure without flattening")
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
