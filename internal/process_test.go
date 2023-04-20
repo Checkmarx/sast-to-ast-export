@@ -379,8 +379,9 @@ func TestFetchUsersData(t *testing.T) {
 					return callbackErr
 				}).
 				AnyTimes()
+			args := &Args{}
 
-			result := fetchUsersData(client, exporter)
+			result := fetchUsersData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -492,11 +493,12 @@ func TestFetchUsersData(t *testing.T) {
 		for _, test := range tests {
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+			args := &Args{}
 
 			fetchUsersSetupExpects(client, &test.fetchMockExpects)
 			writeUsersSetupExpects(exporter, &test.writeMockExpects)
 
-			result := fetchUsersData(client, exporter)
+			result := fetchUsersData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -520,8 +522,9 @@ func TestFetchUsersData(t *testing.T) {
 				return callbackErr
 			}).
 			AnyTimes()
+		args := &Args{}
 
-		result := fetchUsersData(client, exporter)
+		result := fetchUsersData(client, exporter, args)
 
 		assert.NoError(t, result)
 	})
@@ -593,8 +596,9 @@ func TestFetchTeamsData(t *testing.T) {
 					return callbackErr
 				}).
 				AnyTimes()
+			args := &Args{}
 
-			result := fetchTeamsData(client, exporter)
+			result := fetchTeamsData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -680,11 +684,12 @@ func TestFetchTeamsData(t *testing.T) {
 		for _, test := range tests {
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+			args := &Args{}
 
 			fetchTeamsSetupExpects(client, &test.fetchMockExpects)
 			writeTeamsSetupExpects(exporter, &test.writeMockExpects)
 
-			result := fetchTeamsData(client, exporter)
+			result := fetchTeamsData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -706,8 +711,9 @@ func TestFetchTeamsData(t *testing.T) {
 				return callbackErr
 			}).
 			AnyTimes()
+		args := &Args{}
 
-		result := fetchTeamsData(client, exporter)
+		result := fetchTeamsData(client, exporter, args)
 
 		assert.NoError(t, result)
 	})
@@ -935,8 +941,9 @@ func TestConsumeReports(t *testing.T) {
 	}
 	metadataProvider.EXPECT().GetMetadataRecord(gomock.Any(), gomock.Any()).Return(metadataRecord, nil).AnyTimes()
 	outputCh := make(chan ReportConsumeOutput, reportCount)
+	args := &Args{}
 
-	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider)
+	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider, args)
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
@@ -994,9 +1001,10 @@ func TestFetchResultsData(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, teamName, projectsIds)
+			metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
 	})
@@ -1025,8 +1033,10 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
+
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
-			time.Millisecond, metadataProvider, teamName, projectsIds)
+			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.EqualError(t, result, "failed getting triaged scan")
 	})
@@ -1066,9 +1076,10 @@ func TestFetchResultsData(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
-			time.Millisecond, metadataProvider, teamName, projectsIds)
+			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
 	})

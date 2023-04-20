@@ -25,6 +25,7 @@ const (
 	teamName                = "project-team"
 	queryMapping            = "query-mapping"
 	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
+	nestedTeams             = "nested-teams"
 
 	projectsActiveSinceDefaultValue = 180
 )
@@ -110,13 +111,14 @@ func init() {
 	rootCmd.Flags().StringP(userArg, "", "", "SAST username")
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
-	rootCmd.Flags().StringP(queryMapping, "", queryMappingPathDefault, "Path to file query mapping IDs from AST for triage")
-	rootCmd.Flags().StringP(teamName, "", "", "Team name filter")
-	rootCmd.Flags().StringP(projectsIds, "", "", "Project ID filter")
+	rootCmd.Flags().StringP(queryMapping, "", queryMappingPathDefault, "path to file query mapping IDs from AST for triage")
+	rootCmd.Flags().StringP(teamName, "", "", "team name filter")
+	rootCmd.Flags().StringP(projectsIds, "", "", "project ID filter")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", projectsActiveSinceDefaultValue, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
+	rootCmd.Flags().Bool(nestedTeams, false, "include original team structure without flattening")
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
