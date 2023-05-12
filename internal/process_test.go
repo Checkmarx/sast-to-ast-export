@@ -213,47 +213,50 @@ func writeTeamsSetupExpects(exporter *mock_app_export.MockExporter, expect *team
 
 func TestValidatePermissions(t *testing.T) {
 	tests := []validatePermissionTest{
-		{jwt.MapClaims{}, []string{}, false, "empty claims and export options"},
-		{jwt.MapClaims{}, []string{export.UsersOption}, true, "empty claims"},
+		{jwt.MapClaims{"sast-permissions": "manage-system-settings"}, []string{}, false, "empty claims and export options"},
+		{jwt.MapClaims{"sast-permissions": "manage-system-settings"}, []string{export.UsersOption}, true, "empty claims"},
 		{
-			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers"},
+			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers", "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			false,
 			"single, correct permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": "invalid"},
+			jwt.MapClaims{"access-control-permissions": "invalid", "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			true,
 			"single, incorrect permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": nil},
+			jwt.MapClaims{"access-control-permissions": nil, "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			true,
 			"single, invalid permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers"},
+			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers", "sast-permissions": "manage-system-settings"},
 			[]string{export.UsersOption},
 			true,
 			"missing one permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": []interface{}{"manage-authentication-providers", "manage-roles"}},
+			jwt.MapClaims{
+				"access-control-permissions": []interface{}{"manage-authentication-providers", "manage-roles"},
+				"sast-permissions":           "manage-system-settings",
+			},
 			[]string{export.UsersOption},
 			false,
 			"permission list with correct permissions",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": []interface{}{"invalid", "manage-roles"}},
+			jwt.MapClaims{"access-control-permissions": []interface{}{"invalid", "manage-roles"}, "sast-permissions": "manage-system-settings"},
 			[]string{export.UsersOption},
 			true,
 			"permission list with incorrect permissions",
 		},
 		{
 			jwt.MapClaims{
-				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results"},
+				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results", "manage-system-settings"},
 				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
 			},
 			[]string{export.UsersOption, export.ResultsOption},
@@ -262,22 +265,34 @@ func TestValidatePermissions(t *testing.T) {
 		},
 		{
 			jwt.MapClaims{
-				"sast-permissions":           []interface{}{"invalid", "generate-scan-report"},
+				"sast-permissions":           []interface{}{"invalid", "generate-scan-report", "manage-system-settings"},
 				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
 			},
 			[]string{export.UsersOption, export.ResultsOption},
 			true,
 			"multiple permission lists with incorrect permissions",
 		},
+		{
+			jwt.MapClaims{
+				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results"},
+				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
+			},
+			[]string{export.UsersOption, export.ResultsOption},
+			true,
+			"multiple permission lists with correct permissions missing manage-system-settings",
+		},
 	}
-	for _, test := range tests {
-		err := validatePermissions(test.JwtClaims, test.ExportOptions)
+	for i, e := range tests {
+		test := e
+		t.Run(fmt.Sprintf("#%d", i+1), func(t *testing.T) {
+			err := validatePermissions(test.JwtClaims, test.ExportOptions)
 
-		if test.ExpectErr {
-			assert.Error(t, err, test.Message)
-		} else {
-			assert.NoError(t, err, test.Message)
-		}
+			if test.ExpectErr {
+				assert.Error(t, err, test.Message)
+			} else {
+				assert.NoError(t, err, test.Message)
+			}
+		})
 	}
 }
 
@@ -364,8 +379,9 @@ func TestFetchUsersData(t *testing.T) {
 					return callbackErr
 				}).
 				AnyTimes()
+			args := &Args{}
 
-			result := fetchUsersData(client, exporter)
+			result := fetchUsersData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -477,11 +493,12 @@ func TestFetchUsersData(t *testing.T) {
 		for _, test := range tests {
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+			args := &Args{}
 
 			fetchUsersSetupExpects(client, &test.fetchMockExpects)
 			writeUsersSetupExpects(exporter, &test.writeMockExpects)
 
-			result := fetchUsersData(client, exporter)
+			result := fetchUsersData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -505,8 +522,9 @@ func TestFetchUsersData(t *testing.T) {
 				return callbackErr
 			}).
 			AnyTimes()
+		args := &Args{}
 
-		result := fetchUsersData(client, exporter)
+		result := fetchUsersData(client, exporter, args)
 
 		assert.NoError(t, result)
 	})
@@ -578,8 +596,9 @@ func TestFetchTeamsData(t *testing.T) {
 					return callbackErr
 				}).
 				AnyTimes()
+			args := &Args{}
 
-			result := fetchTeamsData(client, exporter)
+			result := fetchTeamsData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -665,11 +684,12 @@ func TestFetchTeamsData(t *testing.T) {
 		for _, test := range tests {
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+			args := &Args{}
 
 			fetchTeamsSetupExpects(client, &test.fetchMockExpects)
 			writeTeamsSetupExpects(exporter, &test.writeMockExpects)
 
-			result := fetchTeamsData(client, exporter)
+			result := fetchTeamsData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -691,8 +711,9 @@ func TestFetchTeamsData(t *testing.T) {
 				return callbackErr
 			}).
 			AnyTimes()
+		args := &Args{}
 
-		result := fetchTeamsData(client, exporter)
+		result := fetchTeamsData(client, exporter, args)
 
 		assert.NoError(t, result)
 	})
@@ -920,8 +941,9 @@ func TestConsumeReports(t *testing.T) {
 	}
 	metadataProvider.EXPECT().GetMetadataRecord(gomock.Any(), gomock.Any()).Return(metadataRecord, nil).AnyTimes()
 	outputCh := make(chan ReportConsumeOutput, reportCount)
+	args := &Args{}
 
-	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider)
+	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider, args)
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
@@ -979,9 +1001,10 @@ func TestFetchResultsData(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, teamName, projectsIds)
+			metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
 	})
@@ -1010,8 +1033,10 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
+
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
-			time.Millisecond, metadataProvider, teamName, projectsIds)
+			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.EqualError(t, result, "failed getting triaged scan")
 	})
@@ -1051,9 +1076,10 @@ func TestFetchResultsData(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
-			time.Millisecond, metadataProvider, teamName, projectsIds)
+			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
 	})

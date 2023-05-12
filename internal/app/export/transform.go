@@ -15,8 +15,15 @@ const (
 	installationContentPackName   = "Checkmarx Queries Pack"
 )
 
+type TransformOptions struct {
+	NestedTeams bool
+}
+
 // TransformTeams flattens teams.
-func TransformTeams(teams []*rest.Team) []*rest.Team {
+func TransformTeams(teams []*rest.Team, options TransformOptions) []*rest.Team {
+	if options.NestedTeams {
+		return teams
+	}
 	out := make([]*rest.Team, 0)
 	for _, e := range teams {
 		e.ParendID = 0
@@ -29,7 +36,10 @@ func TransformTeams(teams []*rest.Team) []*rest.Team {
 
 // TransformUsers reassigns users in the context of flatten teams.
 // Note "teams" list passed must be the original, non-flattened, list
-func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
+func TransformUsers(users []*rest.User, teams []*rest.Team, options TransformOptions) []*rest.User {
+	if options.NestedTeams {
+		return users
+	}
 	out := make([]*rest.User, 0)
 	for _, e := range users {
 		for _, teamID := range e.TeamIDs {
@@ -41,7 +51,10 @@ func TransformUsers(users []*rest.User, teams []*rest.Team) []*rest.User {
 }
 
 // TransformSamlTeamMappings updates team mapping in the context of flatten teams.
-func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping) []*rest.SamlTeamMapping {
+func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping, options TransformOptions) []*rest.SamlTeamMapping {
+	if options.NestedTeams {
+		return samlTeamMappings
+	}
 	out := make([]*rest.SamlTeamMapping, 0)
 	for _, e := range samlTeamMappings {
 		e.TeamFullPath = "/" + strings.ReplaceAll(strings.TrimLeft(e.TeamFullPath, "/"), "/", "_")
@@ -70,7 +83,10 @@ func TransformXMLInstallationMappings(installationMappings *soap.GetInstallation
 }
 
 // TransformScanReport updates scan report in context of flatten teams.
-func TransformScanReport(xml []byte) ([]byte, error) {
+func TransformScanReport(xml []byte, options TransformOptions) ([]byte, error) {
+	if options.NestedTeams {
+		return xml, nil
+	}
 	var teamPath string
 	out := replaceKeyValue(xml, "TeamFullPathOnReportDate", func(s string) string {
 		teamPath = strings.ReplaceAll(s, "\\", "_")
