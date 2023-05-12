@@ -28,6 +28,7 @@ const (
 	nestedTeams                     = "nested-teams"
 	outputFolderArg                 = "output"
 	inputFolderArg                  = "input"
+
 	projectsActiveSinceDefaultValue = 180
 )
 

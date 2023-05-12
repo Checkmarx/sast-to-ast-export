@@ -210,7 +210,6 @@ func exportResultsToFile(args *Args, exportValues export2.Exporter) (string, err
 	}
 
 	exportFileName, _, exportErr := exportValues.CreateExportPackage(args.ProductName, args.OutputPath)
-
 	if exportErr != nil {
 		return exportFileName, exportErr
 	}
