@@ -255,11 +255,11 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 		if sliceutils.Contains(exportOption, options) {
 			switch exportOption {
 			case export2.UsersOption:
-				if err := fetchUsersData(client, exporter); err != nil {
+				if err := fetchUsersData(client, exporter, args); err != nil {
 					return err
 				}
 			case export2.TeamsOption:
-				if err := fetchTeamsData(client, exporter); err != nil {
+				if err := fetchTeamsData(client, exporter, args); err != nil {
 					return err
 				}
 			case export2.QueriesOption:
@@ -272,7 +272,7 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 				}
 			case export2.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
-					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIds); err != nil {
+					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIds, args); err != nil {
 					return err
 				}
 			}
@@ -281,7 +281,7 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	return nil
 }
 
-func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
+func fetchUsersData(client rest.Client, exporter export2.Exporter, args *Args) error {
 	log.Info().Msg("collecting users")
 	users, usersErr := client.GetUsers()
 	if usersErr != nil {
@@ -291,7 +291,9 @@ func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
 	if teamsErr != nil {
 		return errors.Wrap(teamsErr, "failed getting teams")
 	}
-	usersDataSource := export2.NewJSONDataSource(export2.TransformUsers(users, teams))
+	usersDataSource := export2.NewJSONDataSource(
+		export2.TransformUsers(users, teams, export2.TransformOptions{NestedTeams: args.NestedTeams}),
+	)
 	if err := exporter.AddFileWithDataSource(export2.UsersFileName, usersDataSource); err != nil {
 		return err
 	}
@@ -317,13 +319,14 @@ func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
 	return nil
 }
 
-func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
+func fetchTeamsData(client rest.Client, exporter export2.Exporter, args *Args) error {
 	log.Info().Msg("collecting teams")
 	teams, teamsErr := client.GetTeams()
 	if teamsErr != nil {
 		return errors.Wrap(teamsErr, "failed getting teams")
 	}
-	teamsDataSource := export2.NewJSONDataSource(export2.TransformTeams(teams))
+	transformOptions := export2.TransformOptions{NestedTeams: args.NestedTeams}
+	teamsDataSource := export2.NewJSONDataSource(export2.TransformTeams(teams, transformOptions))
 	if err := exporter.AddFileWithDataSource(export2.TeamsFileName, teamsDataSource); err != nil {
 		return err
 	}
@@ -334,7 +337,7 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 	if samlTeamMappingsErr != nil {
 		return errors.Wrap(samlTeamMappingsErr, "failed getting saml team mappings")
 	}
-	samlTeamMappingsDataSource := export2.NewJSONDataSource(export2.TransformSamlTeamMappings(samlTeamMappings))
+	samlTeamMappingsDataSource := export2.NewJSONDataSource(export2.TransformSamlTeamMappings(samlTeamMappings, transformOptions))
 	if err := exporter.AddFileWithDataSource(export2.SamlTeamMappingsFileName, samlTeamMappingsDataSource); err != nil {
 		return err
 	}
@@ -394,11 +397,7 @@ func fetchInstallationData(client interfaces.InstallationProvider, exporter expo
 	}
 
 	installationMappingsDataSource := export2.NewJSONDataSource(export2.TransformXMLInstallationMappings(installationResp))
-	if errMapping := exporter.AddFileWithDataSource(export2.InstallationFileName, installationMappingsDataSource); err != nil {
-		return errMapping
-	}
-
-	return nil
+	return exporter.AddFileWithDataSource(export2.InstallationFileName, installationMappingsDataSource)
 }
 
 func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Exporter) error {
@@ -480,7 +479,7 @@ func fetchPresetsData(
 
 func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
 	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
-	teamName, projectsIds string,
+	teamName, projectsIds string, args *Args,
 ) error {
 	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
@@ -506,7 +505,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
 		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs,
-			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider)
+			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider, args)
 	}
 
 	reportConsumeErrorCount := 0
@@ -597,7 +596,7 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 
 func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
-	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.Provider,
+	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.Provider, args *Args,
 ) {
 	for reportJob := range reportJobs {
 		l := log.With().
@@ -643,22 +642,23 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
 			done <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
-		} else {
-			metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
-			if metadataRecordJSONErr != nil {
-				l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
-				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-				continue
-			}
-			exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
-			if exportMetadataErr != nil {
-				l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
-				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-				continue
-			}
+		}
+		metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
+		if metadataRecordJSONErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
+		if exportMetadataErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
 		}
 		// export report
-		transformedReportData, transformErr := export2.TransformScanReport(reportData)
+		transformedReportData, transformErr := export2.TransformScanReport(
+			reportData, export2.TransformOptions{NestedTeams: args.NestedTeams},
+		)
 		if transformErr != nil {
 			l.Debug().Err(transformErr).Msg("failed transforming report data")
 			done <- ReportConsumeOutput{Err: transformErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
