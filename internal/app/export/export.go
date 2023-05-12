@@ -80,13 +80,19 @@ func CreateExport(prefix string, runTime time.Time) (Export, error) {
 	return Export{tmpDir: tmpExportDir, fileList: []string{}, runTime: runTime}, err
 }
 
-// a different version to allow exporting to a local folder
+// CreateExportLocal creates ExportProducer structure and specified local directory
+// The caller is responsible for calling the Export.Clear function
+// when it's done with the ExportProducer
 func CreateExportLocal(outputPath string, runTime time.Time) (Export, error) {
 	err := os.Mkdir(outputPath, dirPerm)
 	return Export{tmpDir: outputPath, fileList: []string{}, runTime: runTime}, err
 }
 
-// a different version to allow an exporter that imports files from a local folder
+// CreateExportFromLocal creates ExportProducer structure using an existing local
+// directory and adds all existing files from the local directory into the
+// ExportProducer's fileList
+// The caller is responsible for calling the Export.Clear function
+// when it's done with the ExportProducer
 func CreateExportFromLocal(inputPath string, runTime time.Time) (Export, error) {
 	fileList := []string{}
 	_, err := os.Stat(inputPath)
