@@ -16,7 +16,6 @@
     <a href="https://github.com/Checkmarx/sast-to-ast-export/issues/new/choose">Report Bug</a>
     ·
     <a href="https://github.com/Checkmarx/sast-to-ast-export/issues/new/choose">Request Feature</a>
-  </p>
 </p>
 
 # SAST to AST Export
@@ -32,6 +31,8 @@ Fetches SAST triaged results and exports as an encrypted package, which can then
 ### Prerequisites
 
 Microsoft Windows x64.
+
+SAST v9.3 or higher.
 
 ### Installation
 
