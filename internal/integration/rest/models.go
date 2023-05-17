@@ -137,4 +137,35 @@ type (
 		TeamFullPath           string `json:"teamFullPath"`
 		SamlAttributeValue     string `json:"samlAttributeValue"`
 	}
+
+	StatusEngineServer struct {
+		ID    int    `json:"id"`
+		Value string `json:"value"`
+	}
+
+	LinkEngineServer struct {
+		Rel string `json:"rel"`
+		URI string `json:"uri"`
+	}
+
+	OfflineReasonCodeEngineServer struct {
+		ID    int    `json:"id"`
+		Value string `json:"value"`
+	}
+
+	EngineServer struct {
+		ID                             int                           `json:"id"`
+		Name                           string                        `json:"name"`
+		URI                            string                        `json:"uri"`
+		MinLoc                         int                           `json:"minLoc"`
+		MaxLoc                         int                           `json:"maxLoc"`
+		MaxScans                       int                           `json:"maxScans"`
+		CxVersion                      string                        `json:"cxVersion"`
+		OperatingSystem                string                        `json:"operatingSystem"`
+		Status                         StatusEngineServer            `json:"status"`
+		Link                           LinkEngineServer              `json:"link"`
+		OfflineReasonCode              OfflineReasonCodeEngineServer `json:"offlineReasonCode"`
+		OfflineReasonMessage           string                        `json:"offlineReasonMessage"`
+		OfflineReasonMessageParameters string                        `json:"offlineReasonMessageParameters"`
+	}
 )

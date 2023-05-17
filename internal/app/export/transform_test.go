@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/common"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
@@ -311,6 +313,75 @@ func TestTransformScanReport(t *testing.T) {
 	})
 }
 
+func TestTransformEngineServers(t *testing.T) {
+	t.Run("success case", func(t *testing.T) {
+		engineServers := []*rest.EngineServer{
+			{
+				ID:        1,
+				Name:      "blabla1",
+				URI:       "http://localhost",
+				CxVersion: "9.3.4.1111",
+				Status: rest.StatusEngineServer{
+					ID:    1,
+					Value: "Idle",
+				},
+			},
+			{
+				ID:        2,
+				Name:      "blabla2",
+				URI:       "http://localhost",
+				CxVersion: "9.3.4.1111",
+				Status: rest.StatusEngineServer{
+					ID:    1,
+					Value: "Offline",
+				},
+			},
+		}
+
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "0",
+			},
+		}
+
+		result := TransformEngineServers(engineServers)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("success without status case", func(t *testing.T) {
+		engineServers := []*rest.EngineServer{
+			{
+				ID:        1,
+				Name:      "blabla",
+				URI:       "http://localhost",
+				CxVersion: "9.3.4.1111",
+			},
+		}
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "0",
+			},
+		}
+
+		result := TransformEngineServers(engineServers)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("success empty case", func(t *testing.T) {
+		expected := []*common.InstallationMapping{}
+
+		result := TransformEngineServers(nil)
+
+		assert.Equal(t, expected, result)
+	})
+}
+
 func TestGetAllChildTeamIDs(t *testing.T) {
 	teams := []*rest.Team{
 		{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
@@ -373,12 +444,27 @@ func TestReplaceKeyValue(t *testing.T) {
 }
 
 func TestTransformXMLInstallationMappings(t *testing.T) {
+	engineService := &soap.InstallationSetting{
+		Name:    "Checkmarx Engine Service",
+		Version: "9.3.4.1111",
+		Hotfix:  "Hotfix",
+	}
+	scansManager := &soap.InstallationSetting{
+		Name:    "Checkmarx Scans Manager",
+		Version: "9.3.4.1111",
+		Hotfix:  "Hotfix",
+	}
+	queriesPack := &soap.InstallationSetting{
+		Name:    "Checkmarx Queries Pack",
+		Version: "9.3.4.5111",
+		Hotfix:  "Hotfix",
+	}
 	t.Run("no installations", func(t *testing.T) {
 		var installationMappings *soap.GetInstallationSettingsResponse
 
 		result := TransformXMLInstallationMappings(installationMappings)
 
-		var expected []*soap.InstallationMapping
+		var expected []*common.InstallationMapping
 		assert.ElementsMatch(t, expected, result)
 	})
 
@@ -388,18 +474,14 @@ func TestTransformXMLInstallationMappings(t *testing.T) {
 				IsSuccesfull: "true",
 				InstallationSettingsList: soap.InstallationSettingsList{
 					InstallationSetting: []*soap.InstallationSetting{
-						{
-							Name:    "Checkmarx Engine Service",
-							Version: "9.3.4.1111",
-							Hotfix:  "Hotfix",
-						},
+						engineService,
 					},
 				},
 			},
 		}
 
 		result := TransformXMLInstallationMappings(&soapResponseSuccess)
-		expected := []*soap.InstallationMapping{
+		expected := []*common.InstallationMapping{
 			{
 				Name:    "Checkmarx Engine Service",
 				Version: "9.3.4.1111",
@@ -416,18 +498,14 @@ func TestTransformXMLInstallationMappings(t *testing.T) {
 				IsSuccesfull: "true",
 				InstallationSettingsList: soap.InstallationSettingsList{
 					InstallationSetting: []*soap.InstallationSetting{
-						{
-							Name:    "Checkmarx Queries Pack",
-							Version: "9.3.4.5111",
-							Hotfix:  "Hotfix",
-						},
+						queriesPack,
 					},
 				},
 			},
 		}
 
 		result := TransformXMLInstallationMappings(&soapResponseSuccess)
-		expected := []*soap.InstallationMapping{
+		expected := []*common.InstallationMapping{
 			{
 				Name:    "Checkmarx Queries Pack",
 				Version: "9.3.4.5111",
@@ -444,23 +522,46 @@ func TestTransformXMLInstallationMappings(t *testing.T) {
 				IsSuccesfull: "true",
 				InstallationSettingsList: soap.InstallationSettingsList{
 					InstallationSetting: []*soap.InstallationSetting{
-						{
-							Name:    "Checkmarx Engine Service",
-							Version: "9.3.4.1111",
-							Hotfix:  "Hotfix",
-						},
-						{
-							Name:    "Checkmarx Queries Pack",
-							Version: "9.3.4.5111",
-							Hotfix:  "Hotfix",
-						},
+						engineService,
+						queriesPack,
 					},
 				},
 			},
 		}
 
 		result := TransformXMLInstallationMappings(&soapResponseSuccess)
-		expected := []*soap.InstallationMapping{
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
+			},
+		}
+
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("only both engine service, scans manager and queries pack", func(t *testing.T) {
+		soapResponseSuccess := soap.GetInstallationSettingsResponse{
+			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
+				IsSuccesfull: "true",
+				InstallationSettingsList: soap.InstallationSettingsList{
+					InstallationSetting: []*soap.InstallationSetting{
+						scansManager,
+						engineService,
+						queriesPack,
+					},
+				},
+			},
+		}
+
+		result := TransformXMLInstallationMappings(&soapResponseSuccess)
+		expected := []*common.InstallationMapping{
 			{
 				Name:    "Checkmarx Engine Service",
 				Version: "9.3.4.1111",

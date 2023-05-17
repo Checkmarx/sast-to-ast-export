@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/common"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
@@ -12,7 +14,9 @@ import (
 
 const (
 	installationEngineServiceName = "Checkmarx Engine Service"
+	installationScansManagerName  = "Checkmarx Scans Manager"
 	installationContentPackName   = "Checkmarx Queries Pack"
+	engineServersStatusOffline    = "Offline"
 )
 
 type TransformOptions struct {
@@ -64,15 +68,23 @@ func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping, options
 }
 
 // TransformXMLInstallationMappings updates installation mapping.
-func TransformXMLInstallationMappings(installationMappings *soap.GetInstallationSettingsResponse) []*soap.InstallationMapping {
-	out := make([]*soap.InstallationMapping, 0)
+func TransformXMLInstallationMappings(installationMappings *soap.GetInstallationSettingsResponse) []*common.InstallationMapping {
+	out := make([]*common.InstallationMapping, 0)
 	if installationMappings == nil {
-		return []*soap.InstallationMapping{}
+		return []*common.InstallationMapping{}
 	}
 
 	for _, e := range installationMappings.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting {
-		if e.Name == installationEngineServiceName || e.Name == installationContentPackName {
-			out = append(out, &soap.InstallationMapping{
+		if e.Name == installationEngineServiceName || e.Name == installationScansManagerName {
+			if !containsEngine(installationEngineServiceName, out) {
+				out = append(out, &common.InstallationMapping{
+					Name:    installationEngineServiceName,
+					Version: e.Version,
+					Hotfix:  e.Hotfix,
+				})
+			}
+		} else if e.Name == installationContentPackName {
+			out = append(out, &common.InstallationMapping{
 				Name:    e.Name,
 				Version: e.Version,
 				Hotfix:  e.Hotfix,
@@ -98,6 +110,36 @@ func TransformScanReport(xml []byte, options TransformOptions) ([]byte, error) {
 	return out, nil
 }
 
+// TransformEngineServers just for SAST distributed architecture just for 9.4 or higher.
+func TransformEngineServers(servers []*rest.EngineServer) []*common.InstallationMapping {
+	out := make([]*common.InstallationMapping, 0)
+	if servers == nil {
+		return []*common.InstallationMapping{}
+	}
+
+	if len(servers) == 1 {
+		out = append(out, &common.InstallationMapping{
+			Name:    installationEngineServiceName,
+			Version: servers[0].CxVersion,
+			Hotfix:  "0",
+		})
+	} else if len(servers) > 1 {
+		for _, e := range servers {
+			if e.Status.Value != engineServersStatusOffline {
+				if !containsEngine(installationEngineServiceName, out) {
+					out = append(out, &common.InstallationMapping{
+						Name:    installationEngineServiceName,
+						Version: e.CxVersion,
+						Hotfix:  "0",
+					})
+				}
+			}
+		}
+	}
+
+	return out
+}
+
 // getAllChildTeamIDs returns all child team ids relative to a root team id.
 func getAllChildTeamIDs(root int, teams []*rest.Team) []int {
 	out := make([]int, 0)
@@ -119,4 +161,13 @@ func replaceKeyValue(d []byte, key string, getValue func(string) string) []byte 
 		value := getValue(string(matches[0][2]))
 		return []byte(fmt.Sprintf(`%s=%q`, key, value))
 	})
+}
+
+func containsEngine(needle string, data []*common.InstallationMapping) bool {
+	for _, v := range data {
+		if needle == v.Name {
+			return true
+		}
+	}
+	return false
 }
