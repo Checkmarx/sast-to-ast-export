@@ -121,7 +121,7 @@ func TransformEngineServers(servers []*rest.EngineServer) []*common.Installation
 		out = append(out, &common.InstallationMapping{
 			Name:    installationEngineServiceName,
 			Version: servers[0].CxVersion,
-			Hotfix:  "0",
+			Hotfix:  "",
 		})
 	} else if len(servers) > 1 {
 		for _, e := range servers {
@@ -130,7 +130,7 @@ func TransformEngineServers(servers []*rest.EngineServer) []*common.Installation
 					out = append(out, &common.InstallationMapping{
 						Name:    installationEngineServiceName,
 						Version: e.CxVersion,
-						Hotfix:  "0",
+						Hotfix:  "",
 					})
 				}
 			}

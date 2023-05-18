@@ -342,7 +342,7 @@ func TestTransformEngineServers(t *testing.T) {
 			{
 				Name:    "Checkmarx Engine Service",
 				Version: "9.3.4.1111",
-				Hotfix:  "0",
+				Hotfix:  "",
 			},
 		}
 
@@ -364,7 +364,7 @@ func TestTransformEngineServers(t *testing.T) {
 			{
 				Name:    "Checkmarx Engine Service",
 				Version: "9.3.4.1111",
-				Hotfix:  "0",
+				Hotfix:  "",
 			},
 		}
 
