@@ -1655,6 +1655,7 @@ func TestFetchInstallationData(t *testing.T) {
 	}
 	t.Run("test add installation version", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
 		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
 		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
@@ -1666,7 +1667,65 @@ func TestFetchInstallationData(t *testing.T) {
 
 		instance := installation.NewRepo(soapClientMock)
 
-		err := fetchInstallationData(instance, exporter)
+		err := fetchInstallationData(client, instance, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("test add installation version with engine servers", func(t *testing.T) {
+		soapResponseSuccess.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting = []*soap.InstallationSetting{
+			{
+				Name:    "Checkmarx Scans Manager",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
+			},
+		}
+		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
+		instance := installation.NewRepo(soapClientMock)
+
+		err := fetchInstallationData(client, instance, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("test add installation version with engine servers", func(t *testing.T) {
+		soapResponseSuccess = &soap.GetInstallationSettingsResponse{}
+		engineServers := []*rest.EngineServer{
+			{
+				ID:        1,
+				Name:      "blabla",
+				URI:       "http://localhost",
+				CxVersion: "9.3.4.1111",
+			},
+		}
+		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
+		client.EXPECT().GetEngineServers().
+			Return(engineServers, nil)
+
+		instance := installation.NewRepo(soapClientMock)
+
+		err := fetchInstallationData(client, instance, exporter)
 		assert.NoError(t, err)
 	})
 }

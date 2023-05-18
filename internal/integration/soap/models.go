@@ -253,10 +253,4 @@ type (
 		Xmlns                         string                        `xml:"xmlns,attr"`
 		GetInstallationSettingsResult GetInstallationSettingsResult `xml:"GetInstallationSettingsResult"`
 	}
-
-	InstallationMapping struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-		Hotfix  string `json:"hotFix"`
-	}
 )

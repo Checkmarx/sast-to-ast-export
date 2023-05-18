@@ -596,6 +596,86 @@ func TestAPIClient_GetProjects(t *testing.T) {
 	})
 }
 
+func TestAPIClient_GetEngineServers(t *testing.T) {
+	t.Run("returns engine servers response", func(t *testing.T) {
+		//nolint:lll
+		responseJSON := `[ { 
+								"id": 1, 
+								"name": "Localhost", 
+								"uri": "http://localhost:8088/", 
+								"minLoc": 0, 
+								"maxLoc": 999999999, 
+								"maxScans": 3,
+								"cxVersion": "9.3.0.1139", 
+								"status": { 
+									"id": 4, 
+									"value": "Idle" 
+								}, 
+								"link": { 
+									"rel": "self", 
+									"uri": "/sast/engineServers/1" 
+								} 
+						} ]`
+
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetEngineServers()
+		assert.NoError(t, err)
+
+		assert.Len(t, result, 1)
+		assert.Equal(t, "Localhost", result[0].Name)
+		assert.Equal(t, "9.3.0.1139", result[0].CxVersion)
+	})
+	t.Run("returns engine servers multi response", func(t *testing.T) {
+		//nolint:lll
+		responseJSON := `[ { 
+								"id": 1, 
+								"name": "Localhost", 
+								"uri": "http://localhost:8088/", 
+								"minLoc": 0, 
+								"maxLoc": 999999999, 
+								"maxScans": 3,
+								"cxVersion": "9.3.0.1139", 
+								"status": { 
+									"id": 4, 
+									"value": "Idle" 
+								}, 
+								"link": { 
+									"rel": "self", 
+									"uri": "/sast/engineServers/1" 
+								} 
+						},{ 
+								"id": 2, 
+								"name": "Localhost", 
+								"uri": "http://localhost:8088/", 
+								"minLoc": 0, 
+								"maxLoc": 999999999, 
+								"maxScans": 3,
+								"cxVersion": "9.3.5.1139", 
+								"status": { 
+									"id": 4, 
+									"value": "Offline" 
+								}, 
+								"link": { 
+									"rel": "self", 
+									"uri": "/sast/engineServers/1" 
+								} 
+						} ]`
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetEngineServers()
+		assert.NoError(t, err)
+
+		assert.Len(t, result, 2)
+		assert.Equal(t, "Localhost", result[0].Name)
+		assert.Equal(t, "9.3.0.1139", result[0].CxVersion)
+		assert.Equal(t, "Localhost", result[1].Name)
+		assert.Equal(t, "9.3.5.1139", result[1].CxVersion)
+	})
+}
+
 func makeOkResponse(body string) *http.Response {
 	return &http.Response{
 		StatusCode: 200,
