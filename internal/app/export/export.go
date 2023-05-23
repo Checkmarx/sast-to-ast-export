@@ -97,7 +97,6 @@ func CreateExportFromLocal(inputPath string, runTime time.Time) (Export, error) 
 	fileList := []string{}
 	_, err := os.Stat(inputPath)
 	if !os.IsNotExist(err) {
-		fmt.Println("Input path is: ", inputPath)
 		err = filepath.Walk(inputPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Println(err)
