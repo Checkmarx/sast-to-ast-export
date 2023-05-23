@@ -28,6 +28,7 @@ const (
 	reportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
 	reportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
 	createReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
+	engineServersEndpoint         = "/CxRestAPI/help/sast/engineServers"
 
 	// ScanReportTypeXML defines SAST report type XML
 	ScanReportTypeXML = "XML"
@@ -50,6 +51,7 @@ type Client interface {
 	GetProjectsWithLastScanID(fromDate, teamName, projectsIds string, offset, limit int) (*[]ProjectWithLastScanID, error)
 	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
 	CreateScanReport(scanID int, reportType string, retry Retry) ([]byte, error)
+	GetEngineServers() ([]*EngineServer, error)
 }
 
 type RetryableHTTPAdapter interface {
@@ -412,4 +414,22 @@ func (c *APIClient) CreateScanReport(scanID int, reportType string, retry Retry)
 		}
 	}
 	return []byte{}, fmt.Errorf("failed getting report after %d attempts", retry.Attempts)
+}
+
+func (c *APIClient) GetEngineServers() ([]*EngineServer, error) {
+	url := fmt.Sprintf("%s%s", c.BaseURL, engineServersEndpoint)
+	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
+	if requestErr != nil {
+		return nil, requestErr
+	}
+	body, getErr := c.getResponseBodyFromRequest(req)
+	if getErr != nil {
+		return nil, getErr
+	}
+	var response []*EngineServer
+	unmarshalErr := json.Unmarshal(body, &response)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return response, nil
 }

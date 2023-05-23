@@ -112,6 +112,11 @@ func RunExport(args *Args) error {
 		if exportCreateErr != nil {
 			return errors.Wrap(exportCreateErr, "could not create export package")
 		}
+    
+    fetchInstallationErr := fetchInstallationData(client, installationRepo, &exportValues)
+    if fetchInstallationErr != nil {
+      return errors.Wrap(fetchInstallationErr, "could not fetch installation data")
+    }
 
 		if !args.Debug && args.OutputFolder == "" {
 			defer func(exportValues export2.Exporter) {
@@ -389,14 +394,23 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 	return projects, nil
 }
 
-func fetchInstallationData(client interfaces.InstallationProvider, exporter export2.Exporter) error {
+func fetchInstallationData(restClient rest.Client, soapClient interfaces.InstallationProvider, exporter export2.Exporter) error {
 	log.Info().Msg("collecting installation details")
-	installationResp, err := client.GetInstallationSettings()
-	if err != nil {
-		return errors.Wrap(err, "error with getting installation details")
+	installationResp, errInstallations := soapClient.GetInstallationSettings()
+	if errInstallations != nil {
+		return errors.Wrap(errInstallations, "error with getting installation details")
+	}
+	installations := export2.TransformXMLInstallationMappings(installationResp)
+
+	if len(installations) == 0 {
+		engineServersResp, errEngineServers := restClient.GetEngineServers()
+		if errEngineServers != nil {
+			return errors.Wrap(errEngineServers, "error with getting engine servers details")
+		}
+		installations = export2.TransformEngineServers(engineServersResp)
 	}
 
-	installationMappingsDataSource := export2.NewJSONDataSource(export2.TransformXMLInstallationMappings(installationResp))
+	installationMappingsDataSource := export2.NewJSONDataSource(installations)
 	return exporter.AddFileWithDataSource(export2.InstallationFileName, installationMappingsDataSource)
 }
 
