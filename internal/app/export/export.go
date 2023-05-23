@@ -97,16 +97,15 @@ func CreateExportFromLocal(inputPath string, runTime time.Time) (Export, error) 
 	fileList := []string{}
 	_, err := os.Stat(inputPath)
 	if !os.IsNotExist(err) {
+		fmt.Println("Input path is: ", inputPath)
 		err = filepath.Walk(inputPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Println(err)
 				return err
 			}
 
-			subpath := strings.TrimPrefix(path, inputPath+string(os.PathSeparator))
-
 			if !info.IsDir() {
-				fileList = append(fileList, subpath)
+				fileList = append(fileList, filepath.ToSlash(strings.TrimPrefix(path, inputPath+string(os.PathSeparator))))
 			}
 
 			return nil
