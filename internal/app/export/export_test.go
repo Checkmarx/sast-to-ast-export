@@ -62,6 +62,7 @@ func TestExport_GetTmpDir(t *testing.T) {
 	assert.Contains(t, result, prefix)
 }
 
+// nolint:dupl
 func TestExport_AddFileWithDataSource(t *testing.T) {
 	prefix := "cxsast-test-export-add-file-with-data-source"
 	runTime := time.Now()
@@ -105,6 +106,8 @@ func TestExport_AddFileWithDataSource(t *testing.T) {
 		assert.EqualError(t, addErr, "data source error")
 	})
 }
+
+// nolint:dupl
 func TestExportLocal_AddFileWithDataSource(t *testing.T) {
 	prefix := "cxsast-test-export-local-add-file-with-data-source"
 	runTime := time.Now()
