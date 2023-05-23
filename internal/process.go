@@ -182,7 +182,7 @@ func RunExport(args *Args) error {
 		}
 	} else {
 		var exportCreateErr error
-		log.Info().Msg("creating export from folder")
+		log.Info().Msg("exporting from folder")
 		exportValues, exportCreateErr = export2.CreateExportFromLocal(args.InputFolder, args.RunTime)
 
 		if exportCreateErr != nil {
