@@ -107,6 +107,7 @@ func RunExport(args *Args) error {
 		if args.OutputFolder == "" {
 			exportValues, exportCreateErr = export2.CreateExport(args.ProductName, args.RunTime)
 		} else {
+			log.Info().Msg("exporting to folder")
 			exportValues, exportCreateErr = export2.CreateExportLocal(args.OutputFolder, args.RunTime)
 		}
 		if exportCreateErr != nil {
@@ -181,6 +182,7 @@ func RunExport(args *Args) error {
 		}
 	} else {
 		var exportCreateErr error
+		log.Info().Msg("exporting from local manipulated folder")
 		exportValues, exportCreateErr = export2.CreateExportFromLocal(args.InputFolder, args.RunTime)
 
 		if exportCreateErr != nil {
