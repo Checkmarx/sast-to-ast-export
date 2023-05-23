@@ -9,6 +9,8 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/encryption"
@@ -76,6 +78,39 @@ func CreateExport(prefix string, runTime time.Time) (Export, error) {
 	tmpDir := os.TempDir()
 	tmpExportDir, err := os.MkdirTemp(tmpDir, prefix)
 	return Export{tmpDir: tmpExportDir, fileList: []string{}, runTime: runTime}, err
+}
+
+// CreateExportLocal creates ExportProducer structure and specified local directory
+// The caller is responsible for calling the Export.Clear function
+// when it's done with the ExportProducer
+func CreateExportLocal(outputPath string, runTime time.Time) (Export, error) {
+	err := os.Mkdir(outputPath, dirPerm)
+	return Export{tmpDir: outputPath, fileList: []string{}, runTime: runTime}, err
+}
+
+// CreateExportFromLocal creates ExportProducer structure using an existing local
+// directory and adds all existing files from the local directory into the
+// ExportProducer's fileList
+// The caller is responsible for calling the Export.Clear function
+// when it's done with the ExportProducer
+func CreateExportFromLocal(inputPath string, runTime time.Time) (Export, error) {
+	fileList := []string{}
+	_, err := os.Stat(inputPath)
+	if !os.IsNotExist(err) {
+		err = filepath.Walk(inputPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+
+			if !info.IsDir() {
+				fileList = append(fileList, filepath.ToSlash(strings.TrimPrefix(path, inputPath+string(os.PathSeparator))))
+			}
+
+			return nil
+		})
+	}
+	return Export{tmpDir: inputPath, fileList: fileList, runTime: runTime}, err
 }
 
 func (e *Export) GetTmpDir() string {

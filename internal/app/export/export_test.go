@@ -32,6 +32,21 @@ func TestCreateExport(t *testing.T) {
 	assert.Contains(t, export.tmpDir, prefix)
 }
 
+func TestCreateExportLocal(t *testing.T) {
+	prefix := "cxsast-test-create-export-local"
+	export, err := CreateExportLocal(prefix, time.Now())
+	assert.NoError(t, err)
+	defer func() {
+		closeErr := export.Clean()
+		assert.NoError(t, closeErr)
+	}()
+
+	info, statErr := os.Stat(export.tmpDir)
+	assert.NoError(t, statErr)
+	assert.True(t, info.IsDir())
+	assert.Contains(t, export.tmpDir, prefix)
+}
+
 func TestExport_GetTmpDir(t *testing.T) {
 	prefix := "cxsast-test-export-get-tmp-dir"
 	export, err := CreateExport(prefix, time.Now())
@@ -47,6 +62,7 @@ func TestExport_GetTmpDir(t *testing.T) {
 	assert.Contains(t, result, prefix)
 }
 
+// nolint:dupl
 func TestExport_AddFileWithDataSource(t *testing.T) {
 	prefix := "cxsast-test-export-add-file-with-data-source"
 	runTime := time.Now()
@@ -87,6 +103,53 @@ func TestExport_AddFileWithDataSource(t *testing.T) {
 			return []byte{}, fmt.Errorf("data source error")
 		}
 		addErr := export.AddFileWithDataSource("test1.txt", dataSource)
+		assert.EqualError(t, addErr, "data source error")
+	})
+}
+
+// nolint:dupl
+func TestExportLocal_AddFileWithDataSource(t *testing.T) {
+	prefix := "cxsast-test-export-local-add-file-with-data-source"
+	runTime := time.Now()
+
+	t.Run("success case", func(t *testing.T) {
+		// this is different from the test above as it is using a local exporter (to specific directory)
+		export, err := CreateExportLocal(prefix, runTime)
+		assert.NoError(t, err)
+		defer func() {
+			closeErr := export.Clean()
+			assert.NoError(t, closeErr)
+		}()
+		dataSource := func() ([]byte, error) {
+			return []byte("this is test2"), nil
+		}
+		addErr := export.AddFileWithDataSource("test2.txt", dataSource)
+		assert.NoError(t, addErr)
+
+		expectedFileList := []string{"test2.txt"}
+		assert.Equal(t, expectedFileList, export.fileList)
+
+		test1FileName := path.Join(export.tmpDir, "test2.txt")
+		info, statErr := os.Stat(test1FileName)
+		assert.NoError(t, statErr)
+		assert.False(t, info.IsDir())
+
+		content, ioErr := os.ReadFile(test1FileName)
+		assert.NoError(t, ioErr)
+		assert.Equal(t, "this is test2", string(content))
+	})
+	t.Run("fails if data source fails", func(t *testing.T) {
+		// this is different from the test above as it is using a local exporter (to specific directory)
+		export, err := CreateExportLocal(prefix, runTime)
+		assert.NoError(t, err)
+		defer func() {
+			closeErr := export.Clean()
+			assert.NoError(t, closeErr)
+		}()
+		dataSource := func() ([]byte, error) {
+			return []byte{}, fmt.Errorf("data source error")
+		}
+		addErr := export.AddFileWithDataSource("test2.txt", dataSource)
 		assert.EqualError(t, addErr, "data source error")
 	})
 }
