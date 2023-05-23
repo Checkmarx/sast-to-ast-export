@@ -129,7 +129,7 @@ func RunExport(args *Args) error {
 		presetRepo := presetrepo.NewRepo(soapClient)
 		installationRepo := installation.NewRepo(soapClient)
 
-		fetchInstallationErr := fetchInstallationData(installationRepo, &exportValues)
+		fetchInstallationErr := fetchInstallationData(client, installationRepo, &exportValues)
 		if fetchInstallationErr != nil {
 			return errors.Wrap(fetchInstallationErr, "could not fetch installation data")
 		}
