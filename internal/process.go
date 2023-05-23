@@ -112,11 +112,6 @@ func RunExport(args *Args) error {
 		if exportCreateErr != nil {
 			return errors.Wrap(exportCreateErr, "could not create export package")
 		}
-    
-    fetchInstallationErr := fetchInstallationData(client, installationRepo, &exportValues)
-    if fetchInstallationErr != nil {
-      return errors.Wrap(fetchInstallationErr, "could not fetch installation data")
-    }
 
 		if !args.Debug && args.OutputFolder == "" {
 			defer func(exportValues export2.Exporter) {
