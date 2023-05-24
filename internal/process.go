@@ -399,12 +399,13 @@ func fetchInstallationData(restClient rest.Client, soapClient interfaces.Install
 	}
 	installations := export2.TransformXMLInstallationMappings(installationResp)
 
-	if len(installations) == 0 {
+	if !export2.ContainsEngine(export2.InstallationEngineServiceName, installations) {
 		engineServersResp, errEngineServers := restClient.GetEngineServers()
 		if errEngineServers != nil {
 			return errors.Wrap(errEngineServers, "error with getting engine servers details")
 		}
-		installations = export2.TransformEngineServers(engineServersResp)
+		engineServerInstallation := export2.TransformEngineServers(engineServersResp)
+		installations = append(installations, engineServerInstallation...)
 	}
 
 	installationMappingsDataSource := export2.NewJSONDataSource(installations)

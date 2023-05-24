@@ -1634,6 +1634,14 @@ func TestAddCustomQueryIDs(t *testing.T) {
 }
 
 func TestFetchInstallationData(t *testing.T) {
+	engineServers := []*rest.EngineServer{
+		{
+			ID:        1,
+			Name:      "blabla",
+			URI:       "http://localhost",
+			CxVersion: "9.3.4.1111",
+		},
+	}
 	soapResponseSuccess := &soap.GetInstallationSettingsResponse{
 		GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
 			IsSuccesfull: "true",
@@ -1700,16 +1708,38 @@ func TestFetchInstallationData(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("test add installation version with engine servers", func(t *testing.T) {
-		soapResponseSuccess = &soap.GetInstallationSettingsResponse{}
-		engineServers := []*rest.EngineServer{
+	t.Run("test add installation version combined with engine servers", func(t *testing.T) {
+		soapResponseSuccess.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting = []*soap.InstallationSetting{
 			{
-				ID:        1,
-				Name:      "blabla",
-				URI:       "http://localhost",
-				CxVersion: "9.3.4.1111",
+				Name:    "Checkmarx Web Services",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
 			},
 		}
+		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
+		client.EXPECT().GetEngineServers().Return(engineServers, nil)
+		instance := installation.NewRepo(soapClientMock)
+
+		err := fetchInstallationData(client, instance, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("test add installation version with engine servers", func(t *testing.T) {
+		soapResponseSuccess = &soap.GetInstallationSettingsResponse{}
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
