@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	installationEngineServiceName = "Checkmarx Engine Service"
+	InstallationEngineServiceName = "Checkmarx Engine Service"
 	installationScansManagerName  = "Checkmarx Scans Manager"
 	installationContentPackName   = "Checkmarx Queries Pack"
 	engineServersStatusOffline    = "Offline"
@@ -75,10 +75,10 @@ func TransformXMLInstallationMappings(installationMappings *soap.GetInstallation
 	}
 
 	for _, e := range installationMappings.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting {
-		if e.Name == installationEngineServiceName || e.Name == installationScansManagerName {
-			if !containsEngine(installationEngineServiceName, out) {
+		if e.Name == InstallationEngineServiceName || e.Name == installationScansManagerName {
+			if !ContainsEngine(InstallationEngineServiceName, out) {
 				out = append(out, &common.InstallationMapping{
-					Name:    installationEngineServiceName,
+					Name:    InstallationEngineServiceName,
 					Version: e.Version,
 					Hotfix:  e.Hotfix,
 				})
@@ -119,16 +119,16 @@ func TransformEngineServers(servers []*rest.EngineServer) []*common.Installation
 
 	if len(servers) == 1 {
 		out = append(out, &common.InstallationMapping{
-			Name:    installationEngineServiceName,
+			Name:    InstallationEngineServiceName,
 			Version: servers[0].CxVersion,
 			Hotfix:  "",
 		})
 	} else if len(servers) > 1 {
 		for _, e := range servers {
 			if e.Status.Value != engineServersStatusOffline {
-				if !containsEngine(installationEngineServiceName, out) {
+				if !ContainsEngine(InstallationEngineServiceName, out) {
 					out = append(out, &common.InstallationMapping{
-						Name:    installationEngineServiceName,
+						Name:    InstallationEngineServiceName,
 						Version: e.CxVersion,
 						Hotfix:  "",
 					})
@@ -138,6 +138,16 @@ func TransformEngineServers(servers []*rest.EngineServer) []*common.Installation
 	}
 
 	return out
+}
+
+// ContainsEngine returns true if already exists object filtered by name.
+func ContainsEngine(needle string, data []*common.InstallationMapping) bool {
+	for _, v := range data {
+		if needle == v.Name {
+			return true
+		}
+	}
+	return false
 }
 
 // getAllChildTeamIDs returns all child team ids relative to a root team id.
@@ -161,13 +171,4 @@ func replaceKeyValue(d []byte, key string, getValue func(string) string) []byte 
 		value := getValue(string(matches[0][2]))
 		return []byte(fmt.Sprintf(`%s=%q`, key, value))
 	})
-}
-
-func containsEngine(needle string, data []*common.InstallationMapping) bool {
-	for _, v := range data {
-		if needle == v.Name {
-			return true
-		}
-	}
-	return false
 }
