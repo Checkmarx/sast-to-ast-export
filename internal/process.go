@@ -69,6 +69,9 @@ func RunExport(args *Args) error {
 		Str("export", fmt.Sprintf("%v", args.Export)).
 		Str("queryMapping", args.QueryMappingFile).
 		Int("projectsActiveSince", args.ProjectsActiveSince).
+		Str("projectId", args.ProjectsIds).
+		Str("projectTeam", args.TeamName).
+		Bool("nestedTeams", args.NestedTeams).
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
