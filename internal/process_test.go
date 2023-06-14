@@ -1141,10 +1141,9 @@ func TestFetchSelectedData(t *testing.T) {
 		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
-			gomock.Any()).Return(projects, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
-			gomock.Any()).Return([]*rest.Project{}, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return([]*rest.Project{}, nil)
 		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
 		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
@@ -1306,12 +1305,10 @@ func TestFetchSelectedData(t *testing.T) {
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
 		client.EXPECT().GetSamlTeamMappings().Return([]*rest.SamlTeamMapping{}, nil)
 		client.EXPECT().
-			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0),
-				gomock.Any()).
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0), gomock.Any()).
 			Return(&projectPage, nil)
 		client.EXPECT().
-			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-				gomock.Any()).
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&[]rest.ProjectWithLastScanID{}, nil)
 		client.EXPECT().
 			GetTriagedResultsByScanID(gomock.Eq(1)).
@@ -1346,8 +1343,7 @@ func TestFetchSelectedData(t *testing.T) {
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
 		client.EXPECT().GetSamlTeamMappings().Return([]*rest.SamlTeamMapping{}, nil)
 		client.EXPECT().
-			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0),
-				gomock.Any()).
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0), gomock.Any()).
 			Return(&[]rest.ProjectWithLastScanID{}, fmt.Errorf("failed fetching projects"))
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -1450,10 +1446,9 @@ func TestFetchProjects(t *testing.T) {
 			}}}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
-			gomock.Any()).Return(projects, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
-			gomock.Any()).Return([]*rest.Project{}, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return([]*rest.Project{}, nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
@@ -1461,7 +1456,7 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
 
 		assert.NoError(t, errProjects)
 		assert.Equal(t, projects, projectsList)
@@ -1470,10 +1465,10 @@ func TestFetchProjects(t *testing.T) {
 	t.Run("fetch projects with error", func(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
-			gomock.Any()).Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).
+			Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
 
-		_, err := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		_, err := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
 
 		assert.EqualError(t, err, "failed getting projects: failed fetching project")
 	})
@@ -1493,12 +1488,11 @@ func TestFetchProjects(t *testing.T) {
 		expectedList := []*rest.Project{projectsFirst[0], projectsSecond[0]}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
-			gomock.Any()).Return(projectsFirst, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
-			gomock.Any()).Return(projectsSecond, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
-			gomock.Any()).Return([]*rest.Project{}, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projectsFirst, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return(projectsSecond, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return([]*rest.Project{}, nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
@@ -1506,7 +1500,7 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
 
 		assert.NoError(t, errProjects)
 		assert.Equal(t, expectedList, projectsList)

@@ -232,7 +232,8 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	var projects []*rest.Project
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	if sliceutils.Contains(export2.ProjectsOption, options) {
-		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIds)
+		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIds,
+			args.IsDefaultProjectActiveSince)
 		if errProjects != nil {
 			return errProjects
 		}
@@ -341,12 +342,12 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter, args *Args) e
 }
 
 func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
-	teamName, projectsIds string) ([]*rest.Project, error) {
+	teamName, projectsIds string, isDefaultProjectActiveSince bool) ([]*rest.Project, error) {
 	log.Info().Msg("collecting projects")
-	var projects []*rest.Project
+	projects := []*rest.Project{}
 	projectOffset := 0
 	projectLimit := resultsPageLimit
-	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
+	fromDate := getDateFrom(resultsProjectActiveSince, isDefaultProjectActiveSince, projectsIds)
 	for {
 		log.Debug().
 			Str("fromDate", fromDate).
@@ -480,7 +481,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
-	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
+	fromDate := getDateFrom(resultsProjectActiveSince, args.IsDefaultProjectActiveSince, projectsIds)
 	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds)
 	if triagedScanErr != nil {
 		return triagedScanErr
@@ -543,8 +544,8 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 		log.Info().Msg("searching for results...")
 
 		// fetch current page
-		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds,
-			projectOffset, projectLimit)
+		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds, projectOffset,
+			projectLimit)
 		if fetchErr != nil {
 			log.Debug().Err(fetchErr).Msg("failed fetching project last scans")
 			return output, fmt.Errorf("error searching for results")
@@ -789,4 +790,11 @@ func addCustomQueryIDs(astQueryProvider interfaces.ASTQueryProvider, astQueryMap
 	}
 
 	return nil
+}
+
+func getDateFrom(resultsProjectActiveSince int, isDefaultProjectActiveSince bool, projectIds string) string {
+	if isDefaultProjectActiveSince && projectIds != "" {
+		return ""
+	}
+	return GetDateFromDays(resultsProjectActiveSince, time.Now())
 }
