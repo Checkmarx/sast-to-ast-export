@@ -140,33 +140,33 @@ func (mr *MockClientMockRecorder) GetPresets() *gomock.Call {
 }
 
 // GetProjects mocks base method.
-func (m *MockClient) GetProjects(arg0, arg1, arg2 string, arg3, arg4 int, arg5 bool) ([]*rest.Project, error) {
+func (m *MockClient) GetProjects(arg0, arg1, arg2 string, arg3, arg4 int) ([]*rest.Project, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProjects", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "GetProjects", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].([]*rest.Project)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProjects indicates an expected call of GetProjects.
-func (mr *MockClientMockRecorder) GetProjects(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetProjects(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjects", reflect.TypeOf((*MockClient)(nil).GetProjects), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjects", reflect.TypeOf((*MockClient)(nil).GetProjects), arg0, arg1, arg2, arg3, arg4)
 }
 
 // GetProjectsWithLastScanID mocks base method.
-func (m *MockClient) GetProjectsWithLastScanID(arg0, arg1, arg2 string, arg3, arg4 int, arg5 bool) (*[]rest.ProjectWithLastScanID, error) {
+func (m *MockClient) GetProjectsWithLastScanID(arg0, arg1, arg2 string, arg3, arg4 int) (*[]rest.ProjectWithLastScanID, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProjectsWithLastScanID", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "GetProjectsWithLastScanID", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*[]rest.ProjectWithLastScanID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProjectsWithLastScanID indicates an expected call of GetProjectsWithLastScanID.
-func (mr *MockClientMockRecorder) GetProjectsWithLastScanID(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetProjectsWithLastScanID(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectsWithLastScanID", reflect.TypeOf((*MockClient)(nil).GetProjectsWithLastScanID), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectsWithLastScanID", reflect.TypeOf((*MockClient)(nil).GetProjectsWithLastScanID), arg0, arg1, arg2, arg3, arg4)
 }
 
 // GetRoles mocks base method.

@@ -53,7 +53,7 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
-	args.IsDefaultProjectActiveSince = args.ProjectsActiveSince == 0
+	args.IsDefaultProjectActiveSince = args.ProjectsActiveSince == emptyProjectsActiveSince
 	if args.IsDefaultProjectActiveSince {
 		args.ProjectsActiveSince = projectsActiveSinceDefaultValue
 	}

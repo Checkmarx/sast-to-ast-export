@@ -28,6 +28,7 @@ const (
 	nestedTeams             = "nested-teams"
 
 	projectsActiveSinceDefaultValue = 180
+	emptyProjectsActiveSince        = 0
 )
 
 // productName is defined in Makefile and initialized during build
@@ -115,7 +116,7 @@ func init() {
 	rootCmd.Flags().StringP(teamName, "", "", "team name filter")
 	rootCmd.Flags().StringP(projectsIds, "", "", "project ID filter")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
-	rootCmd.Flags().IntP(projectsActiveSinceArg, "", 0, projectsActiveSinceUsage)
+	rootCmd.Flags().IntP(projectsActiveSinceArg, "", emptyProjectsActiveSince, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
 	rootCmd.Flags().Bool(nestedTeams, false, "include original team structure without flattening")

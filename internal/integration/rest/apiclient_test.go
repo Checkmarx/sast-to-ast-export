@@ -302,7 +302,7 @@ func TestAPIClient_GetProjectsWithLastScanID(t *testing.T) {
 	teamName := "TestName"
 	projectsIds := ""
 
-	result, err := client.GetProjectsWithLastScanID("2021-10-7", teamName, projectsIds, 0, 10, false)
+	result, err := client.GetProjectsWithLastScanID("2021-10-7", teamName, projectsIds, 0, 10)
 
 	expected := []ProjectWithLastScanID{
 		{ID: 1, LastScanID: 1000000},
@@ -586,7 +586,7 @@ func TestAPIClient_GetProjects(t *testing.T) {
 		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
 		assert.NoError(t, clientErr)
 
-		result, err := client.GetProjects("2022-04-01", "", "", 0, 10, false)
+		result, err := client.GetProjects("2022-04-01", "", "", 0, 10)
 		assert.NoError(t, err)
 
 		assert.Len(t, result, 2)
