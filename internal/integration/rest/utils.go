@@ -55,7 +55,7 @@ func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string) str
 // getProjectFilterForEmptyDate get project filter when date empty
 func getProjectFilterForEmptyDate(projectIds, teamName string) string {
 	if teamName == "" {
-		return fmt.Sprintf("%s", getProjectIdsFilter(projectIds))
+		return getProjectIdsFilter(projectIds)
 	}
 	return fmt.Sprintf("%s and %s", getProjectIdsFilter(projectIds), getTeamFilter(teamName))
 }
