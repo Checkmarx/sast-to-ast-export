@@ -232,7 +232,8 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	var projects []*rest.Project
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	if sliceutils.Contains(export2.ProjectsOption, options) {
-		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIds)
+		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIds,
+			args.IsDefaultProjectActiveSince)
 		if errProjects != nil {
 			return errProjects
 		}
@@ -341,9 +342,9 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter, args *Args) e
 }
 
 func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
-	teamName, projectsIds string) ([]*rest.Project, error) {
+	teamName, projectsIds string, isDefaultProjectActiveSince bool) ([]*rest.Project, error) {
 	log.Info().Msg("collecting projects")
-	var projects []*rest.Project
+	projects := []*rest.Project{}
 	projectOffset := 0
 	projectLimit := resultsPageLimit
 	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
@@ -355,7 +356,8 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 			Msg("fetching projects with custom fields")
 		log.Info().Msg("searching for projects...")
 
-		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIds, projectOffset, projectLimit)
+		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIds, projectOffset, projectLimit,
+			isDefaultProjectActiveSince)
 		if projectsErr != nil {
 			return nil, errors.Wrap(projectsErr, "failed getting projects")
 		}
@@ -481,7 +483,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 	reportJobs := make(chan ReportJob)
 
 	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
-	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds)
+	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds, args.IsDefaultProjectActiveSince)
 	if triagedScanErr != nil {
 		return triagedScanErr
 	}
@@ -529,7 +531,8 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 	return nil
 }
 
-func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string) ([]TriagedScan, error) {
+func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string,
+	isDefaultProjectActiveSince bool) ([]TriagedScan, error) {
 	var output []TriagedScan
 	projectOffset := 0
 	projectLimit := resultsPageLimit
@@ -544,7 +547,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 
 		// fetch current page
 		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds,
-			projectOffset, projectLimit)
+			projectOffset, projectLimit, isDefaultProjectActiveSince)
 		if fetchErr != nil {
 			log.Debug().Err(fetchErr).Msg("failed fetching project last scans")
 			return output, fmt.Errorf("error searching for results")

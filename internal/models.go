@@ -8,9 +8,10 @@ type Args struct {
 	Password,
 	OutputPath,
 	ProductName string
-	Export              []string
-	ProjectsActiveSince int
-	Debug               bool
+	Export                      []string
+	ProjectsActiveSince         int
+	IsDefaultProjectActiveSince bool
+	Debug                       bool
 	DBConnectionString,
 	ProjectsIds,
 	TeamName string

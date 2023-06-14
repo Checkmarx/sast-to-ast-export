@@ -40,7 +40,8 @@ type Client interface {
 	GetUsers() ([]*User, error)
 	GetRoles() ([]byte, error)
 	GetTeams() ([]*Team, error)
-	GetProjects(fromDate, teamName, projectIds string, offset, limit int) ([]*Project, error)
+	GetProjects(fromDate, teamName, projectIds string, offset, limit int,
+		isDefaultProjectActiveSince bool) ([]*Project, error)
 	GetPresets() ([]*PresetShort, error)
 	GetLdapServers() ([]byte, error)
 	GetLdapRoleMappings() ([]byte, error)
@@ -48,7 +49,8 @@ type Client interface {
 	GetSamlIdentityProviders() ([]byte, error)
 	GetSamlRoleMappings() ([]byte, error)
 	GetSamlTeamMappings() ([]*SamlTeamMapping, error)
-	GetProjectsWithLastScanID(fromDate, teamName, projectsIds string, offset, limit int) (*[]ProjectWithLastScanID, error)
+	GetProjectsWithLastScanID(fromDate, teamName, projectsIds string, offset, limit int,
+		isDefaultProjectActiveSince bool) (*[]ProjectWithLastScanID, error)
 	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
 	CreateScanReport(scanID int, reportType string, retry Retry) ([]byte, error)
 	GetEngineServers() ([]*EngineServer, error)
@@ -241,7 +243,8 @@ func (c *APIClient) GetTeams() ([]*Team, error) {
 	return teams, err
 }
 
-func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, limit int) ([]*Project, error) {
+func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, limit int,
+	isDefaultProjectActiveSince bool) ([]*Project, error) {
 	var response ODataProjectsWithCustomFields
 	url := fmt.Sprintf("%s%s", c.BaseURL, projectsODataEndpoint)
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
@@ -251,7 +254,7 @@ func (c *APIClient) GetProjects(fromDate, teamName, projectIds string, offset, l
 	q := req.URL.Query()
 	q.Add("$select", "Id,OwningTeamId,Name,IsPublic,CreatedDate,CustomFields,PresetId")
 	q.Add("$expand", "CustomFields($select=FieldName,FieldValue)")
-	q.Add("$filter", GetFilterForProjects(fromDate, teamName, projectIds))
+	q.Add("$filter", GetFilterForProjects(fromDate, teamName, projectIds, isDefaultProjectActiveSince))
 	q.Add("$skip", fmt.Sprintf("%d", offset))
 	q.Add("$top", fmt.Sprintf("%d", limit))
 	req.URL.RawQuery = q.Encode()
@@ -325,7 +328,8 @@ func (c *APIClient) postReportID(body io.Reader) ([]byte, error) {
 	return c.PostResponseBody(createReportIDEndpoint, body)
 }
 
-func (c *APIClient) GetProjectsWithLastScanID(fromDate, teamName, projectsIds string, offset, limit int) (*[]ProjectWithLastScanID, error) {
+func (c *APIClient) GetProjectsWithLastScanID(fromDate, teamName, projectsIds string, offset, limit int,
+	isDefaultProjectActiveSince bool) (*[]ProjectWithLastScanID, error) {
 	url := fmt.Sprintf("%s/Cxwebinterface/odata/v1/Projects", c.BaseURL)
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
 	if requestErr != nil {
@@ -334,7 +338,7 @@ func (c *APIClient) GetProjectsWithLastScanID(fromDate, teamName, projectsIds st
 	q := req.URL.Query()
 	q.Add("$select", "Id,LastScanId")
 	q.Add("$expand", "LastScan($select=Id)")
-	q.Add("$filter", GetFilterForProjectsWithLastScan(fromDate, teamName, projectsIds))
+	q.Add("$filter", GetFilterForProjectsWithLastScan(fromDate, teamName, projectsIds, isDefaultProjectActiveSince))
 	q.Add("$skip", fmt.Sprintf("%d", offset))
 	q.Add("$top", fmt.Sprintf("%d", limit))
 	req.URL.RawQuery = q.Encode()

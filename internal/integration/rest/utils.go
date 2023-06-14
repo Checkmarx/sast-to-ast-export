@@ -17,9 +17,15 @@ type Retry struct {
 }
 
 // GetFilterForProjects get filter string for projects list
-func GetFilterForProjects(fromDate, teamName, projectIds string) string {
+func GetFilterForProjects(fromDate, teamName, projectIds string, isDefaultProjectActiveSince bool) string {
 	if teamName == "" && projectIds == "" {
 		return fmt.Sprintf("CreatedDate gt %s", fromDate)
+	}
+	if projectIds != "" && isDefaultProjectActiveSince && teamName == "" {
+		return fmt.Sprintf("%s", getProjectIdsFilter(projectIds))
+	}
+	if projectIds != "" && isDefaultProjectActiveSince && teamName != "" {
+		return fmt.Sprintf("%s and %s", getProjectIdsFilter(projectIds), getTeamFilter(teamName))
 	}
 	if teamName == "" {
 		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
@@ -32,9 +38,15 @@ func GetFilterForProjects(fromDate, teamName, projectIds string) string {
 }
 
 // GetFilterForProjectsWithLastScan get filter string for projects list with last scan
-func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string) string {
+func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string, isDefaultProjectActiveSince bool) string {
 	if teamName == "" && projectIds == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s", fromDate)
+	}
+	if projectIds != "" && isDefaultProjectActiveSince && teamName == "" {
+		return fmt.Sprintf("%s", getProjectIdsFilter(projectIds))
+	}
+	if projectIds != "" && isDefaultProjectActiveSince && teamName != "" {
+		return fmt.Sprintf("%s and %s", getProjectIdsFilter(projectIds), getTeamFilter(teamName))
 	}
 	if teamName == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
