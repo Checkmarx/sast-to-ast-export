@@ -50,6 +50,18 @@ func TestApiClientUtils(t *testing.T) {
 				projectIds:     "wrong_num",
 				expectedResult: "CreatedDate gt 2022-01-15 and Id gt 0",
 			},
+			{
+				fromDate:       "",
+				teamName:       "",
+				projectIds:     "1,2",
+				expectedResult: "Id in (1,2)",
+			},
+			{
+				fromDate:       "",
+				teamName:       "TestTeam",
+				projectIds:     "1,2",
+				expectedResult: "Id in (1,2) and OwningTeam/FullName eq 'TestTeam'",
+			},
 		}
 
 		for _, test := range tests {
@@ -83,6 +95,18 @@ func TestApiClientUtils(t *testing.T) {
 				teamName:       "TestTeam",
 				projectIds:     "1,2",
 				expectedResult: "LastScan/ScanCompletedOn gt 2022-01-15 and OwningTeam/FullName eq 'TestTeam' and Id in (1,2)",
+			},
+			{
+				fromDate:       "",
+				teamName:       "",
+				projectIds:     "1,2",
+				expectedResult: "Id in (1,2)",
+			},
+			{
+				fromDate:       "",
+				teamName:       "TestTeam",
+				projectIds:     "1,2",
+				expectedResult: "Id in (1,2) and OwningTeam/FullName eq 'TestTeam'",
 			},
 		}
 

@@ -21,6 +21,9 @@ func GetFilterForProjects(fromDate, teamName, projectIds string) string {
 	if teamName == "" && projectIds == "" {
 		return fmt.Sprintf("CreatedDate gt %s", fromDate)
 	}
+	if fromDate == "" {
+		return getProjectFilterForEmptyDate(projectIds, teamName)
+	}
 	if teamName == "" {
 		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
 	}
@@ -36,6 +39,9 @@ func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string) str
 	if teamName == "" && projectIds == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s", fromDate)
 	}
+	if fromDate == "" {
+		return getProjectFilterForEmptyDate(projectIds, teamName)
+	}
 	if teamName == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
 	}
@@ -44,6 +50,14 @@ func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string) str
 	}
 	return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s and %s", fromDate, getTeamFilter(teamName),
 		getProjectIdsFilter(projectIds))
+}
+
+// getProjectFilterForEmptyDate get project filter when date empty
+func getProjectFilterForEmptyDate(projectIds, teamName string) string {
+	if teamName == "" {
+		return getProjectIdsFilter(projectIds)
+	}
+	return fmt.Sprintf("%s and %s", getProjectIdsFilter(projectIds), getTeamFilter(teamName))
 }
 
 // getTeamFilter get filter string for team
@@ -74,9 +88,7 @@ func getMinMax(ids []string) (min, max int) {
 	min, _ = strconv.Atoi(strings.Trim(ids[0], " "))
 	max, _ = strconv.Atoi(strings.Trim(ids[1], " "))
 	if min > max {
-		swap := min
-		min = max
-		max = swap
+		min, max = max, min
 	}
 
 	return min, max

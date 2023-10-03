@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/installation"
+	mock_preset_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/preset"
+	mock_integration_soap "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/soap"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
@@ -17,11 +21,15 @@ import (
 	mock_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_mapping"
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
-	mock_preset_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/preset"
 	mock_integration_rest "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/rest"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	TeamName   = "TestTeam"
+	projectIDs = "1,2"
 )
 
 type validatePermissionTest struct {
@@ -205,47 +213,50 @@ func writeTeamsSetupExpects(exporter *mock_app_export.MockExporter, expect *team
 
 func TestValidatePermissions(t *testing.T) {
 	tests := []validatePermissionTest{
-		{jwt.MapClaims{}, []string{}, false, "empty claims and export options"},
-		{jwt.MapClaims{}, []string{export.UsersOption}, true, "empty claims"},
+		{jwt.MapClaims{"sast-permissions": "manage-system-settings"}, []string{}, false, "empty claims and export options"},
+		{jwt.MapClaims{"sast-permissions": "manage-system-settings"}, []string{export.UsersOption}, true, "empty claims"},
 		{
-			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers"},
+			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers", "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			false,
 			"single, correct permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": "invalid"},
+			jwt.MapClaims{"access-control-permissions": "invalid", "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			true,
 			"single, incorrect permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": nil},
+			jwt.MapClaims{"access-control-permissions": nil, "sast-permissions": "manage-system-settings"},
 			[]string{export.TeamsOption},
 			true,
 			"single, invalid permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers"},
+			jwt.MapClaims{"access-control-permissions": "manage-authentication-providers", "sast-permissions": "manage-system-settings"},
 			[]string{export.UsersOption},
 			true,
 			"missing one permission",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": []interface{}{"manage-authentication-providers", "manage-roles"}},
+			jwt.MapClaims{
+				"access-control-permissions": []interface{}{"manage-authentication-providers", "manage-roles"},
+				"sast-permissions":           "manage-system-settings",
+			},
 			[]string{export.UsersOption},
 			false,
 			"permission list with correct permissions",
 		},
 		{
-			jwt.MapClaims{"access-control-permissions": []interface{}{"invalid", "manage-roles"}},
+			jwt.MapClaims{"access-control-permissions": []interface{}{"invalid", "manage-roles"}, "sast-permissions": "manage-system-settings"},
 			[]string{export.UsersOption},
 			true,
 			"permission list with incorrect permissions",
 		},
 		{
 			jwt.MapClaims{
-				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results"},
+				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results", "manage-system-settings"},
 				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
 			},
 			[]string{export.UsersOption, export.ResultsOption},
@@ -254,22 +265,34 @@ func TestValidatePermissions(t *testing.T) {
 		},
 		{
 			jwt.MapClaims{
-				"sast-permissions":           []interface{}{"invalid", "generate-scan-report"},
+				"sast-permissions":           []interface{}{"invalid", "generate-scan-report", "manage-system-settings"},
 				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
 			},
 			[]string{export.UsersOption, export.ResultsOption},
 			true,
 			"multiple permission lists with incorrect permissions",
 		},
+		{
+			jwt.MapClaims{
+				"sast-permissions":           []interface{}{"use-odata", "generate-scan-report", "view-results"},
+				"access-control-permissions": []interface{}{"manage-roles", "manage-authentication-providers"},
+			},
+			[]string{export.UsersOption, export.ResultsOption},
+			true,
+			"multiple permission lists with correct permissions missing manage-system-settings",
+		},
 	}
-	for _, test := range tests {
-		err := validatePermissions(test.JwtClaims, test.ExportOptions)
+	for i, e := range tests {
+		test := e
+		t.Run(fmt.Sprintf("#%d", i+1), func(t *testing.T) {
+			err := validatePermissions(test.JwtClaims, test.ExportOptions)
 
-		if test.ExpectErr {
-			assert.Error(t, err, test.Message)
-		} else {
-			assert.NoError(t, err, test.Message)
-		}
+			if test.ExpectErr {
+				assert.Error(t, err, test.Message)
+			} else {
+				assert.NoError(t, err, test.Message)
+			}
+		})
 	}
 }
 
@@ -356,8 +379,9 @@ func TestFetchUsersData(t *testing.T) {
 					return callbackErr
 				}).
 				AnyTimes()
+			args := &Args{}
 
-			result := fetchUsersData(client, exporter)
+			result := fetchUsersData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -469,11 +493,12 @@ func TestFetchUsersData(t *testing.T) {
 		for _, test := range tests {
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+			args := &Args{}
 
 			fetchUsersSetupExpects(client, &test.fetchMockExpects)
 			writeUsersSetupExpects(exporter, &test.writeMockExpects)
 
-			result := fetchUsersData(client, exporter)
+			result := fetchUsersData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -497,8 +522,9 @@ func TestFetchUsersData(t *testing.T) {
 				return callbackErr
 			}).
 			AnyTimes()
+		args := &Args{}
 
-		result := fetchUsersData(client, exporter)
+		result := fetchUsersData(client, exporter, args)
 
 		assert.NoError(t, result)
 	})
@@ -570,8 +596,9 @@ func TestFetchTeamsData(t *testing.T) {
 					return callbackErr
 				}).
 				AnyTimes()
+			args := &Args{}
 
-			result := fetchTeamsData(client, exporter)
+			result := fetchTeamsData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -657,11 +684,12 @@ func TestFetchTeamsData(t *testing.T) {
 		for _, test := range tests {
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+			args := &Args{}
 
 			fetchTeamsSetupExpects(client, &test.fetchMockExpects)
 			writeTeamsSetupExpects(exporter, &test.writeMockExpects)
 
-			result := fetchTeamsData(client, exporter)
+			result := fetchTeamsData(client, exporter, args)
 
 			assert.ErrorIs(t, result, test.expectedErr)
 		}
@@ -683,8 +711,9 @@ func TestFetchTeamsData(t *testing.T) {
 				return callbackErr
 			}).
 			AnyTimes()
+		args := &Args{}
 
-		result := fetchTeamsData(client, exporter)
+		result := fetchTeamsData(client, exporter, args)
 
 		assert.NoError(t, result)
 	})
@@ -807,7 +836,7 @@ func TestGetTriagedScans(t *testing.T) {
 			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
 			expectedErr:    fmt.Errorf("failed getting result for scanID 2"),
 			msg:            "fails if can't get second result",
-			projectIds:     "1,2",
+			projectIds:     projectIDs,
 		},
 	}
 	fromDate := "2021-9-7"
@@ -906,14 +935,15 @@ func TestConsumeReports(t *testing.T) {
 		Return(nil).
 		MinTimes(1).
 		MaxTimes(1)
-	metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+	metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 	metadataRecord := &metadata.Record{
 		Queries: []*metadata.RecordQuery{},
 	}
 	metadataProvider.EXPECT().GetMetadataRecord(gomock.Any(), gomock.Any()).Return(metadataRecord, nil).AnyTimes()
 	outputCh := make(chan ReportConsumeOutput, reportCount)
+	args := &Args{}
 
-	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider)
+	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider, args)
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
@@ -940,8 +970,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		teamName := "TestTeam"
-		projectsIds := "1,2"
+		teamName := TeamName
+		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
@@ -970,10 +1000,11 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond,
-			metadataProvider, teamName, projectsIds)
+			metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
 	})
@@ -982,8 +1013,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		teamName := "TestTeam"
-		projectsIds := "1,2"
+		teamName := TeamName
+		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
@@ -1001,9 +1032,11 @@ func TestFetchResultsData(t *testing.T) {
 			Return(nil, fmt.Errorf("failed getting triaged scan")).
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
+
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
-			time.Millisecond, metadataProvider, teamName, projectsIds)
+			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.EqualError(t, result, "failed getting triaged scan")
 	})
@@ -1012,8 +1045,8 @@ func TestFetchResultsData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
-		teamName := "TestTeam"
-		projectsIds := "1,2"
+		teamName := TeamName
+		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
@@ -1042,10 +1075,11 @@ func TestFetchResultsData(t *testing.T) {
 			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+		args := &Args{}
 
 		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
-			time.Millisecond, metadataProvider, teamName, projectsIds)
+			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
 	})
@@ -1053,11 +1087,22 @@ func TestFetchResultsData(t *testing.T) {
 
 //nolint:funlen
 func TestFetchSelectedData(t *testing.T) {
+	teamName := TeamName
+	projectsIds := projectIDs
+	projectPage := []rest.ProjectWithLastScanID{
+		{ID: 1, LastScanID: 1},
+		{ID: 2, LastScanID: 2},
+	}
 	t.Run("export users success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		client.EXPECT().
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(TeamName), gomock.Eq(projectIDs),
+				gomock.Eq(0), gomock.Eq(resultsPageLimit)).
+			Return(&projectPage, nil).
+			AnyTimes()
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil)
 		exporter := mock_app_export.NewMockExporter(ctrl)
@@ -1066,7 +1111,102 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider, presetProvider)
+
+		assert.NoError(t, result)
+	})
+	t.Run("export projects and presets success case", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		var preset100000 soap.GetPresetDetailsResponse
+		presetList := []*rest.PresetShort{
+			{ID: 1, Name: "All", OwnerName: "CxUser"},
+			{ID: 9, Name: "Android", OwnerName: "CxUser"},
+			{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
+			{ID: 100001, Name: "New_custom_preset_2", OwnerName: "Custom_user"}, // this one should be ignored
+		}
+		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
+			CreatedDate: "2022-04-21T20:30:59.39+03:00", PresetID: 100000,
+			Configuration: &rest.Configuration{
+				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
+			}}}
+		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
+		assert.NoError(t, io100000Err)
+		unmarshal100000Err := xml.Unmarshal(presetXML100000, &preset100000)
+		assert.NoError(t, unmarshal100000Err)
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
+		client := mock_integration_rest.NewMockClient(ctrl)
+
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return([]*rest.Project{}, nil)
+		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
+		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
+		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		args := Args{
+			Export:              []string{"presets", "projects"},
+			ProjectsIds:         projectIDs,
+			TeamName:            teamName,
+			ProjectsActiveSince: 100,
+		}
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+
+		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
+			metadataProvider, queryProvider, presetProvider)
+
+		assert.NoError(t, result)
+	})
+	t.Run("export all presets success case", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		var preset1, preset9, preset100000, preset100001 soap.GetPresetDetailsResponse
+		presetList := []*rest.PresetShort{
+			{ID: 1, Name: "All", OwnerName: "CxUser"},
+			{ID: 9, Name: "Android", OwnerName: "CxUser"},
+			{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
+			{ID: 100001, Name: "New_custom_preset_2", OwnerName: "Custom_user"}, // this one should not be ignored
+		}
+		args := Args{
+			Export:              []string{"presets"},
+			TeamName:            teamName,
+			ProjectsActiveSince: 100,
+		}
+		presetXML1, io1Err := os.ReadFile("../test/data/presets/1.xml")
+		assert.NoError(t, io1Err)
+		unmarshal1Err := xml.Unmarshal(presetXML1, &preset1)
+		assert.NoError(t, unmarshal1Err)
+		presetXML9, io9Err := os.ReadFile("../test/data/presets/9.xml")
+		assert.NoError(t, io9Err)
+		unmarshal9Err := xml.Unmarshal(presetXML9, &preset9)
+		assert.NoError(t, unmarshal9Err)
+		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
+		assert.NoError(t, io100000Err)
+		unmarshal100000Err := xml.Unmarshal(presetXML100000, &preset100000)
+		assert.NoError(t, unmarshal100000Err)
+		presetXML100001, io100001Err := os.ReadFile("../test/data/presets/100001.xml")
+		assert.NoError(t, io100001Err)
+		unmarshal100001Err := xml.Unmarshal(presetXML100001, &preset100001)
+		assert.NoError(t, unmarshal100001Err)
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
+		client := mock_integration_rest.NewMockClient(ctrl)
+
+		client.EXPECT().GetPresets().Return(presetList, nil).AnyTimes()
+		presetProvider.EXPECT().GetPresetDetails(1).Return(&preset1, nil)
+		presetProvider.EXPECT().GetPresetDetails(9).Return(&preset9, nil)
+		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
+		presetProvider.EXPECT().GetPresetDetails(100001).Return(&preset100001, nil)
+		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1089,7 +1229,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1110,7 +1250,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1145,7 +1285,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"users", "teams"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1165,12 +1305,10 @@ func TestFetchSelectedData(t *testing.T) {
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
 		client.EXPECT().GetSamlTeamMappings().Return([]*rest.SamlTeamMapping{}, nil)
 		client.EXPECT().
-			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0),
-				gomock.Any()).
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0), gomock.Any()).
 			Return(&projectPage, nil)
 		client.EXPECT().
-			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-				gomock.Any()).
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&[]rest.ProjectWithLastScanID{}, nil)
 		client.EXPECT().
 			GetTriagedResultsByScanID(gomock.Eq(1)).
@@ -1189,7 +1327,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{export.UsersOption, export.TeamsOption, export.ResultsOption},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1205,8 +1343,7 @@ func TestFetchSelectedData(t *testing.T) {
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
 		client.EXPECT().GetSamlTeamMappings().Return([]*rest.SamlTeamMapping{}, nil)
 		client.EXPECT().
-			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0),
-				gomock.Any()).
+			GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0), gomock.Any()).
 			Return(&[]rest.ProjectWithLastScanID{}, fmt.Errorf("failed fetching projects"))
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -1214,7 +1351,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{export.UsersOption, export.TeamsOption, export.ResultsOption},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1231,7 +1368,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1248,7 +1385,7 @@ func TestFetchSelectedData(t *testing.T) {
 			Export:              []string{"test1", "test2"},
 			ProjectsActiveSince: 100,
 		}
-		metadataProvider := mock_app_metadata.NewMockMetadataProvider(ctrl)
+		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, queryProvider, presetProvider)
@@ -1299,8 +1436,8 @@ func TestExportResultsToFile(t *testing.T) {
 }
 
 func TestFetchProjects(t *testing.T) {
-	teamName := "TestTeam"
-	projectsIds := "1,2"
+	teamName := TeamName
+	projectsIds := projectIDs
 	t.Run("fetch projects successfully", func(t *testing.T) {
 		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
 			CreatedDate: "2022-04-21T20:30:59.39+03:00",
@@ -1309,10 +1446,9 @@ func TestFetchProjects(t *testing.T) {
 			}}}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
-			gomock.Any()).Return(projects, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
-			gomock.Any()).Return([]*rest.Project{}, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return([]*rest.Project{}, nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
@@ -1320,18 +1456,19 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
 
-		assert.NoError(t, result)
+		assert.NoError(t, errProjects)
+		assert.Equal(t, projects, projectsList)
 	})
 
 	t.Run("fetch projects with error", func(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
-			gomock.Any()).Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).
+			Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
 
-		err := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		_, err := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
 
 		assert.EqualError(t, err, "failed getting projects: failed fetching project")
 	})
@@ -1348,14 +1485,14 @@ func TestFetchProjects(t *testing.T) {
 			Configuration: &rest.Configuration{
 				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test 4"}},
 			}}}
+		expectedList := []*rest.Project{projectsFirst[0], projectsSecond[0]}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0,
-			gomock.Any()).Return(projectsFirst, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
-			gomock.Any()).Return(projectsSecond, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(),
-			gomock.Any()).Return([]*rest.Project{}, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projectsFirst, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return(projectsSecond, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return([]*rest.Project{}, nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
@@ -1363,9 +1500,10 @@ func TestFetchProjects(t *testing.T) {
 			}).
 			AnyTimes()
 
-		result := fetchProjectsData(client, exporter, 10, teamName, projectsIds)
+		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
 
-		assert.NoError(t, result)
+		assert.NoError(t, errProjects)
+		assert.Equal(t, expectedList, projectsList)
 	})
 }
 
@@ -1394,17 +1532,27 @@ func TestPresets(t *testing.T) {
 		{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
 	}
 
-	t.Run("fetch presets successfully", func(t *testing.T) {
+	t.Run("fetch custom and default presets successfully", func(t *testing.T) {
 		var preset100000 soap.GetPresetDetailsResponse
+		var preset1 soap.GetPresetDetailsResponse
+		var preset9 soap.GetPresetDetailsResponse
 		ctrl := gomock.NewController(t)
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
 		assert.NoError(t, io100000Err)
+		presetXML1, io1Err := os.ReadFile("../test/data/presets/1.xml")
+		assert.NoError(t, io1Err)
+		presetXML9, io9Err := os.ReadFile("../test/data/presets/9.xml")
+		assert.NoError(t, io9Err)
 		_ = xml.Unmarshal(presetXML100000, &preset100000)
+		_ = xml.Unmarshal(presetXML1, &preset1)
+		_ = xml.Unmarshal(presetXML9, &preset9)
 		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
+		presetProvider.EXPECT().GetPresetDetails(1).Return(&preset1, nil)
+		presetProvider.EXPECT().GetPresetDetails(9).Return(&preset9, nil)
 		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
 		exporter.EXPECT().AddFileWithDataSource(export.PresetsFileName, gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
@@ -1412,8 +1560,10 @@ func TestPresets(t *testing.T) {
 				return callbackErr
 			}).AnyTimes()
 		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "100000.xml"), gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "1.xml"), gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(path.Join(export.PresetsDirName, "9.xml"), gomock.Any()).Return(nil)
 
-		err := fetchPresetsData(client, presetProvider, exporter)
+		err := fetchPresetsData(client, presetProvider, exporter, nil, "")
 
 		assert.NoError(t, err)
 	})
@@ -1424,7 +1574,7 @@ func TestPresets(t *testing.T) {
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().GetPresets().Return(nil, fmt.Errorf("failed getting preset list")).Times(1)
 
-		err := fetchPresetsData(client, presetProvider, exporter)
+		err := fetchPresetsData(client, presetProvider, exporter, nil, "")
 
 		assert.EqualError(t, err, "error with getting preset list: failed getting preset list")
 		assert.Error(t, err)
@@ -1462,7 +1612,7 @@ func TestAddCustomQueryIDs(t *testing.T) {
 							LanguageName: "Go",
 							Queries: soap.Queries{
 								CxWSQuery: []soap.CxWSQuery{
-									{QueryId: 1, Name: "Test_query"},
+									{QueryID: 1, Name: "Test_query"},
 								},
 							},
 						},
@@ -1477,28 +1627,129 @@ func TestAddCustomQueryIDs(t *testing.T) {
 	})
 }
 
-func TestFilterPresetList(t *testing.T) {
-	t.Run("test filtering default preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 56},
-		}
-		outputList := []*rest.PresetShort{
-			{ID: 56},
-		}
-		result := filterPresetList(inputList)
+func TestFetchInstallationData(t *testing.T) {
+	engineServers := []*rest.EngineServer{
+		{
+			ID:        1,
+			Name:      "blabla",
+			URI:       "http://localhost",
+			CxVersion: "9.3.4.1111",
+		},
+	}
+	soapResponseSuccess := &soap.GetInstallationSettingsResponse{
+		GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
+			IsSuccesfull: "true",
+			InstallationSettingsList: soap.InstallationSettingsList{
+				InstallationSetting: []*soap.InstallationSetting{
+					{
+						Name:    "Checkmarx Engine Service",
+						Version: "9.3.4.1111",
+						Hotfix:  "Hotfix",
+					},
+					{
+						Name:    "Checkmarx Queries Pack",
+						Version: "9.3.4.5111",
+						Hotfix:  "Hotfix",
+					},
+				},
+			},
+		},
+	}
+	t.Run("test add installation version", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
 
-		assert.Equal(t, outputList, result)
+		instance := installation.NewRepo(soapClientMock)
+
+		err := fetchInstallationData(client, instance, exporter)
+		assert.NoError(t, err)
 	})
 
-	t.Run("test filtering without custom preset", func(t *testing.T) {
-		inputList := []*rest.PresetShort{
-			{ID: 1},
-			{ID: 2},
+	t.Run("test add installation version with engine servers", func(t *testing.T) {
+		soapResponseSuccess.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting = []*soap.InstallationSetting{
+			{
+				Name:    "Checkmarx Scans Manager",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
+			},
 		}
-		outputList := []*rest.PresetShort{}
-		result := filterPresetList(inputList)
+		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
+		instance := installation.NewRepo(soapClientMock)
 
-		assert.Equal(t, outputList, result)
+		err := fetchInstallationData(client, instance, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("test add installation version combined with engine servers", func(t *testing.T) {
+		soapResponseSuccess.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting = []*soap.InstallationSetting{
+			{
+				Name:    "Checkmarx Web Services",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
+			},
+		}
+		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
+		client.EXPECT().GetEngineServers().Return(engineServers, nil)
+		instance := installation.NewRepo(soapClientMock)
+
+		err := fetchInstallationData(client, instance, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("test add installation version with engine servers", func(t *testing.T) {
+		soapResponseSuccess = &soap.GetInstallationSettingsResponse{}
+		ctrl := gomock.NewController(t)
+		client := mock_integration_rest.NewMockClient(ctrl)
+		soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
+		soapClientMock.EXPECT().GetInstallationSettings().Return(soapResponseSuccess, nil)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		exporter.EXPECT().
+			AddFileWithDataSource(export.InstallationFileName, gomock.Any()).
+			DoAndReturn(func(_ string, _ func() ([]byte, error)) error {
+				return nil
+			})
+		client.EXPECT().GetEngineServers().
+			Return(engineServers, nil)
+
+		instance := installation.NewRepo(soapClientMock)
+
+		err := fetchInstallationData(client, instance, exporter)
+		assert.NoError(t, err)
 	})
 }

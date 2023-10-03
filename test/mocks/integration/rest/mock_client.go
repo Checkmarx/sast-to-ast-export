@@ -64,6 +64,21 @@ func (mr *MockClientMockRecorder) CreateScanReport(arg0, arg1, arg2 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScanReport", reflect.TypeOf((*MockClient)(nil).CreateScanReport), arg0, arg1, arg2)
 }
 
+// GetEngineServers mocks base method.
+func (m *MockClient) GetEngineServers() ([]*rest.EngineServer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEngineServers")
+	ret0, _ := ret[0].([]*rest.EngineServer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEngineServers indicates an expected call of GetEngineServers.
+func (mr *MockClientMockRecorder) GetEngineServers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEngineServers", reflect.TypeOf((*MockClient)(nil).GetEngineServers))
+}
+
 // GetLdapRoleMappings mocks base method.
 func (m *MockClient) GetLdapRoleMappings() ([]byte, error) {
 	m.ctrl.T.Helper()

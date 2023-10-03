@@ -53,7 +53,6 @@ linters:
   disable-all: true
   enable:
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -72,19 +71,16 @@ linters:
     - gosimple
     - govet
     - ineffassign
-    - interfacer
     - lll
     - misspell
     - nakedret
     - revive
     - rowserrcheck
     - staticcheck
-    - structcheck
     - stylecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
 
   don't enable:

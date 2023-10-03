@@ -549,6 +549,7 @@ func TestAPIClient_GetPresets(t *testing.T) {
 
 func TestAPIClient_GetProjects(t *testing.T) {
 	t.Run("returns projects response", func(t *testing.T) {
+		//nolint:lll
 		responseJSON := `{
     "@odata.context": "http://test-host.com/CxWebInterface/odata/v1/$metadata#Projects(Id,OwningTeamId,Name,IsPublic,CreatedDate,CustomFields,PresetId,CustomFields(FieldName,FieldValue))",
     "value": [
@@ -592,6 +593,86 @@ func TestAPIClient_GetProjects(t *testing.T) {
 		assert.Equal(t, "Test_all_vuln", result[0].Name)
 		assert.Equal(t, 36, result[0].PresetID)
 		assert.Equal(t, "test@test.com", result[1].Configuration.CustomFields[1].FieldValue)
+	})
+}
+
+func TestAPIClient_GetEngineServers(t *testing.T) {
+	t.Run("returns engine servers response", func(t *testing.T) {
+		//nolint:lll
+		responseJSON := `[ { 
+								"id": 1, 
+								"name": "Localhost", 
+								"uri": "http://localhost:8088/", 
+								"minLoc": 0, 
+								"maxLoc": 999999999, 
+								"maxScans": 3,
+								"cxVersion": "9.3.0.1139", 
+								"status": { 
+									"id": 4, 
+									"value": "Idle" 
+								}, 
+								"link": { 
+									"rel": "self", 
+									"uri": "/sast/engineServers/1" 
+								} 
+						} ]`
+
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetEngineServers()
+		assert.NoError(t, err)
+
+		assert.Len(t, result, 1)
+		assert.Equal(t, "Localhost", result[0].Name)
+		assert.Equal(t, "9.3.0.1139", result[0].CxVersion)
+	})
+	t.Run("returns engine servers multi response", func(t *testing.T) {
+		//nolint:lll
+		responseJSON := `[ { 
+								"id": 1, 
+								"name": "Localhost", 
+								"uri": "http://localhost:8088/", 
+								"minLoc": 0, 
+								"maxLoc": 999999999, 
+								"maxScans": 3,
+								"cxVersion": "9.3.0.1139", 
+								"status": { 
+									"id": 4, 
+									"value": "Idle" 
+								}, 
+								"link": { 
+									"rel": "self", 
+									"uri": "/sast/engineServers/1" 
+								} 
+						},{ 
+								"id": 2, 
+								"name": "Localhost", 
+								"uri": "http://localhost:8088/", 
+								"minLoc": 0, 
+								"maxLoc": 999999999, 
+								"maxScans": 3,
+								"cxVersion": "9.3.5.1139", 
+								"status": { 
+									"id": 4, 
+									"value": "Offline" 
+								}, 
+								"link": { 
+									"rel": "self", 
+									"uri": "/sast/engineServers/1" 
+								} 
+						} ]`
+		client, clientErr := newMockClient(makeOkResponse(responseJSON)) //nolint:bodyclose
+		assert.NoError(t, clientErr)
+
+		result, err := client.GetEngineServers()
+		assert.NoError(t, err)
+
+		assert.Len(t, result, 2)
+		assert.Equal(t, "Localhost", result[0].Name)
+		assert.Equal(t, "9.3.0.1139", result[0].CxVersion)
+		assert.Equal(t, "Localhost", result[1].Name)
+		assert.Equal(t, "9.3.5.1139", result[1].CxVersion)
 	})
 }
 

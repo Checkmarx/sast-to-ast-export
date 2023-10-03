@@ -49,6 +49,14 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
+	args.NestedTeams, err = cmd.Flags().GetBool(nestedTeams)
+	if err != nil {
+		panic(err)
+	}
+	args.IsDefaultProjectActiveSince = args.ProjectsActiveSince == emptyProjectsActiveSince
+	if args.IsDefaultProjectActiveSince {
+		args.ProjectsActiveSince = projectsActiveSinceDefaultValue
+	}
 
 	args.OutputPath, err = os.Getwd()
 	if err != nil {

@@ -3,10 +3,10 @@ package astquery
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"os"
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	mock_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_mapping"
 	mock_interfaces_queries "github.com/checkmarxDev/ast-sast-export/test/mocks/app/queries"

@@ -10,6 +10,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
+
+	"github.com/hashicorp/go-cleanhttp"
+
+	"github.com/checkmarxDev/ast-sast-export/internal/persistence/installation"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/app/astquery"
 	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
@@ -29,8 +35,6 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -56,7 +60,7 @@ type ReportConsumeOutput struct {
 	ScanID    int
 }
 
-//nolint:funlen
+//nolint:gocyclo,funlen
 func RunExport(args *Args) error {
 	consumerCount := worker.GetNumCPU()
 
@@ -65,13 +69,16 @@ func RunExport(args *Args) error {
 		Str("export", fmt.Sprintf("%v", args.Export)).
 		Str("queryMapping", args.QueryMappingFile).
 		Int("projectsActiveSince", args.ProjectsActiveSince).
+		Str("projectId", args.ProjectsIds).
+		Str("projectTeam", args.TeamName).
+		Bool("nestedTeams", args.NestedTeams).
 		Bool("debug", args.Debug).
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
-	retryHttpClient := getRetryHttpClient()
+	retryHTTPClient := getRetryHTTPClient()
 	// create api client
-	client, err := rest.NewSASTClient(args.URL, retryHttpClient)
+	client, err := rest.NewSASTClient(args.URL, retryHTTPClient)
 	if err != nil {
 		return errors.Wrap(err, "could not create REST client")
 	}
@@ -109,13 +116,19 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
-	soapClient := soap.NewClient(args.URL, client.Token, retryHttpClient)
+	soapClient := soap.NewClient(args.URL, client.Token, retryHTTPClient)
 	sourceRepo := sourcefile.NewRepo(soapClient)
 	methodLineRepo := methodline.NewRepo(soapClient)
 	queriesRepo := queries.NewRepo(soapClient)
 	presetRepo := presetrepo.NewRepo(soapClient)
+	installationRepo := installation.NewRepo(soapClient)
 
-	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile, retryHttpClient)
+	fetchInstallationErr := fetchInstallationData(client, installationRepo, &exportValues)
+	if fetchInstallationErr != nil {
+		return errors.Wrap(fetchInstallationErr, "could not fetch installation data")
+	}
+
+	astQueryMappingProvider, astQueryMappingProviderErr := querymapping.NewProvider(args.QueryMappingFile, retryHTTPClient)
 	if astQueryMappingProviderErr != nil {
 		return errors.Wrap(astQueryMappingProviderErr, "could not create AST query mapping provider")
 	}
@@ -212,24 +225,28 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 }
 
 func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args, retryAttempts int,
-	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
+	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
 	astQueryProvider interfaces.ASTQueryProvider, presetProvider interfaces.PresetProvider,
 ) error {
+	var errProjects error
+	var projects []*rest.Project
 	options := sliceutils.ConvertStringToInterface(args.Export)
+	if sliceutils.Contains(export2.ProjectsOption, options) {
+		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIds,
+			args.IsDefaultProjectActiveSince)
+		if errProjects != nil {
+			return errProjects
+		}
+	}
 	for _, exportOption := range export2.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
 			switch exportOption {
 			case export2.UsersOption:
-				if err := fetchUsersData(client, exporter); err != nil {
+				if err := fetchUsersData(client, exporter, args); err != nil {
 					return err
 				}
 			case export2.TeamsOption:
-				if err := fetchTeamsData(client, exporter); err != nil {
-					return err
-				}
-			case export2.ProjectsOption:
-				if err := fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName,
-					args.ProjectsIds); err != nil {
+				if err := fetchTeamsData(client, exporter, args); err != nil {
 					return err
 				}
 			case export2.QueriesOption:
@@ -237,12 +254,12 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 					return err
 				}
 			case export2.PresetsOption:
-				if err := fetchPresetsData(client, presetProvider, exporter); err != nil {
+				if err := fetchPresetsData(client, presetProvider, exporter, projects, args.ProjectsIds); err != nil {
 					return err
 				}
 			case export2.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
-					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIds); err != nil {
+					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIds, args); err != nil {
 					return err
 				}
 			}
@@ -251,7 +268,7 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	return nil
 }
 
-func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
+func fetchUsersData(client rest.Client, exporter export2.Exporter, args *Args) error {
 	log.Info().Msg("collecting users")
 	users, usersErr := client.GetUsers()
 	if usersErr != nil {
@@ -261,7 +278,9 @@ func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
 	if teamsErr != nil {
 		return errors.Wrap(teamsErr, "failed getting teams")
 	}
-	usersDataSource := export2.NewJSONDataSource(export2.TransformUsers(users, teams))
+	usersDataSource := export2.NewJSONDataSource(
+		export2.TransformUsers(users, teams, export2.TransformOptions{NestedTeams: args.NestedTeams}),
+	)
 	if err := exporter.AddFileWithDataSource(export2.UsersFileName, usersDataSource); err != nil {
 		return err
 	}
@@ -287,13 +306,14 @@ func fetchUsersData(client rest.Client, exporter export2.Exporter) error {
 	return nil
 }
 
-func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
+func fetchTeamsData(client rest.Client, exporter export2.Exporter, args *Args) error {
 	log.Info().Msg("collecting teams")
 	teams, teamsErr := client.GetTeams()
 	if teamsErr != nil {
 		return errors.Wrap(teamsErr, "failed getting teams")
 	}
-	teamsDataSource := export2.NewJSONDataSource(export2.TransformTeams(teams))
+	transformOptions := export2.TransformOptions{NestedTeams: args.NestedTeams}
+	teamsDataSource := export2.NewJSONDataSource(export2.TransformTeams(teams, transformOptions))
 	if err := exporter.AddFileWithDataSource(export2.TeamsFileName, teamsDataSource); err != nil {
 		return err
 	}
@@ -304,7 +324,7 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 	if samlTeamMappingsErr != nil {
 		return errors.Wrap(samlTeamMappingsErr, "failed getting saml team mappings")
 	}
-	samlTeamMappingsDataSource := export2.NewJSONDataSource(export2.TransformSamlTeamMappings(samlTeamMappings))
+	samlTeamMappingsDataSource := export2.NewJSONDataSource(export2.TransformSamlTeamMappings(samlTeamMappings, transformOptions))
 	if err := exporter.AddFileWithDataSource(export2.SamlTeamMappingsFileName, samlTeamMappingsDataSource); err != nil {
 		return err
 	}
@@ -322,12 +342,12 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter) error {
 }
 
 func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
-	teamName, projectsIds string) error {
+	teamName, projectsIds string, isDefaultProjectActiveSince bool) ([]*rest.Project, error) {
 	log.Info().Msg("collecting projects")
-	var projects []*rest.Project
+	projects := []*rest.Project{}
 	projectOffset := 0
 	projectLimit := resultsPageLimit
-	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
+	fromDate := getDateFrom(resultsProjectActiveSince, isDefaultProjectActiveSince, projectsIds)
 	for {
 		log.Debug().
 			Str("fromDate", fromDate).
@@ -338,7 +358,7 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 
 		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIds, projectOffset, projectLimit)
 		if projectsErr != nil {
-			return errors.Wrap(projectsErr, "failed getting projects")
+			return nil, errors.Wrap(projectsErr, "failed getting projects")
 		}
 		if len(projectsItems) == 0 {
 			break
@@ -351,9 +371,30 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 	}
 	if err := exporter.AddFileWithDataSource(export2.ProjectsFileName,
 		export2.NewJSONDataSource(projects)); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return projects, nil
+}
+
+func fetchInstallationData(restClient rest.Client, soapClient interfaces.InstallationProvider, exporter export2.Exporter) error {
+	log.Info().Msg("collecting installation details")
+	installationResp, errInstallations := soapClient.GetInstallationSettings()
+	if errInstallations != nil {
+		return errors.Wrap(errInstallations, "error with getting installation details")
+	}
+	installations := export2.TransformXMLInstallationMappings(installationResp)
+
+	if !export2.ContainsEngine(export2.InstallationEngineServiceName, installations) {
+		engineServersResp, errEngineServers := restClient.GetEngineServers()
+		if errEngineServers != nil {
+			return errors.Wrap(errEngineServers, "error with getting engine servers details")
+		}
+		engineServerInstallation := export2.TransformEngineServers(engineServersResp)
+		installations = append(installations, engineServerInstallation...)
+	}
+
+	installationMappingsDataSource := export2.NewJSONDataSource(installations)
+	return exporter.AddFileWithDataSource(export2.InstallationFileName, installationMappingsDataSource)
 }
 
 func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Exporter) error {
@@ -375,7 +416,11 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 	return nil
 }
 
-func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, exporter export2.Exporter) error {
+func fetchPresetsData(
+	client rest.Client,
+	soapClient interfaces.PresetProvider,
+	exporter export2.Exporter,
+	projects []*rest.Project, projectsIds string) error {
 	log.Info().Msg("collecting presets")
 	consumerCount := worker.GetNumCPU()
 	presetJobs := make(chan PresetJob)
@@ -384,7 +429,10 @@ func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, 
 	if listErr != nil {
 		return errors.Wrap(listErr, "error with getting preset list")
 	}
-	presetList = filterPresetList(presetList)
+	if projectsIds != "" {
+		presetList = filterPresetByProjectList(presetList, projects)
+		log.Info().Msgf("%d associated presets found", len(presetList))
+	}
 	if err := exporter.CreateDir(export2.PresetsDirName); err != nil {
 		return err
 	}
@@ -427,13 +475,13 @@ func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, 
 }
 
 func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
-	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
-	teamName, projectsIds string,
+	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
+	teamName, projectsIds string, args *Args,
 ) error {
 	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
-	fromDate := GetDateFromDays(resultsProjectActiveSince, time.Now())
+	fromDate := getDateFrom(resultsProjectActiveSince, args.IsDefaultProjectActiveSince, projectsIds)
 	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds)
 	if triagedScanErr != nil {
 		return triagedScanErr
@@ -454,7 +502,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
 		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs,
-			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider)
+			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider, args)
 	}
 
 	reportConsumeErrorCount := 0
@@ -496,8 +544,8 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 		log.Info().Msg("searching for results...")
 
 		// fetch current page
-		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds,
-			projectOffset, projectLimit)
+		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds, projectOffset,
+			projectLimit)
 		if fetchErr != nil {
 			log.Debug().Err(fetchErr).Msg("failed fetching project last scans")
 			return output, fmt.Errorf("error searching for results")
@@ -545,7 +593,7 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 
 func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
-	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.MetadataProvider,
+	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.Provider, args *Args,
 ) {
 	for reportJob := range reportJobs {
 		l := log.With().
@@ -591,22 +639,23 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
 			done <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
-		} else {
-			metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
-			if metadataRecordJSONErr != nil {
-				l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
-				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-				continue
-			}
-			exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
-			if exportMetadataErr != nil {
-				l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
-				done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-				continue
-			}
+		}
+		metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
+		if metadataRecordJSONErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
+		if exportMetadataErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
 		}
 		// export report
-		transformedReportData, transformErr := export2.TransformScanReport(reportData)
+		transformedReportData, transformErr := export2.TransformScanReport(
+			reportData, export2.TransformOptions{NestedTeams: args.NestedTeams},
+		)
 		if transformErr != nil {
 			l.Debug().Err(transformErr).Msg("failed transforming report data")
 			done <- ReportConsumeOutput{Err: transformErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
@@ -622,15 +671,23 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 	}
 }
 
-func filterPresetList(list []*rest.PresetShort) []*rest.PresetShort {
-	out := []*rest.PresetShort{}
-	for _, item := range list {
-		if preset.IsDefaultPreset(item.ID) {
-			continue
+func filterPresetByProjectList(presets []*rest.PresetShort, projects []*rest.Project) []*rest.PresetShort {
+	out := make([]*rest.PresetShort, 0)
+	for _, item := range presets {
+		if isIncludedPreset(projects, item) {
+			out = append(out, item)
 		}
-		out = append(out, item)
 	}
 	return out
+}
+
+func isIncludedPreset(projects []*rest.Project, value *rest.PresetShort) bool {
+	for _, project := range projects {
+		if project.PresetID == value.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func getPresetFileName(fileName string) string {
@@ -683,7 +740,7 @@ func getPresetData(soapClient interfaces.PresetProvider, presetID int) ([]byte, 
 	return presetData, nil
 }
 
-func getRetryHttpClient() *retryablehttp.Client {
+func getRetryHTTPClient() *retryablehttp.Client {
 	return &retryablehttp.Client{
 		HTTPClient:   cleanhttp.DefaultPooledClient(),
 		Logger:       nil,
@@ -721,14 +778,23 @@ func addCustomQueryIDs(astQueryProvider interfaces.ASTQueryProvider, astQueryMap
 	if errResp != nil {
 		return errResp
 	}
-	for _, queryGroup := range customQueryResp.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
-		for _, query := range queryGroup.Queries.CxWSQuery {
+	for i := range customQueryResp.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup {
+		queryGroup := customQueryResp.GetQueryCollectionResult.QueryGroups.CxWSQueryGroup[i]
+		for j := range queryGroup.Queries.CxWSQuery {
+			query := queryGroup.Queries.CxWSQuery[j]
 			if err := astQueryMappingProvider.AddQueryMapping(queryGroup.LanguageName, query.Name,
-				queryGroup.Name, strconv.Itoa(query.QueryId)); err != nil {
+				queryGroup.Name, strconv.Itoa(query.QueryID)); err != nil {
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func getDateFrom(resultsProjectActiveSince int, isDefaultProjectActiveSince bool, projectIds string) string {
+	if isDefaultProjectActiveSince && projectIds != "" {
+		return ""
+	}
+	return GetDateFromDays(resultsProjectActiveSince, time.Now())
 }

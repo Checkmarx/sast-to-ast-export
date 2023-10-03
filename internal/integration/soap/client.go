@@ -13,11 +13,12 @@ import (
 )
 
 const (
-	errRequestMarshalFailed    = "could not marshal request"
-	errResponseUnmarshalFailed = "could not unmarshal response"
-	errSoapCallFailed          = "SOAP call failed"
-	errCannotGetQueryList      = "Cannot get Query list"
-	errCannotGetPresetDetail   = "Cannot get preset detail %d"
+	errRequestMarshalFailed        = "could not marshal request"
+	errResponseUnmarshalFailed     = "could not unmarshal response"
+	errSoapCallFailed              = "SOAP call failed"
+	errCannotGetQueryList          = "Cannot get Query list"
+	errCannotGetPresetDetail       = "Cannot get preset detail %d"
+	errCannotGetInstallationDetail = "Cannot get installation detail"
 )
 
 type Adapter interface {
@@ -25,6 +26,7 @@ type Adapter interface {
 	GetResultPathsForQuery(scanID string, queryID string) (*GetResultPathsForQueryResponse, error)
 	GetQueryCollection() (*GetQueryCollectionResponse, error)
 	GetPresetDetails(ID int) (*GetPresetDetailsResponse, error)
+	GetInstallationSettings() (*GetInstallationSettingsResponse, error)
 }
 
 type Client struct {
@@ -112,7 +114,7 @@ func (e *Client) GetQueryCollection() (*GetQueryCollectionResponse, error) {
 }
 
 func (e *Client) GetPresetDetails(id int) (*GetPresetDetailsResponse, error) {
-	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{Id: id})
+	requestBytes, requestMarshalErr := xml.Marshal(GetPresetDetailsRequest{ID: id})
 	if requestMarshalErr != nil {
 		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
 	}
@@ -127,6 +129,27 @@ func (e *Client) GetPresetDetails(id int) (*GetPresetDetailsResponse, error) {
 	}
 	if !response.GetPresetDetailsResult.IsSuccessful {
 		return nil, fmt.Errorf("%s: "+errCannotGetPresetDetail, errSoapCallFailed, id)
+	}
+	return &response, nil
+}
+
+func (e *Client) GetInstallationSettings() (*GetInstallationSettingsResponse, error) {
+	requestBytes, requestMarshalErr := xml.Marshal(GetInstallationSettingsRequest{})
+	if requestMarshalErr != nil {
+		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
+	}
+	envelope, callErr := e.call("GetInstallationSettings", requestBytes)
+	if callErr != nil {
+		return nil, errors.Wrap(callErr, errSoapCallFailed)
+	}
+
+	var response GetInstallationSettingsResponse
+	unmarshalErr := xml.Unmarshal(envelope.Body.Contents, &response)
+	if unmarshalErr != nil {
+		return nil, errors.Wrap(unmarshalErr, errResponseUnmarshalFailed)
+	}
+	if response.GetInstallationSettingsResult.IsSuccesfull != "true" {
+		return nil, fmt.Errorf("%s: %s, response: %v", errSoapCallFailed, errCannotGetInstallationDetail, response)
 	}
 	return &response, nil
 }

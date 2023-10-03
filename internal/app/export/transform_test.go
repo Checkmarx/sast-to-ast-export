@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/common"
+
+	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
+
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
 	"github.com/stretchr/testify/assert"
 )
@@ -11,6 +15,7 @@ import (
 type transformTeamsTest struct {
 	Name     string
 	Input    []*rest.Team
+	Options  TransformOptions
 	Expected []*rest.Team
 }
 
@@ -18,15 +23,17 @@ type transformUsersTest struct {
 	Name     string
 	Input    []*rest.User
 	Teams    []*rest.Team
+	Options  TransformOptions
 	Expected []*rest.User
 }
 
 func TestTransformTeams(t *testing.T) {
 	tests := []transformTeamsTest{
-		{"empty input", []*rest.Team{}, []*rest.Team{}},
+		{"empty input", []*rest.Team{}, TransformOptions{}, []*rest.Team{}},
 		{
 			"one root team",
 			[]*rest.Team{{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0}},
+			TransformOptions{},
 			[]*rest.Team{{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0}},
 		},
 		{
@@ -36,6 +43,7 @@ func TestTransformTeams(t *testing.T) {
 				{ID: 2, Name: "TeamB", FullName: "/TeamA/TeamB", ParendID: 1},
 				{ID: 3, Name: "TeamC", FullName: "/TeamA/TeamC", ParendID: 1},
 			},
+			TransformOptions{},
 			[]*rest.Team{
 				{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
 				{ID: 2, Name: "TeamA_TeamB", FullName: "/TeamA_TeamB", ParendID: 0},
@@ -49,6 +57,7 @@ func TestTransformTeams(t *testing.T) {
 				{ID: 2, Name: "TeamB", FullName: "/TeamA/TeamB", ParendID: 1},
 				{ID: 3, Name: "TeamC", FullName: "/TeamA/TeamB/TeamC", ParendID: 2},
 			},
+			TransformOptions{},
 			[]*rest.Team{
 				{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
 				{ID: 2, Name: "TeamA_TeamB", FullName: "/TeamA_TeamB", ParendID: 0},
@@ -67,6 +76,7 @@ func TestTransformTeams(t *testing.T) {
 				{ID: 7, Name: "TeamG", FullName: "/TeamE/TeamF/TeamG", ParendID: 5},
 				{ID: 8, Name: "TeamH", FullName: "/TeamE/TeamF/TeamG/TeamH", ParendID: 5},
 			},
+			TransformOptions{},
 			[]*rest.Team{ //nolint:dupl
 				{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
 				{ID: 2, Name: "TeamA_TeamB", FullName: "/TeamA_TeamB", ParendID: 0},
@@ -78,10 +88,24 @@ func TestTransformTeams(t *testing.T) {
 				{ID: 8, Name: "TeamE_TeamF_TeamG_TeamH", FullName: "/TeamE_TeamF_TeamG_TeamH", ParendID: 0},
 			},
 		},
+		{
+			"nested teams enabled",
+			[]*rest.Team{
+				{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
+				{ID: 2, Name: "TeamB", FullName: "/TeamA/TeamB", ParendID: 1},
+				{ID: 3, Name: "TeamC", FullName: "/TeamA/TeamC", ParendID: 1},
+			},
+			TransformOptions{NestedTeams: true},
+			[]*rest.Team{
+				{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
+				{ID: 2, Name: "TeamB", FullName: "/TeamA/TeamB", ParendID: 1},
+				{ID: 3, Name: "TeamC", FullName: "/TeamA/TeamC", ParendID: 1},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			result := TransformTeams(test.Input)
+			result := TransformTeams(test.Input, test.Options)
 			assert.ElementsMatch(t, test.Expected, result)
 		})
 	}
@@ -89,11 +113,12 @@ func TestTransformTeams(t *testing.T) {
 
 func TestTransformUsers(t *testing.T) {
 	tests := []transformUsersTest{
-		{"empty input", []*rest.User{}, []*rest.Team{}, []*rest.User{}},
+		{"empty input", []*rest.User{}, []*rest.Team{}, TransformOptions{}, []*rest.User{}},
 		{
 			"one user in root team",
 			[]*rest.User{{ID: 1, UserName: "Alice", TeamIDs: []int{1}}},
 			[]*rest.Team{{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0}},
+			TransformOptions{},
 			[]*rest.User{{ID: 1, UserName: "Alice", TeamIDs: []int{1}}},
 		},
 		{
@@ -106,6 +131,7 @@ func TestTransformUsers(t *testing.T) {
 				{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
 				{ID: 2, Name: "TeamB", FullName: "/TeamA/TeamB", ParendID: 1},
 			},
+			TransformOptions{},
 			[]*rest.User{
 				{ID: 1, UserName: "Alice", TeamIDs: []int{1, 2}},
 				{ID: 2, UserName: "Bob", TeamIDs: []int{2}},
@@ -123,6 +149,7 @@ func TestTransformUsers(t *testing.T) {
 				{ID: 2, Name: "TeamB", FullName: "/TeamA/TeamB", ParendID: 1},
 				{ID: 3, Name: "TeamC", FullName: "/TeamA/TeamB/TeamC", ParendID: 2},
 			},
+			TransformOptions{},
 			[]*rest.User{
 				{ID: 1, UserName: "Alice", TeamIDs: []int{1, 2, 3}},
 				{ID: 2, UserName: "Bob", TeamIDs: []int{2, 3}},
@@ -147,6 +174,7 @@ func TestTransformUsers(t *testing.T) {
 				{ID: 5, Name: "TeamE", FullName: "/TeamD/TeamE", ParendID: 4},
 				{ID: 6, Name: "TeamF", FullName: "/TeamD/TeamF", ParendID: 4},
 			},
+			TransformOptions{},
 			[]*rest.User{
 				{ID: 1, UserName: "Alice", TeamIDs: []int{1, 2, 3}},
 				{ID: 2, UserName: "Bob", TeamIDs: []int{2, 3}},
@@ -156,10 +184,26 @@ func TestTransformUsers(t *testing.T) {
 				{ID: 6, UserName: "Fred", TeamIDs: []int{6}},
 			},
 		},
+		{
+			"nested teams enabled",
+			[]*rest.User{
+				{ID: 1, UserName: "Alice", TeamIDs: []int{1}},
+				{ID: 2, UserName: "Bob", TeamIDs: []int{2}},
+			},
+			[]*rest.Team{
+				{ID: 1, Name: "TeamA", FullName: "/TeamA", ParendID: 0},
+				{ID: 2, Name: "TeamB", FullName: "/TeamA/TeamB", ParendID: 1},
+			},
+			TransformOptions{NestedTeams: true},
+			[]*rest.User{
+				{ID: 1, UserName: "Alice", TeamIDs: []int{1}},
+				{ID: 2, UserName: "Bob", TeamIDs: []int{2}},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			result := TransformUsers(test.Input, test.Teams)
+			result := TransformUsers(test.Input, test.Teams, test.Options)
 			assert.ElementsMatch(t, test.Expected, result)
 		})
 	}
@@ -169,7 +213,7 @@ func TestTransformSamlTeamMappings(t *testing.T) {
 	t.Run("no mappings", func(t *testing.T) {
 		var samlTeamMappings []*rest.SamlTeamMapping
 
-		result := TransformSamlTeamMappings(samlTeamMappings)
+		result := TransformSamlTeamMappings(samlTeamMappings, TransformOptions{})
 
 		var expected []*rest.SamlTeamMapping
 		assert.ElementsMatch(t, expected, result)
@@ -180,7 +224,7 @@ func TestTransformSamlTeamMappings(t *testing.T) {
 			{ID: 1, SamlIdentityProviderID: 1, TeamID: 1, TeamFullPath: "/TeamA", SamlAttributeValue: "team"},
 		}
 
-		result := TransformSamlTeamMappings(samlTeamMappings)
+		result := TransformSamlTeamMappings(samlTeamMappings, TransformOptions{})
 
 		expected := []*rest.SamlTeamMapping{
 			{ID: 1, SamlIdentityProviderID: 1, TeamID: 1, TeamFullPath: "/TeamA", SamlAttributeValue: "team"},
@@ -193,7 +237,7 @@ func TestTransformSamlTeamMappings(t *testing.T) {
 			{ID: 1, SamlIdentityProviderID: 1, TeamID: 2, TeamFullPath: "/TeamA/TeamB", SamlAttributeValue: "team"},
 		}
 
-		result := TransformSamlTeamMappings(samlTeamMappings)
+		result := TransformSamlTeamMappings(samlTeamMappings, TransformOptions{})
 
 		expected := []*rest.SamlTeamMapping{
 			{ID: 1, SamlIdentityProviderID: 1, TeamID: 2, TeamFullPath: "/TeamA_TeamB", SamlAttributeValue: "team"},
@@ -206,10 +250,23 @@ func TestTransformSamlTeamMappings(t *testing.T) {
 			{ID: 1, SamlIdentityProviderID: 1, TeamID: 3, TeamFullPath: "/TeamA/TeamB/TeamC", SamlAttributeValue: "team"},
 		}
 
-		result := TransformSamlTeamMappings(samlTeamMappings)
+		result := TransformSamlTeamMappings(samlTeamMappings, TransformOptions{})
 
 		expected := []*rest.SamlTeamMapping{
 			{ID: 1, SamlIdentityProviderID: 1, TeamID: 3, TeamFullPath: "/TeamA_TeamB_TeamC", SamlAttributeValue: "team"},
+		}
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("nested teams enabled", func(t *testing.T) {
+		samlTeamMappings := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 2, TeamFullPath: "/TeamA/TeamB", SamlAttributeValue: "team"},
+		}
+
+		result := TransformSamlTeamMappings(samlTeamMappings, TransformOptions{NestedTeams: true})
+
+		expected := []*rest.SamlTeamMapping{
+			{ID: 1, SamlIdentityProviderID: 1, TeamID: 2, TeamFullPath: "/TeamA/TeamB", SamlAttributeValue: "team"},
 		}
 		assert.ElementsMatch(t, expected, result)
 	})
@@ -219,7 +276,7 @@ func TestTransformScanReport(t *testing.T) {
 	t.Run("root team", func(t *testing.T) {
 		report := newMockScanReportXML("TeamA", "TeamA")
 
-		result, err := TransformScanReport([]byte(report))
+		result, err := TransformScanReport([]byte(report), TransformOptions{})
 
 		assert.NoError(t, err)
 		assert.Equal(t, report, string(result))
@@ -228,7 +285,7 @@ func TestTransformScanReport(t *testing.T) {
 	t.Run("one level deep team", func(t *testing.T) {
 		report := newMockScanReportXML("TeamB", "TeamA\\TeamB")
 
-		result, err := TransformScanReport([]byte(report))
+		result, err := TransformScanReport([]byte(report), TransformOptions{})
 
 		assert.NoError(t, err)
 		expected := newMockScanReportXML("TeamA_TeamB", "TeamA_TeamB")
@@ -238,11 +295,90 @@ func TestTransformScanReport(t *testing.T) {
 	t.Run("two levels deep team", func(t *testing.T) {
 		report := newMockScanReportXML("TeamC", "TeamA\\TeamB\\TeamC")
 
-		result, err := TransformScanReport([]byte(report))
+		result, err := TransformScanReport([]byte(report), TransformOptions{})
 
 		assert.NoError(t, err)
 		expected := newMockScanReportXML("TeamA_TeamB_TeamC", "TeamA_TeamB_TeamC")
 		assert.Equal(t, expected, string(result))
+	})
+
+	t.Run("nested teams enabled", func(t *testing.T) {
+		report := newMockScanReportXML("TeamB", "TeamA\\TeamB")
+
+		result, err := TransformScanReport([]byte(report), TransformOptions{NestedTeams: true})
+
+		assert.NoError(t, err)
+		expected := newMockScanReportXML("TeamB", "TeamA\\TeamB")
+		assert.Equal(t, expected, string(result))
+	})
+}
+
+func TestTransformEngineServers(t *testing.T) {
+	t.Run("success case", func(t *testing.T) {
+		engineServers := []*rest.EngineServer{
+			{
+				ID:        1,
+				Name:      "blabla1",
+				URI:       "http://localhost",
+				CxVersion: "9.3.4.1111",
+				Status: rest.StatusEngineServer{
+					ID:    1,
+					Value: "Idle",
+				},
+			},
+			{
+				ID:        2,
+				Name:      "blabla2",
+				URI:       "http://localhost",
+				CxVersion: "9.3.4.1111",
+				Status: rest.StatusEngineServer{
+					ID:    1,
+					Value: "Offline",
+				},
+			},
+		}
+
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "",
+			},
+		}
+
+		result := TransformEngineServers(engineServers)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("success without status case", func(t *testing.T) {
+		engineServers := []*rest.EngineServer{
+			{
+				ID:        1,
+				Name:      "blabla",
+				URI:       "http://localhost",
+				CxVersion: "9.3.4.1111",
+			},
+		}
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "",
+			},
+		}
+
+		result := TransformEngineServers(engineServers)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("success empty case", func(t *testing.T) {
+		expected := []*common.InstallationMapping{}
+
+		result := TransformEngineServers(nil)
+
+		assert.Equal(t, expected, result)
 	})
 }
 
@@ -304,6 +440,141 @@ func TestReplaceKeyValue(t *testing.T) {
 
 		expected := `a="1" b="-2-" c="3"`
 		assert.Equal(t, expected, string(result))
+	})
+}
+
+func TestTransformXMLInstallationMappings(t *testing.T) {
+	engineService := &soap.InstallationSetting{
+		Name:    "Checkmarx Engine Service",
+		Version: "9.3.4.1111",
+		Hotfix:  "Hotfix",
+	}
+	scansManager := &soap.InstallationSetting{
+		Name:    "Checkmarx Scans Manager",
+		Version: "9.3.4.1111",
+		Hotfix:  "Hotfix",
+	}
+	queriesPack := &soap.InstallationSetting{
+		Name:    "Checkmarx Queries Pack",
+		Version: "9.3.4.5111",
+		Hotfix:  "Hotfix",
+	}
+	t.Run("no installations", func(t *testing.T) {
+		var installationMappings *soap.GetInstallationSettingsResponse
+
+		result := TransformXMLInstallationMappings(installationMappings)
+
+		var expected []*common.InstallationMapping
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("only engine service", func(t *testing.T) {
+		soapResponseSuccess := soap.GetInstallationSettingsResponse{
+			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
+				IsSuccesfull: "true",
+				InstallationSettingsList: soap.InstallationSettingsList{
+					InstallationSetting: []*soap.InstallationSetting{
+						engineService,
+					},
+				},
+			},
+		}
+
+		result := TransformXMLInstallationMappings(&soapResponseSuccess)
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+		}
+
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("only queries pack", func(t *testing.T) {
+		soapResponseSuccess := soap.GetInstallationSettingsResponse{
+			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
+				IsSuccesfull: "true",
+				InstallationSettingsList: soap.InstallationSettingsList{
+					InstallationSetting: []*soap.InstallationSetting{
+						queriesPack,
+					},
+				},
+			},
+		}
+
+		result := TransformXMLInstallationMappings(&soapResponseSuccess)
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
+			},
+		}
+
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("only both engine service and queries pack", func(t *testing.T) {
+		soapResponseSuccess := soap.GetInstallationSettingsResponse{
+			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
+				IsSuccesfull: "true",
+				InstallationSettingsList: soap.InstallationSettingsList{
+					InstallationSetting: []*soap.InstallationSetting{
+						engineService,
+						queriesPack,
+					},
+				},
+			},
+		}
+
+		result := TransformXMLInstallationMappings(&soapResponseSuccess)
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
+			},
+		}
+
+		assert.ElementsMatch(t, expected, result)
+	})
+
+	t.Run("only both engine service, scans manager and queries pack", func(t *testing.T) {
+		soapResponseSuccess := soap.GetInstallationSettingsResponse{
+			GetInstallationSettingsResult: soap.GetInstallationSettingsResult{
+				IsSuccesfull: "true",
+				InstallationSettingsList: soap.InstallationSettingsList{
+					InstallationSetting: []*soap.InstallationSetting{
+						scansManager,
+						engineService,
+						queriesPack,
+					},
+				},
+			},
+		}
+
+		result := TransformXMLInstallationMappings(&soapResponseSuccess)
+		expected := []*common.InstallationMapping{
+			{
+				Name:    "Checkmarx Engine Service",
+				Version: "9.3.4.1111",
+				Hotfix:  "Hotfix",
+			},
+			{
+				Name:    "Checkmarx Queries Pack",
+				Version: "9.3.4.5111",
+				Hotfix:  "Hotfix",
+			},
+		}
+
+		assert.ElementsMatch(t, expected, result)
 	})
 }
 
