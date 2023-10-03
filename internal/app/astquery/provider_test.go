@@ -10,8 +10,8 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	mock_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_mapping"
 	mock_interfaces_queries "github.com/checkmarxDev/ast-sast-export/test/mocks/app/queries"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 type QueryIDTest struct {
