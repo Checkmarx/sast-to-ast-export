@@ -181,9 +181,9 @@ func GetQueriesFromReport(reportReader *report.CxXMLResults) []*Query {
 		for j := 0; j < len(q.Results); j++ {
 			r := q.Results[j]
 			// only triaged results will have metadata records generated
-			if r.Remark == "" {
-				continue
-			}
+			//if r.Remark == "" {
+			//	continue
+			//}
 			for k := 0; k < len(r.Paths); k++ {
 				p := r.Paths[k]
 				firstNode := p.PathNodes[0]

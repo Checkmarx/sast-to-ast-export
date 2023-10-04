@@ -560,18 +560,18 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 			Msg("processing project last scans")
 
 		for _, project := range *projects {
-			// get triaged results
-			triagedResults, triagedResultsErr := client.GetTriagedResultsByScanID(project.LastScanID)
-			if triagedResultsErr != nil {
-				log.Debug().Err(triagedResultsErr).
-					Int("projectID", project.ID).
-					Int("scanID", project.LastScanID).
-					Msg("failed fetching triaged results")
-				return output, triagedResultsErr
-			}
-			if len(*triagedResults) > 0 {
-				output = append(output, TriagedScan{project.ID, project.LastScanID})
-			}
+			//// get triaged results
+			//triagedResults, triagedResultsErr := client.GetTriagedResultsByScanID(project.LastScanID)
+			//if triagedResultsErr != nil {
+			//	log.Debug().Err(triagedResultsErr).
+			//		Int("projectID", project.ID).
+			//		Int("scanID", project.LastScanID).
+			//		Msg("failed fetching triaged results")
+			//	return output, triagedResultsErr
+			//}
+			//if len(*triagedResults) > 0 {
+			output = append(output, TriagedScan{project.ID, project.LastScanID})
+			//}
 		}
 
 		// prepare to fetch next page

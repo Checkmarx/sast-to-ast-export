@@ -138,6 +138,7 @@ func (c *APIClient) Authenticate(username, password string) error {
 		if response.ErrorDescription == "invalid_username_or_password" {
 			return fmt.Errorf("authentication error - please confirm your user name and password")
 		}
+		log.Debug().Str("response", string(responseBody)).Msg("unknown authentication error")
 	}
 
 	logger.Debug().Msg("authenticate unexpected response")
