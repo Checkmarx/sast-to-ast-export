@@ -192,8 +192,7 @@ func TestExport_CreateExportPackage(t *testing.T) {
 }
 
 func TestExport_Clean(t *testing.T) {
-	prefix := "cxsast-test-export-clean"
-	export, err := CreateExport(prefix, time.Now())
+	export, err := CreateExport("cxsast-test-export-clean", time.Now())
 	assert.NoError(t, err)
 
 	cleanErr := export.Clean()

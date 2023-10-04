@@ -43,14 +43,14 @@ func Encrypt(in io.Reader, out io.Writer, keyAes, keyHmac []byte) (err error) {
 	// Version
 	_, err = out.Write([]byte{v1})
 	if err != nil {
-		return
+		return err
 	}
 
 	w := io.MultiWriter(out, HMAC)
 
 	_, err = w.Write(iv)
 	if err != nil {
-		return
+		return err
 	}
 
 	buf := make([]byte, bufferSize)
@@ -88,18 +88,18 @@ func Decrypt(in io.Reader, out io.Writer, keyAes, keyHmac []byte) (err error) {
 	var version int8
 	err = binary.Read(in, binary.LittleEndian, &version)
 	if err != nil {
-		return
+		return err
 	}
 
 	iv := make([]byte, ivSize)
 	_, err = io.ReadFull(in, iv)
 	if err != nil {
-		return
+		return err
 	}
 
 	AES, err := aes.NewCipher(keyAes)
 	if err != nil {
-		return
+		return err
 	}
 
 	ctr := cipher.NewCTR(AES, iv)
@@ -115,7 +115,7 @@ func Decrypt(in io.Reader, out io.Writer, keyAes, keyHmac []byte) (err error) {
 	for {
 		b, err = buf.Peek(bufferSize)
 		if err != nil && err != io.EOF {
-			return
+			return err
 		}
 
 		limit = len(b) - hmacSize
@@ -141,12 +141,12 @@ func Decrypt(in io.Reader, out io.Writer, keyAes, keyHmac []byte) (err error) {
 		outBuf := make([]byte, int64(limit))
 		_, err = buf.Read(b[:limit])
 		if err != nil {
-			return
+			return err
 		}
 		ctr.XORKeyStream(outBuf, b[:limit])
 		_, err = w.Write(outBuf)
 		if err != nil {
-			return
+			return err
 		}
 
 		if err == io.EOF {

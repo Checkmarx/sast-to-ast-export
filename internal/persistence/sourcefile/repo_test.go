@@ -9,8 +9,8 @@ import (
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	mock_integration_soap "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/soap"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestRepo_DownloadSourceFiles(t *testing.T) {

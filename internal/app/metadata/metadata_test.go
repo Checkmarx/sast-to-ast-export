@@ -11,8 +11,8 @@ import (
 
 	mock_integration_similarity "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/similarity"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 type testResultData struct {

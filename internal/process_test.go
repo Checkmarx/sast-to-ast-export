@@ -23,8 +23,8 @@ import (
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
 	mock_integration_rest "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/rest"
 	"github.com/golang-jwt/jwt"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -368,7 +368,8 @@ func TestFetchUsersData(t *testing.T) {
 			},
 		}
 		// nolint:dupl
-		for _, test := range tests {
+		for i := range tests {
+			test := tests[i]
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 			fetchUsersSetupExpects(client, &test.mockExpects)
@@ -490,7 +491,8 @@ func TestFetchUsersData(t *testing.T) {
 				expectedErr: samlServersErr,
 			},
 		}
-		for _, test := range tests {
+		for i := range tests {
+			test := tests[i]
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 			args := &Args{}
@@ -585,7 +587,8 @@ func TestFetchTeamsData(t *testing.T) {
 			},
 		}
 		// nolint:dupl
-		for _, test := range tests {
+		for i := range tests {
+			test := tests[i]
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 			fetchTeamsSetupExpects(client, &test.mockExpects)
@@ -681,7 +684,8 @@ func TestFetchTeamsData(t *testing.T) {
 				expectedErr: samlServersErr,
 			},
 		}
-		for _, test := range tests {
+		for i := range tests {
+			test := tests[i]
 			exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 			client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 			args := &Args{}
