@@ -934,6 +934,8 @@ func TestConsumeReports(t *testing.T) {
 		Return(fmt.Errorf("could not write report #3")).
 		MinTimes(1).
 		MaxTimes(1)
+	exporter.EXPECT().AddFile(gomock.Eq(export.ResultsMappingFileName), gomock.Any()).
+		Return(fmt.Errorf("could not write mapping results")).AnyTimes()
 	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 4), gomock.Any()).Return(nil)
 	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 4)), gomock.Any()).
 		Return(nil).
@@ -951,10 +953,10 @@ func TestConsumeReports(t *testing.T) {
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
-		{Err: nil, ProjectID: 1, ScanID: 1},
+		{Err: fmt.Errorf("could not write mapping results"), ProjectID: 1, ScanID: 1},
 		{Err: fmt.Errorf("failed getting report #2"), ProjectID: 2, ScanID: 2},
 		{Err: fmt.Errorf("EOF"), ProjectID: 3, ScanID: 3},
-		{Err: nil, ProjectID: 4, ScanID: 4},
+		{Err: fmt.Errorf("could not write mapping results"), ProjectID: 4, ScanID: 4},
 	}
 	for i := 0; i < reportCount; i++ {
 		out := <-outputCh

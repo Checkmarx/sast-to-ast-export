@@ -117,7 +117,7 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 		}
 
 		// handle calculation results
-		for range query.Results {
+		for _, result := range query.Results {
 			r := <-similarityCalculationResults
 			if r.Err != nil {
 				return nil, errors.Wrap(r.Err, "failed calculating similarity id")
@@ -141,7 +141,12 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 				}
 			}
 			if recordPath == nil {
-				recordPath = &RecordPath{PathID: r.PathID, SimilarityID: r.SimilarityID}
+				recordPath = &RecordPath{
+					PathID:           r.PathID,
+					SimilarityID:     r.SimilarityID,
+					ResultID:         result.ResultID,
+					SASTSimilarityID: result.SimilarityID,
+				}
 				recordResult.Paths = append(recordResult.Paths, recordPath)
 			}
 		}
@@ -189,8 +194,9 @@ func GetQueriesFromReport(reportReader *report.CxXMLResults) []*Query {
 				firstNode := p.PathNodes[0]
 				lastNode := p.PathNodes[len(p.PathNodes)-1]
 				query.Results = append(query.Results, &Result{
-					ResultID: p.ResultID,
-					PathID:   p.PathID,
+					ResultID:     p.ResultID,
+					PathID:       p.PathID,
+					SimilarityID: p.SimilarityID,
 					FirstNode: Node{
 						FileName: firstNode.FileName,
 						Name:     firstNode.Name,
