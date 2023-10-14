@@ -97,6 +97,12 @@ func TestGenerateCsv(t *testing.T) {
 			},
 		},
 	}
+
+	allRecords := []*metadata.Record{
+		inputRecord1,
+		inputRecord2,
+	}
+
 	items1 := [][]string{
 		{"result_id", "cxone_similarity_id", "sast_similarity_id"},
 		{"", "-1234567890", "-1234567890"},
@@ -108,21 +114,34 @@ func TestGenerateCsv(t *testing.T) {
 		{"", "-1234567890", "-1234567890"},
 	}
 
+	itemsAll := [][]string{
+		{"result_id", "cxone_similarity_id", "sast_similarity_id"},
+		{"", "-1234567890", "-1234567890"},
+		{"", "-1234567891", "-1234567891"},
+		{"", "-1234567890", "-1234567890"},
+	}
+
 	t.Run("validate csv data returned from results", func(t *testing.T) {
-		result := GenerateCSV(inputRecord1)
+		result := GenerateCSV([]*metadata.Record{inputRecord1})
 
 		assert.Equal(t, items1, result)
 	})
 
 	t.Run("validate csv data returned from results", func(t *testing.T) {
-		result := GenerateCSV(inputRecord2)
+		result := GenerateCSV([]*metadata.Record{inputRecord2})
 
 		assert.Equal(t, items2, result)
 	})
 
+	t.Run("validate csv data returned from results", func(t *testing.T) {
+		result := GenerateCSV(allRecords)
+
+		assert.Equal(t, itemsAll, result)
+	})
+
 	t.Run("success returns only headers if not exists data to generate csv from results", func(t *testing.T) {
 		expectedResult := [][]string{latestVersionHeaders}
-		result := GenerateCSV(&metadata.Record{})
+		result := GenerateCSV([]*metadata.Record{})
 
 		assert.Equal(t, expectedResult, result)
 	})

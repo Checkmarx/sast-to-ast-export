@@ -7,29 +7,26 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 )
 
-type GenerateProvider interface {
-	GenerateCSV(record *metadata.Record) [][]string
-	WriteAllToSanitizedCsv(records [][]string) []byte
-}
-
-func GenerateCSV(record *metadata.Record) [][]string {
+func GenerateCSV(records []*metadata.Record) [][]string {
 	var items [][]string
 	items = append(items, []string{
 		"result_id",
 		"cxone_similarity_id",
 		"sast_similarity_id",
 	})
-	if record == nil {
+	if records == nil {
 		return items
 	}
-	for _, query := range record.Queries {
-		for _, result := range query.Results {
-			for _, path := range result.Paths {
-				items = append(items, []string{
-					path.ResultID,
-					path.SimilarityID,
-					path.SASTSimilarityID,
-				})
+	for _, record := range records {
+		for _, query := range record.Queries {
+			for _, result := range query.Results {
+				for _, path := range result.Paths {
+					items = append(items, []string{
+						path.ResultID,
+						path.SimilarityID,
+						path.SASTSimilarityID,
+					})
+				}
 			}
 		}
 	}

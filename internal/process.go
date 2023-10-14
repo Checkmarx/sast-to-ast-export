@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/resultsmapping"
-	"github.com/rs/zerolog"
 
 	"github.com/hashicorp/go-retryablehttp"
 
@@ -61,6 +60,7 @@ type ReportConsumeOutput struct {
 	Err       error
 	ProjectID int
 	ScanID    int
+	Record    *metadata.Record
 }
 
 //nolint:gocyclo,funlen
@@ -508,9 +508,13 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider, args)
 	}
 
+	metadataRecord := make([]*metadata.Record, 0)
 	reportConsumeErrorCount := 0
 	for i := 0; i < reportCount; i++ {
 		consumeOutput := <-reportConsumeOutputs
+		if consumeOutput.Record != nil {
+			metadataRecord = append(metadataRecord, consumeOutput.Record)
+		}
 		reportIndex := i + 1
 		if consumeOutput.Err == nil {
 			log.Info().
@@ -526,10 +530,26 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 		}
 	}
 
+	allResultsMappingErr := addAllResultsMappingToFile(metadataRecord, exporter)
+	if allResultsMappingErr != nil {
+		log.Debug().Err(allResultsMappingErr).Msg("failed saving results mapping")
+	}
+
 	if reportConsumeErrorCount > 0 {
 		log.Warn().Msgf("failed collecting %d/%d results", reportConsumeErrorCount, reportCount)
 	}
 
+	return nil
+}
+
+func addAllResultsMappingToFile(metadataRecord []*metadata.Record, exporter export2.Exporter) error {
+	metadataResultsCSV := resultsmapping.GenerateCSV(metadataRecord)
+	metadataResultsCSVByte := resultsmapping.WriteAllToSanitizedCsv(metadataResultsCSV)
+	exportResultsErr := exporter.AddFile(export2.ResultsMappingFileName, metadataResultsCSVByte)
+	if exportResultsErr != nil {
+		return exportResultsErr
+	}
+	log.Info().Msg("collected results mapping")
 	return nil
 }
 
@@ -631,9 +651,29 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 		}
 
 		// generate metadata json
-		generateErr := generateMetadataReport(&l, reportData, exporter, reportJob, metadataProvider)
-		if generateErr != nil {
-			done <- ReportConsumeOutput{Err: generateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+		var reportReader report.CxXMLResults
+		unmarshalErr := xml.Unmarshal(reportData, &reportReader)
+		if unmarshalErr != nil {
+			done <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		metadataQueries := metadata.GetQueriesFromReport(&reportReader)
+		metadataRecord, metadataRecordErr := metadataProvider.GetMetadataRecord(reportReader.ScanID, metadataQueries)
+		if metadataRecordErr != nil {
+			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
+		if metadataRecordJSONErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+		exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
+		if exportMetadataErr != nil {
+			l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
+			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
 
@@ -649,46 +689,11 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), transformedReportData)
 		if exportErr != nil {
 			l.Debug().Err(exportErr).Msg("failed saving result")
-			done <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			done <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
 		} else {
-			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
 		}
 	}
-}
-
-func generateMetadataReport(
-	l *zerolog.Logger, reportData []byte, exporter export2.Exporter,
-	reportJob ReportJob, metadataProvider metadata.Provider,
-) error {
-	var reportReader report.CxXMLResults
-	unmarshalErr := xml.Unmarshal(reportData, &reportReader)
-	if unmarshalErr != nil {
-		return unmarshalErr
-	}
-	metadataQueries := metadata.GetQueriesFromReport(&reportReader)
-	metadataRecord, metadataRecordErr := metadataProvider.GetMetadataRecord(reportReader.ScanID, metadataQueries)
-	if metadataRecordErr != nil {
-		l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
-		return metadataRecordErr
-	}
-	metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
-	if metadataRecordJSONErr != nil {
-		l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
-		return metadataRecordJSONErr
-	}
-	exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
-	if exportMetadataErr != nil {
-		l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
-		return exportMetadataErr
-	}
-	metadataResultsCSV := resultsmapping.GenerateCSV(metadataRecord)
-	metadataResultsCSVByte := resultsmapping.WriteAllToSanitizedCsv(metadataResultsCSV)
-	exportResultsErr := exporter.AddFile(export2.ResultsMappingFileName, metadataResultsCSVByte)
-	if exportResultsErr != nil {
-		l.Debug().Err(exportResultsErr).Msg("failed saving mapping results")
-		return exportResultsErr
-	}
-	return nil
 }
 
 func filterPresetByProjectList(presets []*rest.PresetShort, projects []*rest.Project) []*rest.PresetShort {

@@ -931,11 +931,9 @@ func TestConsumeReports(t *testing.T) {
 		MinTimes(1).
 		MaxTimes(1)
 	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 3)), gomock.Any()).
-		Return(fmt.Errorf("could not write report #3")).
+		Return(fmt.Errorf("EOF")).
 		MinTimes(1).
 		MaxTimes(1)
-	exporter.EXPECT().AddFile(gomock.Eq(export.ResultsMappingFileName), gomock.Any()).
-		Return(fmt.Errorf("could not write mapping results")).AnyTimes()
 	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 4), gomock.Any()).Return(nil)
 	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 4)), gomock.Any()).
 		Return(nil).
@@ -953,10 +951,10 @@ func TestConsumeReports(t *testing.T) {
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
-		{Err: fmt.Errorf("could not write mapping results"), ProjectID: 1, ScanID: 1},
+		{Err: nil, ProjectID: 1, ScanID: 1},
 		{Err: fmt.Errorf("failed getting report #2"), ProjectID: 2, ScanID: 2},
 		{Err: fmt.Errorf("EOF"), ProjectID: 3, ScanID: 3},
-		{Err: fmt.Errorf("could not write mapping results"), ProjectID: 4, ScanID: 4},
+		{Err: nil, ProjectID: 4, ScanID: 4},
 	}
 	for i := 0; i < reportCount; i++ {
 		out := <-outputCh
@@ -968,6 +966,84 @@ func TestConsumeReports(t *testing.T) {
 		assert.Equal(t, expected[i].ProjectID, out.ProjectID)
 		assert.Equal(t, expected[i].ScanID, out.ScanID)
 	}
+}
+
+func TestAddAllResultsMappingToFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	exporter := mock_app_export.NewMockExporter(ctrl)
+	t.Run("success case empty results", func(t *testing.T) {
+		exporter.EXPECT().AddFile(export.ResultsMappingFileName, gomock.Any()).Return(nil).AnyTimes()
+
+		err := addAllResultsMappingToFile([]*metadata.Record{}, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("success case with results", func(t *testing.T) {
+		inputRecord1 := &metadata.Record{
+			Queries: []*metadata.RecordQuery{
+				{
+					QueryID: "1",
+					Results: []*metadata.RecordResult{
+						{
+							ResultID: "2000000",
+							Paths: []*metadata.RecordPath{
+								{
+									PathID:           "1",
+									SimilarityID:     "987796958577",
+									SASTSimilarityID: "-987796958577",
+								},
+								{
+									PathID:           "1",
+									SimilarityID:     "987796958577",
+									SASTSimilarityID: "-987796958577",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		inputRecord2 := &metadata.Record{
+			Queries: []*metadata.RecordQuery{
+				{
+					QueryID: "1",
+					Results: []*metadata.RecordResult{
+						{
+							ResultID: "2000000",
+							Paths: []*metadata.RecordPath{
+								{
+									PathID:           "1",
+									SimilarityID:     "987796958577",
+									SASTSimilarityID: "-987796958577",
+								},
+								{
+									PathID:           "1",
+									SimilarityID:     "987796958577",
+									SASTSimilarityID: "-987796958577",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		allRecords := []*metadata.Record{
+			inputRecord1,
+			inputRecord2,
+		}
+		exporter.EXPECT().AddFile(export.ResultsMappingFileName, gomock.Any()).Return(nil).AnyTimes()
+
+		err := addAllResultsMappingToFile(allRecords, exporter)
+		assert.NoError(t, err)
+	})
+
+	t.Run("success case nil", func(t *testing.T) {
+		exporter.EXPECT().AddFile(export.ResultsMappingFileName, gomock.Any()).Return(nil).AnyTimes()
+
+		err := addAllResultsMappingToFile(nil, exporter)
+		assert.NoError(t, err)
+	})
 }
 
 func TestFetchResultsData(t *testing.T) {
