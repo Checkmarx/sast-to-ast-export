@@ -70,18 +70,23 @@ func TransformSamlTeamMappings(samlTeamMappings []*rest.SamlTeamMapping, options
 // TransformXMLInstallationMappings updates installation mapping.
 func TransformXMLInstallationMappings(installationMappings *soap.GetInstallationSettingsResponse) []*common.InstallationMapping {
 	out := make([]*common.InstallationMapping, 0)
+	var scansManager *common.InstallationMapping
 	if installationMappings == nil {
 		return []*common.InstallationMapping{}
 	}
 
 	for _, e := range installationMappings.GetInstallationSettingsResult.InstallationSettingsList.InstallationSetting {
-		if e.Name == InstallationEngineServiceName || e.Name == installationScansManagerName {
-			if !ContainsEngine(InstallationEngineServiceName, out) {
-				out = append(out, &common.InstallationMapping{
-					Name:    InstallationEngineServiceName,
-					Version: e.Version,
-					Hotfix:  e.Hotfix,
-				})
+		if e.Name == InstallationEngineServiceName {
+			out = append(out, &common.InstallationMapping{
+				Name:    InstallationEngineServiceName,
+				Version: e.Version,
+				Hotfix:  e.Hotfix,
+			})
+		} else if e.Name == installationScansManagerName {
+			scansManager = &common.InstallationMapping{
+				Name:    InstallationEngineServiceName,
+				Version: e.Version,
+				Hotfix:  e.Hotfix,
 			}
 		} else if e.Name == installationContentPackName {
 			out = append(out, &common.InstallationMapping{
@@ -91,6 +96,11 @@ func TransformXMLInstallationMappings(installationMappings *soap.GetInstallation
 			})
 		}
 	}
+
+	if !ContainsEngine(InstallationEngineServiceName, out) && scansManager != nil {
+		out = append(out, scansManager)
+	}
+
 	return out
 }
 
