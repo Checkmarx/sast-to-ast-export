@@ -1,4 +1,4 @@
-name: AST scan
+name: Govulncheck
 on:
   workflow_dispatch:
   push:
@@ -13,5 +13,5 @@ jobs:
       - id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: 1.21
+          go-version-input: 1.20
           go-package: ./...
