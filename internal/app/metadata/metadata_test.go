@@ -21,15 +21,18 @@ type testResultData struct {
 }
 
 func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
-	astQueryID := "12532796926860742976"
 	scanID := "1000001"
+	astQueryID := "12532796926860742976"
+	similarityID1 := "-1234567890"
+	similarityID2 := "-1234567891"
 	metaResult1Data := testResultData{
 		SimilarityID: "1234567890",
 		MethodLines:  []string{"100", "2", "3", "101"},
 	}
 	metaResult1 := Result{
-		PathID:   "2",
-		ResultID: "1000002",
+		PathID:       "2",
+		ResultID:     "1000002",
+		SimilarityID: similarityID1,
 		FirstNode: Node{
 			FileName: "Goatlin-develop/packages/clients/android/app/src/main/java/com/cx/goatlin/EditNoteActivity.kt",
 			Name:     "text",
@@ -48,8 +51,9 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 		MethodLines:  []string{"43", "21", "13"},
 	}
 	metaResult2 := Result{
-		PathID:   "3",
-		ResultID: "1000002",
+		PathID:       "3",
+		ResultID:     "1000002",
+		SimilarityID: similarityID2,
 		FirstNode: Node{
 			FileName: "path/file1.kt",
 			Name:     "text",
@@ -127,12 +131,16 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 						ResultID: metaResult1.ResultID,
 						Paths: []*RecordPath{
 							{
-								PathID:       metaResult1.PathID,
-								SimilarityID: metaResult1Data.SimilarityID,
+								PathID:           metaResult1.PathID,
+								SimilarityID:     metaResult1Data.SimilarityID,
+								ResultID:         metaResult1.ResultID,
+								SASTSimilarityID: similarityID1,
 							},
 							{
-								PathID:       metaResult2.PathID,
-								SimilarityID: metaResult2Data.SimilarityID,
+								PathID:           metaResult2.PathID,
+								SimilarityID:     metaResult2Data.SimilarityID,
+								ResultID:         metaResult1.ResultID,
+								SASTSimilarityID: similarityID2,
 							},
 						},
 					},

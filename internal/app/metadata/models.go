@@ -16,8 +16,10 @@ type (
 	}
 
 	RecordPath struct {
-		PathID       string `json:"pathId"`
-		SimilarityID string `json:"similarityId"`
+		PathID           string `json:"pathId"`
+		SimilarityID     string `json:"similarityId"`
+		ResultID         string `json:"-"`
+		SASTSimilarityID string `json:"-"`
 	}
 
 	Query struct {
@@ -29,10 +31,11 @@ type (
 	}
 
 	Result struct {
-		PathID    string
-		ResultID  string
-		FirstNode Node
-		LastNode  Node
+		PathID       string
+		ResultID     string
+		SimilarityID string
+		FirstNode    Node
+		LastNode     Node
 	}
 
 	Node struct {

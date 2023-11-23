@@ -45,6 +45,8 @@ const (
 	PresetsFileName = "presets.json"
 	// InstallationFileName file
 	InstallationFileName = "installation.json"
+	// ResultsMappingFileName file
+	ResultsMappingFileName = "results_mapping.csv"
 
 	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"

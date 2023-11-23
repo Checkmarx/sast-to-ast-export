@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/resultsmapping"
+
 	"github.com/hashicorp/go-retryablehttp"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -58,6 +60,7 @@ type ReportConsumeOutput struct {
 	Err       error
 	ProjectID int
 	ScanID    int
+	Record    *metadata.Record
 }
 
 //nolint:gocyclo,funlen
@@ -505,9 +508,13 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider, args)
 	}
 
+	metadataRecord := make([]*metadata.Record, 0)
 	reportConsumeErrorCount := 0
 	for i := 0; i < reportCount; i++ {
 		consumeOutput := <-reportConsumeOutputs
+		if consumeOutput.Record != nil {
+			metadataRecord = append(metadataRecord, consumeOutput.Record)
+		}
 		reportIndex := i + 1
 		if consumeOutput.Err == nil {
 			log.Info().
@@ -523,10 +530,26 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 		}
 	}
 
+	allResultsMappingErr := addAllResultsMappingToFile(metadataRecord, exporter)
+	if allResultsMappingErr != nil {
+		log.Debug().Err(allResultsMappingErr).Msg("failed saving results mapping")
+	}
+
 	if reportConsumeErrorCount > 0 {
 		log.Warn().Msgf("failed collecting %d/%d results", reportConsumeErrorCount, reportCount)
 	}
 
+	return nil
+}
+
+func addAllResultsMappingToFile(metadataRecord []*metadata.Record, exporter export2.Exporter) error {
+	metadataResultsCSV := resultsmapping.GenerateCSV(metadataRecord)
+	metadataResultsCSVByte := resultsmapping.WriteAllToSanitizedCsv(metadataResultsCSV)
+	exportResultsErr := exporter.AddFile(export2.ResultsMappingFileName, metadataResultsCSVByte)
+	if exportResultsErr != nil {
+		return exportResultsErr
+	}
+	log.Info().Msg("collected results mapping")
 	return nil
 }
 
@@ -626,6 +649,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			done <- ReportConsumeOutput{Err: reportCreateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
+
 		// generate metadata json
 		var reportReader report.CxXMLResults
 		unmarshalErr := xml.Unmarshal(reportData, &reportReader)
@@ -652,6 +676,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
+
 		// export report
 		transformedReportData, transformErr := export2.TransformScanReport(
 			reportData, export2.TransformOptions{NestedTeams: args.NestedTeams},
@@ -664,9 +689,9 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), transformedReportData)
 		if exportErr != nil {
 			l.Debug().Err(exportErr).Msg("failed saving result")
-			done <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			done <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
 		} else {
-			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
 		}
 	}
 }
