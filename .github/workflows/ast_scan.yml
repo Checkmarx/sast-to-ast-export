@@ -9,9 +9,9 @@ jobs:
   ast-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       - name: Checkmarx AST Github Action
-        uses: checkmarx/ast-github-action@main
+        uses: checkmarx/ast-github-action@72d549beebd0bc5bbafa559f198161b6ce7c03df # v2
         with:
           base_uri: ${{ secrets.AST_RND_SCANS_BASE_URI }}
           cx_tenant: ${{ secrets.AST_RND_SCANS_TENANT }}
