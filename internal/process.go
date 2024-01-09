@@ -530,11 +530,6 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 		}
 	}
 
-	allResultsMappingErr := addAllResultsMappingToFile(metadataRecord, exporter)
-	if allResultsMappingErr != nil {
-		log.Debug().Err(allResultsMappingErr).Msg("failed saving results mapping")
-	}
-
 	if reportConsumeErrorCount > 0 {
 		log.Warn().Msgf("failed collecting %d/%d results", reportConsumeErrorCount, reportCount)
 	}
