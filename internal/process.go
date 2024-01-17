@@ -508,9 +508,13 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider, args)
 	}
 
+	metadataRecord := make([]*metadata.Record, 0)
 	reportConsumeErrorCount := 0
 	for i := 0; i < reportCount; i++ {
 		consumeOutput := <-reportConsumeOutputs
+		if consumeOutput.Record != nil {
+			metadataRecord = append(metadataRecord, consumeOutput.Record)
+		}
 		reportIndex := i + 1
 		if consumeOutput.Err == nil {
 			log.Info().
@@ -524,6 +528,11 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 				Int("scanID", consumeOutput.ScanID).
 				Msgf("failed collecting result %d/%d", reportIndex, reportCount)
 		}
+	}
+
+	allResultsMappingErr := addAllResultsMappingToFile(metadataRecord, exporter)
+	if allResultsMappingErr != nil {
+		log.Debug().Err(allResultsMappingErr).Msg("failed saving results mapping")
 	}
 
 	if reportConsumeErrorCount > 0 {
