@@ -12,7 +12,7 @@ lint:
 	go fmt ./...
 	golangci-lint run
 
-build: windows_amd64
+build: windows_amd64 package_check
 
 package: build
 	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_windows_amd64.zip ./build/windows/amd64/*
@@ -26,6 +26,9 @@ unit_test:
 
 clean:
 	rm -r $(BUILD_PATH)
+
+package_check:
+	govulncheck -mode binary $(BUILD_PATH)/windows/amd64/$(PRODUCT_NAME).exe
 
 windows_amd64:
 	env GOOS=windows GOARCH=amd64 go build -o $(BUILD_PATH)/windows/amd64/$(PRODUCT_NAME).exe $(LD_FLAGS)
