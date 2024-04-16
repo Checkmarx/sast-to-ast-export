@@ -1,3 +1,16 @@
+<img src="https://raw.githubusercontent.com/Checkmarx/ci-cd-integrations/main/.images/banner.png">
+<br />
+<div  align="center" >
+
+[![Documentation][documentation-shield]][documentation-url]
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
+
+</div>
+
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
@@ -74,3 +87,16 @@ We appreciate feedback and contribution to this repo! Before you get started, pl
 
 ## License
 Distributed under the [Apache 2.0](LICENSE). See `LICENSE` for more information.
+
+[documentation-shield]: https://img.shields.io/badge/docs-viewdocs-blue.svg
+[documentation-url]:https://checkmarx.com/resource/documents/en/34965-68669-sast-cli-export-tool.html
+[contributors-shield]: https://img.shields.io/github/contributors/Checkmarx/sast-to-ast-export.svg
+[contributors-url]: https://github.com/Checkmarx/sast-to-ast-export/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/Checkmarx/sast-to-ast-export.svg
+[forks-url]: https://github.com/Checkmarx/sast-to-ast-export/network/members
+[stars-shield]: https://img.shields.io/github/stars/Checkmarx/sast-to-ast-export.svg
+[stars-url]: https://github.com/Checkmarx/sast-to-ast-export/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Checkmarx/sast-to-ast-export.svg
+[issues-url]: https://github.com/Checkmarx/sast-to-ast-export/issues
+[license-shield]: https://img.shields.io/github/license/Checkmarx/sast-to-ast-export.svg
+[license-url]: https://github.com/Checkmarx/sast-to-ast-export/blob/master/LICENSE
