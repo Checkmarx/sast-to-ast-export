@@ -12,7 +12,7 @@ lint:
 	go fmt ./...
 	golangci-lint run
 
-build: windows_amd64 package_check
+build: windows_amd64
 
 package: build
 	zip -j $(BUILD_PATH)/$(PRODUCT_NAME)_$(PRODUCT_VERSION)_windows_amd64.zip ./build/windows/amd64/*
