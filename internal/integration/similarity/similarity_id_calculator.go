@@ -1,6 +1,7 @@
 package similarity
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +19,7 @@ type IDProvider interface {
 		filename1, name1, line1, column1, methodLine1,
 		filename2, name2, line2, column2, methodLine2,
 		queryID string,
+		simIdVersion int,
 	) (string, error)
 }
 
@@ -39,19 +41,21 @@ func (e *IDCalculator) Calculate(
 	filename1, name1, line1, column1, methodLine1,
 	filename2, name2, line2, column2, methodLine2,
 	queryID string,
+	simIdVersion int,
 ) (string, error) {
 	command := exec.Command( //nolint:gosec
 		e.calculatorCmd,
 		filename1, name1, line1, column1, methodLine1,
 		filename2, name2, line2, column2, methodLine2,
 		queryID,
+		fmt.Sprint(simIdVersion),
 	)
 	out, err := command.Output()
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
-			"failed running command file1=%s name1=%s line1=%s col1=%s method1=%s file2=%s name2=%s line2=%s col2=%s method2=%s query=%s",
-			filename1, name1, line1, column1, methodLine1, filename2, name2, line2, column2, methodLine2, queryID,
+			"failed running command file1=%s name1=%s line1=%s col1=%s method1=%s file2=%s name2=%s line2=%s col2=%s method2=%s query=%s simIdVersion=%d",
+			filename1, name1, line1, column1, methodLine1, filename2, name2, line2, column2, methodLine2, queryID, simIdVersion,
 		)
 	}
 	return strings.TrimSpace(string(out)), nil

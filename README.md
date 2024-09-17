@@ -50,11 +50,12 @@ SAST v9.3 or higher.
 
 Run export with:
 ```
-.\cxsast_exporter --user username --pass password --url http://localhost
+.\cxsast_exporter --user username --pass password --url http://localhost [--simIdVersion simIdV]
 ```
 
  * Replace `username` and `password` with user credentials.
  * Replace `http://localhost` with the url to SAST, if necessary.
+ * Replace `simIdV` with similarity ID version needed, optional, default value is 0.
 
 ## Additional Documentation
 

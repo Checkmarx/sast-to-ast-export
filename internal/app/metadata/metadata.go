@@ -20,6 +20,7 @@ type Factory struct {
 	sourceProvider       interfaces.SourceFileRepo
 	methodLineProvider   interfaces.MethodLineRepo
 	tmpDir               string
+	simIdVersion         int
 }
 
 func NewMetadataFactory(
@@ -28,6 +29,7 @@ func NewMetadataFactory(
 	sourceProvider interfaces.SourceFileRepo,
 	methodLineProvider interfaces.MethodLineRepo,
 	tmpDir string,
+	simIdVersion int,
 ) *Factory {
 	return &Factory{
 		astQueryIDProvider,
@@ -35,6 +37,7 @@ func NewMetadataFactory(
 		sourceProvider,
 		methodLineProvider,
 		tmpDir,
+		simIdVersion,
 	}
 }
 
@@ -90,7 +93,7 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 					result.ResultID, result.PathID,
 					firstSourceFile.LocalName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
 					lastSourceFile.LocalName, result.LastNode.Name, result.LastNode.Line, result.LastNode.Column, methodLines[len(methodLines)-1],
-					astQueryID,
+					astQueryID, e.simIdVersion,
 				}
 			}
 			close(similarityCalculationJobs)
@@ -105,6 +108,7 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 						job.Filename1, job.Name1, job.Line1, job.Column1, job.MethodLine1,
 						job.Filename2, job.Name2, job.Line2, job.Column2, job.MethodLine2,
 						job.QueryID,
+						job.SimIdVersion,
 					)
 					similarityCalculationResults <- SimilarityCalculationResult{
 						ResultID:     job.ResultID,

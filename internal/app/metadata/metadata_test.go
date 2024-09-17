@@ -83,12 +83,12 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	similarityIDProviderMock.EXPECT().Calculate(
 		gomock.Any(), metaResult1.FirstNode.Name, metaResult1.FirstNode.Line, metaResult1.FirstNode.Column, metaResult1Data.MethodLines[0],
 		gomock.Any(), metaResult1.LastNode.Name, metaResult1.LastNode.Line, metaResult1.LastNode.Column, metaResult1Data.MethodLines[3],
-		astQueryID,
+		astQueryID, "0",
 	).Return(metaResult1Data.SimilarityID, nil)
 	similarityIDProviderMock.EXPECT().Calculate(
 		gomock.Any(), metaResult2.FirstNode.Name, metaResult2.FirstNode.Line, metaResult2.FirstNode.Column, metaResult2Data.MethodLines[0],
 		gomock.Any(), metaResult2.LastNode.Name, metaResult2.LastNode.Line, metaResult2.LastNode.Column, metaResult2Data.MethodLines[2],
-		astQueryID,
+		astQueryID, "0",
 	).Return(metaResult2Data.SimilarityID, nil)
 	sourceProviderMock := mock_app_source_file.NewMockSourceFileRepo(ctrl)
 	sourceProviderMock.EXPECT().
@@ -117,7 +117,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	methodLineProvider.EXPECT().
 		GetMethodLinesByPath(scanID, metaQuery.QueryID).
 		Return(methodLinesResult, nil)
-	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir)
+	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir, 0)
 
 	result, err := metadata.GetMetadataRecord(scanID, []*Query{metaQuery})
 	assert.NoError(t, err)

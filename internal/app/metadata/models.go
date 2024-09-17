@@ -50,6 +50,7 @@ type (
 		Filename1, Name1, Line1, Column1, MethodLine1,
 		Filename2, Name2, Line2, Column2, MethodLine2,
 		QueryID string
+		SimIdVersion int
 	}
 
 	SimilarityCalculationResult struct {
