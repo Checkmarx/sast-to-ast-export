@@ -159,7 +159,14 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := metadata.NewMetadataFactory(astQueryProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir, args.SimIdVersion)
+	metadataSource := metadata.NewMetadataFactory(
+		astQueryProvider,
+		similarityIDCalculator,
+		sourceRepo,
+		methodLineRepo,
+		metadataTempDir,
+		args.SimIdVersion,
+	)
 
 	addErr := addCustomQueryIDs(astQueryProvider, astQueryMappingProvider)
 	if addErr != nil {
@@ -583,7 +590,6 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 		for _, project := range *projects {
 			// get triaged results
 			triagedResults, triagedResultsErr := client.GetTriagedResultsByScanID(project.LastScanID)
-			log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
 			if triagedResultsErr != nil {
 				log.Debug().Err(triagedResultsErr).
 					Int("projectID", project.ID).
@@ -594,6 +600,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 			if len(*triagedResults) > 0 {
 				output = append(output, TriagedScan{project.ID, project.LastScanID})
 			}
+			log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
 		}
 
 		// prepare to fetch next page

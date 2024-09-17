@@ -54,7 +54,7 @@ func (e *IDCalculator) Calculate(
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
-			"failed running command file1=%s name1=%s line1=%s col1=%s method1=%s file2=%s name2=%s line2=%s col2=%s method2=%s query=%s simIdVersion=%d",
+			"failed running command file1=%s name1=%s line1=%s col1=%s method1=%s file2=%s name2=%s line2=%s col2=%s method2=%s query=%s simIdVersion=%d", //nolint:lll
 			filename1, name1, line1, column1, methodLine1, filename2, name2, line2, column2, methodLine2, queryID, simIdVersion,
 		)
 	}

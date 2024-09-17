@@ -123,7 +123,13 @@ func init() {
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
 	rootCmd.Flags().Bool(nestedTeams, false, "include original team structure without flattening")
-	rootCmd.Flags().IntVarP(&simIdVersion, simIdVersionArg, "", 0, "Version of the similarity ID calculation (default 0)")
+	rootCmd.Flags().IntVarP(
+		&simIdVersion,
+		simIdVersionArg,
+		"",
+		0,
+		"define version of the similarity ID calculation (0 if omitted). Values: 0 - Default, 1 - Trim leading spaces, 2 - Remove all spaces.", //nolint:lll
+	)
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
