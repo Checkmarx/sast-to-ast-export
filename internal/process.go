@@ -583,7 +583,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 		for _, project := range *projects {
 			// get triaged results
 			triagedResults, triagedResultsErr := client.GetTriagedResultsByScanID(project.LastScanID)
-			log.Info().Msgf("fetching %d triaged results found from projectID %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
+			log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
 			if triagedResultsErr != nil {
 				log.Debug().Err(triagedResultsErr).
 					Int("projectID", project.ID).
