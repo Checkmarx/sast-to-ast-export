@@ -26,7 +26,7 @@ const (
 	queryMapping            = "query-mapping"
 	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
 	nestedTeams             = "nested-teams"
-	simIdVersionArg         = "simIdVersion"
+	simIDVersionArg         = "simIDVersion"
 
 	projectsActiveSinceDefaultValue = 180
 	emptyProjectsActiveSince        = 0
@@ -41,7 +41,7 @@ var productVersion string
 // productBuild is defined in Makefile and initialized during build
 var productBuild string
 
-var simIdVersion int
+var simIDVersion int
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -124,8 +124,8 @@ func init() {
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
 	rootCmd.Flags().Bool(nestedTeams, false, "include original team structure without flattening")
 	rootCmd.Flags().IntVarP(
-		&simIdVersion,
-		simIdVersionArg,
+		&simIDVersion,
+		simIDVersionArg,
 		"",
 		0,
 		"define version of the similarity ID calculation (0 if omitted). Values: 0 - Default, 1 - Trim leading spaces, 2 - Remove all spaces.", //nolint:lll

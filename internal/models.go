@@ -18,7 +18,7 @@ type Args struct {
 	RunTime          time.Time
 	QueryMappingFile string
 	NestedTeams      bool
-	SimIdVersion     int
+	SimIDVersion     int
 }
 
 type ReportJob struct {

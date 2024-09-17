@@ -61,7 +61,7 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
-	args.SimIdVersion, err = cmd.Flags().GetInt(simIdVersionArg)
+	args.SimIDVersion, err = cmd.Flags().GetInt(simIDVersionArg)
 	if err != nil {
 		panic(err)
 	}

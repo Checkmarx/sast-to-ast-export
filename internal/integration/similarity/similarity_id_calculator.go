@@ -19,7 +19,7 @@ type IDProvider interface {
 		filename1, name1, line1, column1, methodLine1,
 		filename2, name2, line2, column2, methodLine2,
 		queryID string,
-		simIdVersion int,
+		simIDVersion int,
 	) (string, error)
 }
 
@@ -41,21 +41,21 @@ func (e *IDCalculator) Calculate(
 	filename1, name1, line1, column1, methodLine1,
 	filename2, name2, line2, column2, methodLine2,
 	queryID string,
-	simIdVersion int,
+	simIDVersion int,
 ) (string, error) {
 	command := exec.Command( //nolint:gosec
 		e.calculatorCmd,
 		filename1, name1, line1, column1, methodLine1,
 		filename2, name2, line2, column2, methodLine2,
 		queryID,
-		fmt.Sprint(simIdVersion),
+		fmt.Sprint(simIDVersion),
 	)
 	out, err := command.Output()
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
-			"failed running command file1=%s name1=%s line1=%s col1=%s method1=%s file2=%s name2=%s line2=%s col2=%s method2=%s query=%s simIdVersion=%d", //nolint:lll
-			filename1, name1, line1, column1, methodLine1, filename2, name2, line2, column2, methodLine2, queryID, simIdVersion,
+			"failed running command file1=%s name1=%s line1=%s col1=%s method1=%s file2=%s name2=%s line2=%s col2=%s method2=%s query=%s simIDVersion=%d", //nolint:lll
+			filename1, name1, line1, column1, methodLine1, filename2, name2, line2, column2, methodLine2, queryID, simIDVersion,
 		)
 	}
 	return strings.TrimSpace(string(out)), nil

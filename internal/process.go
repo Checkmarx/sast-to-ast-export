@@ -165,7 +165,7 @@ func RunExport(args *Args) error {
 		sourceRepo,
 		methodLineRepo,
 		metadataTempDir,
-		args.SimIdVersion,
+		args.SimIDVersion,
 	)
 
 	addErr := addCustomQueryIDs(astQueryProvider, astQueryMappingProvider)
