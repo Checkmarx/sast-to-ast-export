@@ -62,8 +62,11 @@ NOTE the minimum supported SAST version is 9.3. SAST installations below this ve
 
 		// Validate simIDVersion if provided
 		if simIDVersion < 0 || simIDVersion > 2 {
-			fmt.Println("Error: simIDVersion must be 0 (Default), 1 (Trim leading spaces), or 2 (Remove all spaces).")
-			os.Exit(1)
+			errorMessage := fmt.Errorf(
+				"simIDVersion must be 0 (Default), 1 (Trim leading spaces), or 2 (Remove all spaces)",
+			)
+			log.Error().Err(errorMessage).Msg("Invalid simIDVersion")
+			panic(errorMessage)
 		}
 
 		// setup logging
