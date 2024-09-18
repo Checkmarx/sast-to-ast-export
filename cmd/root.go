@@ -59,6 +59,13 @@ Produces:
 NOTE the minimum supported SAST version is 9.3. SAST installations below this version should be upgraded in order to run this export tool. 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// Validate simIDVersion if provided
+		if simIDVersion < 0 || simIDVersion > 2 {
+			fmt.Println("Error: simIDVersion must be 0 (Default), 1 (Trim leading spaces), or 2 (Remove all spaces).")
+			os.Exit(1)
+		}
+
 		// setup logging
 		verbose, flagErr := cmd.Flags().GetBool(verboseArg)
 		if flagErr != nil {
@@ -128,7 +135,7 @@ func init() {
 		simIDVersionArg,
 		"",
 		0,
-		"define version of the similarity ID calculation (0 if omitted). Values: 0 - Default, 1 - Trim leading spaces, 2 - Remove all spaces.", //nolint:lll
+		"define version of the similarity ID calculation. Values: 0 - Default, 1 - Trim leading spaces, 2 - Remove all spaces.",
 	)
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
