@@ -159,7 +159,14 @@ func RunExport(args *Args) error {
 		}
 	}()
 
-	metadataSource := metadata.NewMetadataFactory(astQueryProvider, similarityIDCalculator, sourceRepo, methodLineRepo, metadataTempDir)
+	metadataSource := metadata.NewMetadataFactory(
+		astQueryProvider,
+		similarityIDCalculator,
+		sourceRepo,
+		methodLineRepo,
+		metadataTempDir,
+		args.SimIDVersion,
+	)
 
 	addErr := addCustomQueryIDs(astQueryProvider, astQueryMappingProvider)
 	if addErr != nil {
@@ -495,8 +502,6 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 		Str("scans", fmt.Sprintf("%v", triagedScans)).
 		Msg("last scans by project")
 
-	log.Info().Msgf("%d results found", len(triagedScans))
-
 	// create and fetch report for each scan
 	go produceReports(triagedScans, reportJobs)
 
@@ -595,6 +600,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 			if len(*triagedResults) > 0 {
 				output = append(output, TriagedScan{project.ID, project.LastScanID})
 			}
+			log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
 		}
 
 		// prepare to fetch next page

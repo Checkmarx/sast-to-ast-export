@@ -26,6 +26,7 @@ const (
 	queryMapping            = "query-mapping"
 	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
 	nestedTeams             = "nested-teams"
+	simIDVersionArg         = "simIDVersion"
 
 	projectsActiveSinceDefaultValue = 180
 	emptyProjectsActiveSince        = 0
@@ -39,6 +40,8 @@ var productVersion string
 
 // productBuild is defined in Makefile and initialized during build
 var productBuild string
+
+var simIDVersion int
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -56,6 +59,16 @@ Produces:
 NOTE the minimum supported SAST version is 9.3. SAST installations below this version should be upgraded in order to run this export tool. 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// Validate simIDVersion if provided
+		if simIDVersion < 0 || simIDVersion > 2 {
+			errorMessage := fmt.Errorf(
+				"simIDVersion must be 0 (Default), 1 (Trim leading spaces), or 2 (Remove all spaces)",
+			)
+			log.Error().Err(errorMessage).Msg("Invalid simIDVersion")
+			panic(errorMessage)
+		}
+
 		// setup logging
 		verbose, flagErr := cmd.Flags().GetBool(verboseArg)
 		if flagErr != nil {
@@ -120,6 +133,13 @@ func init() {
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
 	rootCmd.Flags().BoolP(verboseArg, "v", false, "enable verbose logging to console")
 	rootCmd.Flags().Bool(nestedTeams, false, "include original team structure without flattening")
+	rootCmd.Flags().IntVarP(
+		&simIDVersion,
+		simIDVersionArg,
+		"",
+		0,
+		"define version of the similarity ID calculation. Values: 0 - Default, 1 - Trim leading spaces, 2 - Remove all spaces.",
+	)
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)

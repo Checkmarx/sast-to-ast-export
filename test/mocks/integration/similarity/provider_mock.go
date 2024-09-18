@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_integration_similarity -destination test/mocks/integration/similarity/provider_mock.go github.com/checkmarxDev/ast-sast-export/internal/integration/similarity IDProvider
 //
+
 // Package mock_integration_similarity is a generated GoMock package.
 package mock_integration_similarity
 
@@ -38,16 +39,16 @@ func (m *MockIDProvider) EXPECT() *MockIDProviderMockRecorder {
 }
 
 // Calculate mocks base method.
-func (m *MockIDProvider) Calculate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 string) (string, error) {
+func (m *MockIDProvider) Calculate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 string, arg11 int) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Calculate", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+	ret := m.ctrl.Call(m, "Calculate", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Calculate indicates an expected call of Calculate.
-func (mr *MockIDProviderMockRecorder) Calculate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 any) *gomock.Call {
+func (mr *MockIDProviderMockRecorder) Calculate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Calculate", reflect.TypeOf((*MockIDProvider)(nil).Calculate), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Calculate", reflect.TypeOf((*MockIDProvider)(nil).Calculate), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
 }
