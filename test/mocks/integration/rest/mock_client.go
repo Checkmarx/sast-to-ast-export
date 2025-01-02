@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_integration_rest -destination test/mocks/integration/rest/mock_client.go github.com/checkmarxDev/ast-sast-export/internal/integration/rest Client
 //
+
 // Package mock_integration_rest is a generated GoMock package.
 package mock_integration_rest
 
@@ -66,6 +67,36 @@ func (m *MockClient) CreateScanReport(arg0 int, arg1 string, arg2 rest.Retry) ([
 func (mr *MockClientMockRecorder) CreateScanReport(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScanReport", reflect.TypeOf((*MockClient)(nil).CreateScanReport), arg0, arg1, arg2)
+}
+
+// GetEngineConfigurationMappings mocks base method.
+func (m *MockClient) GetEngineConfigurationMappings() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEngineConfigurationMappings")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEngineConfigurationMappings indicates an expected call of GetEngineConfigurationMappings.
+func (mr *MockClientMockRecorder) GetEngineConfigurationMappings() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEngineConfigurationMappings", reflect.TypeOf((*MockClient)(nil).GetEngineConfigurationMappings))
+}
+
+// GetEngineConfigurations mocks base method.
+func (m *MockClient) GetEngineConfigurations(arg0 int) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEngineConfigurations", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEngineConfigurations indicates an expected call of GetEngineConfigurations.
+func (mr *MockClientMockRecorder) GetEngineConfigurations(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEngineConfigurations", reflect.TypeOf((*MockClient)(nil).GetEngineConfigurations), arg0)
 }
 
 // GetEngineServers mocks base method.

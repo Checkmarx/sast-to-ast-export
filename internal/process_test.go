@@ -863,7 +863,8 @@ func TestGetTriagedScans(t *testing.T) {
 				MaxTimes(1)
 		}
 
-		result, err := getTriagedScans(client, fromDate, teamName, test.projectIds)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+		result, err := getTriagedScans(client, exporter, fromDate, teamName, test.projectIds)
 
 		if test.expectedErr == nil {
 			assert.NoError(t, err)

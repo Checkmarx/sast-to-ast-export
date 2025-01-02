@@ -52,6 +52,15 @@ type (
 		Value []TriagedScanResult
 	}
 
+	ScanSettings struct {
+		Project struct {
+			ID int `json:"id"`
+		} `json:"project"`
+		EngineConfiguration struct {
+			ID int `json:"id"`
+		} `json:"engineConfiguration"`
+	}
+
 	TriagedScanResult struct {
 		ID int `json:"Id"`
 	}

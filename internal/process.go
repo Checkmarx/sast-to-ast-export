@@ -63,6 +63,11 @@ type ReportConsumeOutput struct {
 	Record    *metadata.Record
 }
 
+type EngineConfig struct {
+	ProjectID             int
+	EngineConfigurationID int
+}
+
 //nolint:gocyclo,funlen
 func RunExport(args *Args) error {
 	consumerCount := worker.GetNumCPU()
@@ -383,6 +388,9 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 		export2.NewJSONDataSource(projects)); err != nil {
 		return nil, err
 	}
+	if err := exporter.AddFileWithDataSource(export2.EngineConfigurationMappingFileName, client.GetEngineConfigurationMappings); err != nil {
+		return nil, err
+	}
 	return projects, nil
 }
 
@@ -426,11 +434,7 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 	return nil
 }
 
-func fetchPresetsData(
-	client rest.Client,
-	soapClient interfaces.PresetProvider,
-	exporter export2.Exporter,
-	projects []*rest.Project, projectsIds string) error {
+func fetchPresetsData(client rest.Client, soapClient interfaces.PresetProvider, exporter export2.Exporter, projects []*rest.Project, projectsIds string) error {
 	log.Info().Msg("collecting presets")
 	consumerCount := worker.GetNumCPU()
 	presetJobs := make(chan PresetJob)
@@ -462,20 +466,25 @@ func fetchPresetsData(
 	}
 
 	presetConsumeErrorCount := 0
+	collectedPresets := []int{}
+
 	for i := 0; i < presetCount; i++ {
 		presetOutput := <-presetConsumeOutputs
-		presetIndex := i + 1
 		if presetOutput.Err == nil {
-			log.Info().
-				Int("presetID", presetOutput.PresetID).
-				Msgf("collected preset %d/%d", presetIndex, presetCount)
+			collectedPresets = append(collectedPresets, presetOutput.PresetID)
 		} else {
 			presetConsumeErrorCount++
 			log.Warn().
 				Int("presetID", presetOutput.PresetID).
-				Msgf("failed collecting preset %d/%d", presetIndex, presetCount)
+				Msgf("failed collecting preset %d/%d", i+1, presetCount)
 		}
 	}
+
+	// Log the summary of collected presets
+	log.Info().
+		Int("totalCollected", len(collectedPresets)).
+		Int("totalFailed", presetConsumeErrorCount).
+		Msg("Preset collection summary")
 
 	if presetConsumeErrorCount > 0 {
 		log.Warn().Msgf("failed collecting %d/%d presets", presetConsumeErrorCount, presetCount)
@@ -492,7 +501,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 	reportJobs := make(chan ReportJob)
 
 	fromDate := getDateFrom(resultsProjectActiveSince, args.IsDefaultProjectActiveSince, projectsIds)
-	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds)
+	triagedScans, triagedScanErr := getTriagedScans(client, exporter, fromDate, teamName, projectsIds)
 	if triagedScanErr != nil {
 		return triagedScanErr
 	}
@@ -558,8 +567,10 @@ func addAllResultsMappingToFile(metadataRecord []*metadata.Record, exporter expo
 	return nil
 }
 
-func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string) ([]TriagedScan, error) {
+func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, teamName, projectsIds string) ([]TriagedScan, error) {
 	var output []TriagedScan
+	var engineConfigs []EngineConfig
+
 	projectOffset := 0
 	projectLimit := resultsPageLimit
 
@@ -572,8 +583,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 		log.Info().Msg("searching for results...")
 
 		// fetch current page
-		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds, projectOffset,
-			projectLimit)
+		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds, projectOffset, projectLimit)
 		if fetchErr != nil {
 			log.Debug().Err(fetchErr).Msg("failed fetching project last scans")
 			return output, fmt.Errorf("error searching for results")
@@ -601,11 +611,45 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 				output = append(output, TriagedScan{project.ID, project.LastScanID})
 			}
 			log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
+
+			// Fetch engine configurations based on project.ID
+			configs, err := client.GetEngineConfigurations(project.ID)
+			if err != nil {
+				log.Error().Err(err).
+					Int("projectID", project.ID).
+					Msg("error with getting engine configurations details")
+				return output, errors.Wrap(err, "error with getting engine configurations details")
+			}
+
+			if len(configs) > 0 {
+				var scanSettings rest.ScanSettings
+				if err := json.Unmarshal(configs, &scanSettings); err != nil {
+					log.Error().Err(err).Msg("failed to unmarshal scan settings")
+					return output, err
+				}
+				engineConfigs = append(engineConfigs, EngineConfig{
+					ProjectID:             scanSettings.Project.ID,
+					EngineConfigurationID: scanSettings.EngineConfiguration.ID,
+				})
+				log.Info().Msgf("Extracted config: ProjectID=%d, EngineConfigurationID=%d",
+					scanSettings.Project.ID, scanSettings.EngineConfiguration.ID)
+			}
 		}
 
 		// prepare to fetch next page
 		projectOffset += projectLimit
 	}
+	if len(engineConfigs) > 0 {
+		configssDataSource := export2.NewJSONDataSource(engineConfigs)
+		exportErr := exporter.AddFileWithDataSource(export2.EngineConfigurationPerProjectFileName, configssDataSource)
+		if exportErr != nil {
+			log.Error().Err(exportErr).Msg("Failed to export engine configurations data")
+			return output, exportErr
+		}
+	} else {
+		log.Info().Msg("No engine configurations to export")
+	}
+
 	return output, nil
 }
 
