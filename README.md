@@ -10,7 +10,7 @@
 <p align="center">
     SAST to AST Export is a standalone Checkmarx tool.
 <br />
-    <a href="https://checkmarx.atlassian.net/wiki/spaces/AST/pages/6247580171/SAST+Migration+to+AST"><strong>Explore the docs »</strong></a>
+    <a href="https://docs.checkmarx.com/en/34965-68666-migrating-from-sast-to-checkmarx-one.html"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/Checkmarx/sast-to-ast-export/issues/new/choose">Report Bug</a>
@@ -44,7 +44,7 @@ SAST v9.3 or higher.
     3. Sast > Scan Results > View Results
     4. Access Control > General > Manage Authentication Providers
     5. Access Control > General > Manage Roles
-* Please refer to [Wiki](https://checkmarx.atlassian.net/wiki/spaces/AST/pages/6247580171/SAST+Migration+to+AST) for more details
+* Please refer to [Wiki](https://docs.checkmarx.com/en/34965-68669-sast-cli-export-tool.html) for more details
 
 ### Execution
 
@@ -55,10 +55,13 @@ Run export with:
 
  * Replace `username` and `password` with user credentials.
  * Replace `http://localhost` with the url to SAST, if necessary.
+* Please refer to [Wiki](https://docs.checkmarx.com/en/34965-68670-cxsast_exporter.html) for more details
 
 ## Additional Documentation
 
-Refer to the project [Wiki](https://checkmarx.com/resource/documents/en/34965-68669-sast-cli-export-tool.html) for additional information
+Importing SAST to Checkmarx One [Wiki](https://docs.checkmarx.com/en/34965-68672-importing-sast-to-checkmarx-one.html)
+
+Internal information [Wiki](https://checkmarx.com/resource/documents/en/34965-68669-sast-cli-export-tool.html)
 
 ## Similarity Calculator
 
