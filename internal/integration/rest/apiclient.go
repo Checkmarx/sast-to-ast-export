@@ -291,9 +291,7 @@ func (c *APIClient) GetPresets() ([]*PresetShort, error) {
 	err := c.unmarshalResponseBody(presetsEndpoint, &presets)
 	return presets, err
 }
-func (c *APIClient) GetEngineConfigurations(projectId int) ([]byte, error) {
-	log.Info().Msg("Starting GetEngineConfigurations function")
-
+func (c *APIClient) GetEngineConfigurations(projectID int) ([]byte, error) {
 	url := fmt.Sprintf("%s%s", c.BaseURL, scanSettingsEndpoint)
 
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
@@ -304,7 +302,7 @@ func (c *APIClient) GetEngineConfigurations(projectId int) ([]byte, error) {
 	}
 
 	q := req.URL.Query()
-	q.Add("projectId", fmt.Sprintf("%d", projectId))
+	q.Add("projectId", fmt.Sprintf("%d", projectID))
 	req.URL.RawQuery = q.Encode()
 
 	body, getErr := c.getResponseBodyFromRequest(req)

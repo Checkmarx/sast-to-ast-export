@@ -609,8 +609,9 @@ func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, te
 			}
 			if len(*triagedResults) > 0 {
 				output = append(output, TriagedScan{project.ID, project.LastScanID})
+				log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
+
 			}
-			log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
 
 			// Fetch engine configurations based on project.ID
 			configs, err := client.GetEngineConfigurations(project.ID)
@@ -622,17 +623,15 @@ func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, te
 			}
 
 			if len(configs) > 0 {
-				var scanSettings rest.ScanSettings
-				if err := json.Unmarshal(configs, &scanSettings); err != nil {
+				var engineConfigurations rest.EngineConfigurations
+				if err := json.Unmarshal(configs, &engineConfigurations); err != nil {
 					log.Error().Err(err).Msg("failed to unmarshal scan settings")
 					return output, err
 				}
 				engineConfigs = append(engineConfigs, EngineConfig{
-					ProjectID:             scanSettings.Project.ID,
-					EngineConfigurationID: scanSettings.EngineConfiguration.ID,
+					ProjectID:             engineConfigurations.Project.ID,
+					EngineConfigurationID: engineConfigurations.EngineConfiguration.ID,
 				})
-				log.Info().Msgf("Extracted config: ProjectID=%d, EngineConfigurationID=%d",
-					scanSettings.Project.ID, scanSettings.EngineConfiguration.ID)
 			}
 		}
 
