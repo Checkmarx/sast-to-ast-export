@@ -1038,7 +1038,7 @@ func TestAddAllResultsMappingToFile(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("success case nil", func(t *testing.T) {
+	t.Run("Success case nil", func(t *testing.T) {
 		exporter.EXPECT().AddFile(export.ResultsMappingFileName, gomock.Any()).Return(nil).AnyTimes()
 
 		err := addAllResultsMappingToFile(nil, exporter)
