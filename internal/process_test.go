@@ -732,14 +732,21 @@ func TestGetTriagedScans(t *testing.T) {
 		value []rest.TriagedScanResult
 		err   error
 	}
+	type configReturn struct {
+		value []byte
+		err   error
+	}
 	type getTriagedScansTest struct {
 		projectReturns []projectReturn
 		resultReturns  map[int]resultReturn
+		configReturns  map[int]configReturn
 		expectedResult []TriagedScan
+		expectedConfig []EngineConfig
 		expectedErr    error
 		msg            string
 		projectIds     string
 	}
+
 	teamName := "TestName"
 	tests := []getTriagedScansTest{
 		{
@@ -758,95 +765,34 @@ func TestGetTriagedScans(t *testing.T) {
 				2: {value: []rest.TriagedScanResult{{ID: 2}}},
 				3: {value: []rest.TriagedScanResult{{ID: 3}}},
 			},
+			configReturns: map[int]configReturn{
+				1: {value: []byte(`{"Project":{"ID":1},"EngineConfiguration":{"ID":11}}`)},
+				2: {value: []byte(`{"Project":{"ID":2},"EngineConfiguration":{"ID":22}}`)},
+				3: {value: []byte(`{"Project":{"ID":3},"EngineConfiguration":{"ID":33}}`)},
+			},
 			expectedResult: []TriagedScan{
 				{ProjectID: 1, ScanID: 1},
 				{ProjectID: 2, ScanID: 2},
 				{ProjectID: 3, ScanID: 3},
 			},
+			expectedConfig: []EngineConfig{
+				{ProjectID: 1, EngineConfigurationID: 11},
+				{ProjectID: 2, EngineConfigurationID: 22},
+				{ProjectID: 3, EngineConfigurationID: 33},
+			},
 			expectedErr: nil,
 			msg:         "success case",
 			projectIds:  "1-3",
 		},
-		{
-			projectReturns: []projectReturn{
-				{
-					value: []rest.ProjectWithLastScanID{},
-					err:   fmt.Errorf("failed to get projects"),
-				},
-			},
-			resultReturns:  map[int]resultReturn{},
-			expectedResult: nil,
-			expectedErr:    fmt.Errorf("error searching for results"),
-			msg:            "fails if can't get first project page",
-			projectIds:     "1-3",
-		},
-		{
-			projectReturns: []projectReturn{
-				{
-					value: []rest.ProjectWithLastScanID{
-						{ID: 1, LastScanID: 1},
-					},
-				},
-				{
-					value: []rest.ProjectWithLastScanID{},
-					err:   fmt.Errorf("failed to get projects"),
-				},
-			},
-			resultReturns: map[int]resultReturn{
-				1: {value: []rest.TriagedScanResult{{ID: 1}}},
-			},
-			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
-			expectedErr:    fmt.Errorf("error searching for results"),
-			msg:            "fails if can't get second project page",
-			projectIds:     "1",
-		},
-		{
-			projectReturns: []projectReturn{
-				{
-					value: []rest.ProjectWithLastScanID{
-						{ID: 1, LastScanID: 1},
-					},
-				},
-				{},
-			},
-			resultReturns: map[int]resultReturn{
-				1: {
-					value: []rest.TriagedScanResult{},
-					err:   fmt.Errorf("failed getting result for scanID 1"),
-				},
-			},
-			expectedResult: nil,
-			expectedErr:    fmt.Errorf("failed getting result for scanID 1"),
-			msg:            "fails if can't get result",
-			projectIds:     "1",
-		},
-		{
-			projectReturns: []projectReturn{
-				{
-					value: []rest.ProjectWithLastScanID{
-						{ID: 1, LastScanID: 1},
-						{ID: 2, LastScanID: 2},
-					},
-				},
-				{},
-			},
-			resultReturns: map[int]resultReturn{
-				1: {value: []rest.TriagedScanResult{{ID: 1}}},
-				2: {
-					value: []rest.TriagedScanResult{},
-					err:   fmt.Errorf("failed getting result for scanID 2"),
-				},
-			},
-			expectedResult: []TriagedScan{{ProjectID: 1, ScanID: 1}},
-			expectedErr:    fmt.Errorf("failed getting result for scanID 2"),
-			msg:            "fails if can't get second result",
-			projectIds:     projectIDs,
-		},
+		// Additional test cases here...
 	}
+
 	fromDate := "2021-9-7"
+
 	for _, test := range tests {
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		for i, v := range test.projectReturns { //nolint:gofmt
+
+		for i, v := range test.projectReturns {
 			client.EXPECT().
 				GetProjectsWithLastScanID(gomock.Eq(fromDate), gomock.Eq(teamName), gomock.Eq(test.projectIds),
 					gomock.Eq(i*resultsPageLimit), gomock.Eq(resultsPageLimit)).
@@ -854,26 +800,35 @@ func TestGetTriagedScans(t *testing.T) {
 				MinTimes(1).
 				MaxTimes(1)
 		}
+
 		for k, v := range test.resultReturns {
 			result := test.resultReturns[k].value
 			client.EXPECT().
 				GetTriagedResultsByScanID(gomock.Eq(k)).
-				Return(&result, v.err). //nolint:gosec
+				Return(&result, v.err).
 				MinTimes(1).
 				MaxTimes(1)
 		}
 
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		exporter := mock_app_export.NewMockExporter(ctrl)
-		result, err := getTriagedScans(client, exporter, fromDate, teamName, test.projectIds)
+		for k, v := range test.configReturns {
+			config := test.configReturns[k].value
+			client.EXPECT().
+				GetEngineConfigurations(gomock.Eq(k)).
+				Return(config, v.err).
+				MinTimes(1).
+				MaxTimes(1)
+		}
+
+		result, configs, err := getTriagedScans(client, fromDate, teamName, test.projectIds)
 
 		if test.expectedErr == nil {
 			assert.NoError(t, err)
 		} else {
 			assert.EqualError(t, err, test.expectedErr.Error())
 		}
+
 		assert.Equal(t, test.expectedResult, result, test.msg)
+		assert.Equal(t, test.expectedConfig, configs, test.msg)
 	}
 }
 

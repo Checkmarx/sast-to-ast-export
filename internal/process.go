@@ -506,7 +506,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 	reportJobs := make(chan ReportJob)
 
 	fromDate := getDateFrom(resultsProjectActiveSince, args.IsDefaultProjectActiveSince, projectsIds)
-	triagedScans, triagedScanErr := getTriagedScans(client, exporter, fromDate, teamName, projectsIds)
+	triagedScans, engineConfigs, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds)
 	if triagedScanErr != nil {
 		return triagedScanErr
 	}
@@ -515,6 +515,18 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 		Int("count", len(triagedScans)).
 		Str("scans", fmt.Sprintf("%v", triagedScans)).
 		Msg("last scans by project")
+
+	// Export engine configurations
+	if len(engineConfigs) > 0 {
+		configssDataSource := export2.NewJSONDataSource(engineConfigs)
+		exportErr := exporter.AddFileWithDataSource(export2.EngineConfigurationPerProjectFileName, configssDataSource)
+		if exportErr != nil {
+			log.Error().Err(exportErr).Msg("Failed to export engine configurations data")
+			return exportErr
+		}
+	} else {
+		log.Info().Msg("No engine configurations to export")
+	}
 
 	// create and fetch report for each scan
 	go produceReports(triagedScans, reportJobs)
@@ -572,7 +584,7 @@ func addAllResultsMappingToFile(metadataRecord []*metadata.Record, exporter expo
 	return nil
 }
 
-func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, teamName, projectsIds string) ([]TriagedScan, error) {
+func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string) ([]TriagedScan, []EngineConfig, error) {
 	var output []TriagedScan
 	var engineConfigs []EngineConfig
 
@@ -591,7 +603,7 @@ func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, te
 		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds, projectOffset, projectLimit)
 		if fetchErr != nil {
 			log.Debug().Err(fetchErr).Msg("failed fetching project last scans")
-			return output, fmt.Errorf("error searching for results")
+			return output, engineConfigs, fmt.Errorf("error searching for results")
 		}
 		if len(*projects) == 0 {
 			// all pages fetched
@@ -610,12 +622,11 @@ func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, te
 					Int("projectID", project.ID).
 					Int("scanID", project.LastScanID).
 					Msg("failed fetching triaged results")
-				return output, triagedResultsErr
+				return output, engineConfigs, triagedResultsErr
 			}
 			if len(*triagedResults) > 0 {
 				output = append(output, TriagedScan{project.ID, project.LastScanID})
 				log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
-
 			}
 
 			// Fetch engine configurations based on project.ID
@@ -624,14 +635,14 @@ func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, te
 				log.Error().Err(err).
 					Int("projectID", project.ID).
 					Msg("error with getting engine configurations details")
-				return output, errors.Wrap(err, "error with getting engine configurations details")
+				return output, engineConfigs, errors.Wrap(err, "error with getting engine configurations details")
 			}
 
 			if len(configs) > 0 {
 				var engineConfigurations rest.EngineConfigurations
 				if err := json.Unmarshal(configs, &engineConfigurations); err != nil {
 					log.Error().Err(err).Msg("failed to unmarshal scan settings")
-					return output, err
+					return output, engineConfigs, err
 				}
 				engineConfigs = append(engineConfigs, EngineConfig{
 					ProjectID:             engineConfigurations.Project.ID,
@@ -643,18 +654,8 @@ func getTriagedScans(client rest.Client, exporter export2.Exporter, fromDate, te
 		// prepare to fetch next page
 		projectOffset += projectLimit
 	}
-	if len(engineConfigs) > 0 {
-		configssDataSource := export2.NewJSONDataSource(engineConfigs)
-		exportErr := exporter.AddFileWithDataSource(export2.EngineConfigurationPerProjectFileName, configssDataSource)
-		if exportErr != nil {
-			log.Error().Err(exportErr).Msg("Failed to export engine configurations data")
-			return output, exportErr
-		}
-	} else {
-		log.Info().Msg("No engine configurations to export")
-	}
 
-	return output, nil
+	return output, engineConfigs, nil
 }
 
 func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
