@@ -434,11 +434,13 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 	return nil
 }
 
-func fetchPresetsData(client rest.Client,
+func fetchPresetsData(
+	client rest.Client,
 	soapClient interfaces.PresetProvider,
 	exporter export2.Exporter,
 	projects []*rest.Project,
-	projectsIds string) error {
+	projectsIds string,
+) error {
 
 	log.Info().Msg("collecting presets")
 	consumerCount := worker.GetNumCPU()
