@@ -677,6 +677,7 @@ func TestAPIClient_GetEngineServers(t *testing.T) {
 }
 
 func TestAPIClient_GetEngineConfigurations(t *testing.T) {
+	//nolint:bodyclose
 	t.Run("returns engine configurations for valid project ID", func(t *testing.T) {
 		responseJSON := `[{"Project":{"ID":1},"EngineConfiguration":{"ID":10}}]`
 		client, clientErr := newMockClient(makeOkResponse(responseJSON))

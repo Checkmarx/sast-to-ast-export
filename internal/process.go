@@ -234,6 +234,7 @@ func validatePermissions(jwtClaims jwt.MapClaims, selectedExportOptions []string
 	return nil
 }
 
+//nolint:gocyclo
 func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args, retryAttempts int,
 	retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
 	astQueryProvider interfaces.ASTQueryProvider, presetProvider interfaces.PresetProvider,
