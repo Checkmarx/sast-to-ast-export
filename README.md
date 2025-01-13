@@ -30,7 +30,7 @@ Fetches SAST triaged results and exports as an encrypted package, which can then
 
 ### Prerequisites
 
-Microsoft Windows x64.
+Microsoft Windows x64
 
 SAST v9.3 or higher.
 
