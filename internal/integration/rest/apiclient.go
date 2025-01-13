@@ -30,7 +30,7 @@ const (
 	createReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
 	engineServersEndpoint         = "/CxRestAPI/help/sast/engineServers"
 
-	// ScanReportTypeXML defines SAST report type XML
+	// ScanReportTypeXML Defines SAST report type XML
 	ScanReportTypeXML = "XML"
 )
 

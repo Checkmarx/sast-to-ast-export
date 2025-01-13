@@ -761,12 +761,12 @@ func consumePresets(soapClient interfaces.PresetProvider, exporter export2.Expor
 func getPresetData(soapClient interfaces.PresetProvider, presetID int) ([]byte, error) {
 	presetResponse, err := soapClient.GetPresetDetails(presetID)
 	if err != nil {
-		return nil, errors.Wrap(err, "error with getting getPresetDetails")
+		return nil, errors.Wrap(err, "Error with getting getPresetDetails")
 	}
 
 	presetData, marshalErr := xml.MarshalIndent(presetResponse, "  ", "    ")
 	if marshalErr != nil {
-		return nil, errors.Wrapf(marshalErr, "marshal error with getting preset %d", presetID)
+		return nil, errors.Wrapf(marshalErr, "Marshal error with getting preset %d", presetID)
 	}
 	return presetData, nil
 }

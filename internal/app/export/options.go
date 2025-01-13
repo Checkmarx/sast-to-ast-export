@@ -11,7 +11,7 @@ const (
 	ProjectsOption = "projects"
 	// QueriesOption represent custom queries
 	QueriesOption = "queries"
-	// PresetsOption represent presets
+	// PresetsOption Represent presets
 	PresetsOption = "presets"
 )
 
