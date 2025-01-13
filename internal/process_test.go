@@ -846,7 +846,6 @@ func TestGetTriagedScans(t *testing.T) {
 	fromDate := "2021-9-7"
 	for _, test := range tests {
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetEngineConfigurations(gomock.Any()).Return(nil, nil).AnyTimes()
 		for i, v := range test.projectReturns { //nolint:gofmt
 			client.EXPECT().
 				GetProjectsWithLastScanID(gomock.Eq(fromDate), gomock.Eq(teamName), gomock.Eq(test.projectIds),
@@ -864,7 +863,7 @@ func TestGetTriagedScans(t *testing.T) {
 				MaxTimes(1)
 		}
 
-		result, _, err := getTriagedScans(client, fromDate, teamName, test.projectIds)
+		result, err := getTriagedScans(client, fromDate, teamName, test.projectIds)
 
 		if test.expectedErr == nil {
 			assert.NoError(t, err)
@@ -1210,11 +1209,37 @@ func TestFetchSelectedData(t *testing.T) {
 			{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
 			{ID: 100001, Name: "New_custom_preset_2", OwnerName: "Custom_user"}, // this one should be ignored
 		}
-		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
-			CreatedDate: "2022-04-21T20:30:59.39+03:00", PresetID: 100000,
-			Configuration: &rest.Configuration{
-				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
-			}}}
+		projects := []*rest.Project{
+			{
+				ID:          1,
+				Name:        "test_name",
+				IsPublic:    true,
+				TeamID:      1,
+				CreatedDate: "2022-04-21T20:30:59.39+03:00",
+				PresetID:    100000,
+				Configuration: &rest.Configuration{
+					CustomFields: []*rest.CustomField{
+						{FieldName: "Creator_custom_field", FieldValue: "test"},
+					},
+				},
+			},
+		}
+		engineConfigResponse := []byte(`{
+			"project": {
+				"id": 1,
+				"link": { "rel": "project", "uri": "/projects/1" }
+			},
+			"preset": {
+				"id": 36,
+				"link": { "rel": "preset", "uri": "/sast/presets/36" }
+			},
+			"engineConfiguration": {
+				"id": 1,
+				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
+			},
+			"postScanAction": null,
+			"emailNotifications": { "failedScan": [], "beforeScan": [], "afterScan": [] }
+		}`)
 		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
 		assert.NoError(t, io100000Err)
 		unmarshal100000Err := xml.Unmarshal(presetXML100000, &preset100000)
@@ -1227,6 +1252,7 @@ func TestFetchSelectedData(t *testing.T) {
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
 			Return([]*rest.Project{}, nil)
+		client.EXPECT().GetEngineConfigurations(1).Return(engineConfigResponse, nil)
 		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
 		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
@@ -1522,16 +1548,32 @@ func TestFetchProjects(t *testing.T) {
 	teamName := TeamName
 	projectsIds := projectIDs
 	t.Run("fetch projects successfully", func(t *testing.T) {
-		projects := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
-			CreatedDate: "2022-04-21T20:30:59.39+03:00",
-			Configuration: &rest.Configuration{
-				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
-			}}}
+		projects := []*rest.Project{
+			{
+				ID:          1,
+				Name:        "test_name",
+				IsPublic:    true,
+				TeamID:      1,
+				CreatedDate: "2022-04-21T20:30:59.39+03:00",
+				Configuration: &rest.Configuration{
+					CustomFields: []*rest.CustomField{
+						{FieldName: "Creator_custom_field", FieldValue: "test"},
+					},
+				},
+			},
+		}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
 			Return([]*rest.Project{}, nil)
+		client.EXPECT().GetEngineConfigurations(gomock.Any()).Return([]byte(`{
+			"engineConfiguration": {
+				"id": 1,
+				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
+			}
+		}`), nil).AnyTimes()
+
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
@@ -1558,17 +1600,64 @@ func TestFetchProjects(t *testing.T) {
 
 	t.Run("fetch many pages", func(t *testing.T) {
 		projectsIds = "1-4"
-		projectsFirst := []*rest.Project{{ID: 1, Name: "test_name", IsPublic: true, TeamID: 1,
-			CreatedDate: "2022-04-21T20:30:59.39+03:00",
-			Configuration: &rest.Configuration{
-				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
-			}}}
-		projectsSecond := []*rest.Project{{ID: 4, Name: "test_name 4", IsPublic: true, TeamID: 1,
-			CreatedDate: "2022-04-22T20:30:59.39+03:00",
-			Configuration: &rest.Configuration{
-				CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test 4"}},
-			}}}
+		projectsFirst := []*rest.Project{
+			{
+				ID:          1,
+				Name:        "test_name",
+				IsPublic:    true,
+				TeamID:      1,
+				CreatedDate: "2022-04-21T20:30:59.39+03:00",
+				Configuration: &rest.Configuration{
+					CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
+				},
+			},
+		}
+		projectsSecond := []*rest.Project{
+			{
+				ID:          4,
+				Name:        "test_name 4",
+				IsPublic:    true,
+				TeamID:      1,
+				CreatedDate: "2022-04-22T20:30:59.39+03:00",
+				Configuration: &rest.Configuration{
+					CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test 4"}},
+				},
+			},
+		}
 		expectedList := []*rest.Project{projectsFirst[0], projectsSecond[0]}
+		engineConfigResponse1 := []byte(`{
+			"project": {
+				"id": 1,
+				"link": { "rel": "project", "uri": "/projects/1" }
+			},
+			"preset": {
+				"id": 36,
+				"link": { "rel": "preset", "uri": "/sast/presets/36" }
+			},
+			"engineConfiguration": {
+				"id": 1,
+				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
+			},
+			"postScanAction": null,
+			"emailNotifications": { "failedScan": [], "beforeScan": [], "afterScan": [] }
+		}`)
+		engineConfigResponse4 := []byte(`{
+			"project": {
+				"id": 4,
+				"link": { "rel": "project", "uri": "/projects/4" }
+			},
+			"preset": {
+				"id": 36,
+				"link": { "rel": "preset", "uri": "/sast/presets/36" }
+			},
+			"engineConfiguration": {
+				"id": 4,
+				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/4" }
+			},
+			"postScanAction": null,
+			"emailNotifications": { "failedScan": [], "beforeScan": [], "afterScan": [] }
+		}`)
+
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projectsFirst, nil)
@@ -1576,6 +1665,8 @@ func TestFetchProjects(t *testing.T) {
 			Return(projectsSecond, nil)
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
 			Return([]*rest.Project{}, nil)
+		client.EXPECT().GetEngineConfigurations(1).Return(engineConfigResponse1, nil)
+		client.EXPECT().GetEngineConfigurations(4).Return(engineConfigResponse4, nil)
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()

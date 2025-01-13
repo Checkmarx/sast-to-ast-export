@@ -33,6 +33,10 @@ const (
 	SamlRoleMappingsFileName = "saml_role_mappings.json"
 	// SamlTeamMappingsFileName salm teams mapping file
 	SamlTeamMappingsFileName = "saml_team_mappings.json"
+	// EngineConfiguration mapping file
+	EngineConfigurationMappingFileName = "engine_configuration_mappings.json"
+	// EngineConfigurationPerProject file
+	EngineConfigurationPerProjectFileName = "engine_configuration_per_project.json"
 	// TeamsFileName teams file
 	TeamsFileName = "teams.json"
 	// ProjectsFileName projects file
@@ -47,10 +51,7 @@ const (
 	InstallationFileName = "installation.json"
 	// ResultsMappingFileName file
 	ResultsMappingFileName = "results_mapping.csv"
-	// EngineConfiguration mapping file
-	EngineConfigurationMappingFileName = "engine_configuration_mappings.json"
-	// EngineConfigurationPerProject file
-	EngineConfigurationPerProjectFileName = "engineConfigurationPerProject.json"
+
 	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"
 

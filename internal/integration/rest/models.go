@@ -52,15 +52,6 @@ type (
 		Value []TriagedScanResult
 	}
 
-	EngineConfigurations struct {
-		Project struct {
-			ID int `json:"id"`
-		} `json:"project"`
-		EngineConfiguration struct {
-			ID int `json:"id"`
-		} `json:"engineConfiguration"`
-	}
-
 	TriagedScanResult struct {
 		ID int `json:"Id"`
 	}
@@ -176,5 +167,14 @@ type (
 		OfflineReasonCode              OfflineReasonCodeEngineServer `json:"offlineReasonCode"`
 		OfflineReasonMessage           string                        `json:"offlineReasonMessage"`
 		OfflineReasonMessageParameters string                        `json:"offlineReasonMessageParameters"`
+	}
+
+	EngineConfigurations struct {
+		Project struct {
+			ID int `json:"id"`
+		} `json:"project"`
+		EngineConfiguration struct {
+			ID int `json:"id"`
+		} `json:"engineConfiguration"`
 	}
 )

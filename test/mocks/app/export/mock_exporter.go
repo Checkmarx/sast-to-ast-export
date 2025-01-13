@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_app_export -destination test/mocks/app/export/mock_exporter.go github.com/checkmarxDev/ast-sast-export/internal/app/export Exporter
 //
+
 // Package mock_app_export is a generated GoMock package.
 package mock_app_export
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_integration_soap -destination test/mocks/integration/soap/mock_adapter.go github.com/checkmarxDev/ast-sast-export/internal/integration/soap Adapter
 //
+
 // Package mock_integration_soap is a generated GoMock package.
 package mock_integration_soap
 

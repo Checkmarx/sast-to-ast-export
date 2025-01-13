@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_app_ast_query_id -destination test/mocks/app/ast_query_id/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces ASTQueryIDProvider
 //
+
 // Package mock_app_ast_query_id is a generated GoMock package.
 package mock_app_ast_query_id
 

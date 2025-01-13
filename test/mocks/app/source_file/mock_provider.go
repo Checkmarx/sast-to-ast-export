@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_app_source_file -destination test/mocks/app/source_file/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces SourceFileRepo
 //
+
 // Package mock_app_source_file is a generated GoMock package.
 package mock_app_source_file
 
