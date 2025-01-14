@@ -2,7 +2,7 @@ module github.com/checkmarxDev/ast-sast-export
 
 go 1.22
 
-toolchain go1.22.2
+toolchain go1.23.4
 
 require (
 	github.com/golang-jwt/jwt v3.2.2-0.20210730202754-8e9d9ebf6f4a+incompatible
