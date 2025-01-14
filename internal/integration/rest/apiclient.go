@@ -29,6 +29,8 @@ const (
 	reportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
 	createReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
 	engineServersEndpoint         = "/CxRestAPI/help/sast/engineServers"
+	scanSettingsEndpoint          = "/CxRestAPI/sast/scanSettings"
+	engineConfigurationsEndpoint  = "/CxRestAPI/sast/engineConfigurations"
 
 	// ScanReportTypeXML defines SAST report type XML
 	ScanReportTypeXML = "XML"
@@ -52,6 +54,8 @@ type Client interface {
 	GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult, error)
 	CreateScanReport(scanID int, reportType string, retry Retry) ([]byte, error)
 	GetEngineServers() ([]*EngineServer, error)
+	GetEngineConfigurations(projectID int) ([]byte, error)
+	GetEngineConfigurationMappings() ([]byte, error)
 }
 
 type RetryableHTTPAdapter interface {
@@ -432,4 +436,31 @@ func (c *APIClient) GetEngineServers() ([]*EngineServer, error) {
 		return nil, unmarshalErr
 	}
 	return response, nil
+}
+
+func (c *APIClient) GetEngineConfigurations(projectID int) ([]byte, error) {
+	url := fmt.Sprintf("%s%s", c.BaseURL, scanSettingsEndpoint)
+
+	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
+	req.Header.Set("Content-Type", "application/json;v=1.1")
+	if requestErr != nil {
+		log.Error().Err(requestErr).Msg("Failed to create HTTP request")
+		return nil, requestErr
+	}
+
+	q := req.URL.Query()
+	q.Add("projectId", fmt.Sprintf("%d", projectID))
+	req.URL.RawQuery = q.Encode()
+
+	body, getErr := c.getResponseBodyFromRequest(req)
+
+	if getErr != nil {
+		log.Error().Err(getErr).Msg("Failed to get response body from request")
+		return nil, getErr
+	}
+	return body, nil
+}
+
+func (c *APIClient) GetEngineConfigurationMappings() ([]byte, error) {
+	return c.getResponseBody(engineConfigurationsEndpoint)
 }

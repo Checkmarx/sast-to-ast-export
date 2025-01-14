@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_installation_interfaces -destination test/mocks/app/installation/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces InstallationProvider
 //
+
 // Package mock_installation_interfaces is a generated GoMock package.
 package mock_installation_interfaces
 
