@@ -5,6 +5,7 @@ type SourceFileRepo interface {
 }
 
 type SourceFile struct {
+	ResultID   string
 	RemoteName string
 	LocalName  string
 }

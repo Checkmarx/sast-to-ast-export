@@ -63,16 +63,22 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 		}
 		var filesToDownload []interfaces.SourceFile
 		for _, result := range query.Results {
-			if ok1 := findSourceFile(result.FirstNode.FileName, filesToDownload); ok1 == nil {
+			firstFile := filepath.Join(result.ResultID, result.FirstNode.FileName)
+			lastFile := filepath.Join(result.ResultID, result.LastNode.FileName)
+
+			if ok1 := findSourceFile(result.ResultID, firstFile, filesToDownload); ok1 == nil {
 				filesToDownload = append(filesToDownload, interfaces.SourceFile{
+					ResultID:   result.ResultID,
 					RemoteName: result.FirstNode.FileName,
-					LocalName:  filepath.Join(e.tmpDir, result.FirstNode.FileName),
+					LocalName:  filepath.Join(e.tmpDir, result.ResultID, result.FirstNode.FileName),
 				})
 			}
-			if ok2 := findSourceFile(result.LastNode.FileName, filesToDownload); ok2 == nil {
+
+			if ok2 := findSourceFile(result.ResultID, lastFile, filesToDownload); ok2 == nil {
 				filesToDownload = append(filesToDownload, interfaces.SourceFile{
+					ResultID:   result.ResultID,
 					RemoteName: result.LastNode.FileName,
-					LocalName:  filepath.Join(e.tmpDir, result.LastNode.FileName),
+					LocalName:  filepath.Join(e.tmpDir, result.ResultID, result.LastNode.FileName),
 				})
 			}
 		}
@@ -86,8 +92,8 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 		q := query
 		go func() {
 			for _, result := range q.Results {
-				firstSourceFile := findSourceFile(result.FirstNode.FileName, filesToDownload)
-				lastSourceFile := findSourceFile(result.LastNode.FileName, filesToDownload)
+				firstSourceFile := findSourceFile(result.ResultID, result.FirstNode.FileName, filesToDownload)
+				lastSourceFile := findSourceFile(result.ResultID, result.LastNode.FileName, filesToDownload)
 				methodLines := findResultPath(result.PathID, methodLinesByPath).MethodLines
 				similarityCalculationJobs <- SimilarityCalculationJob{
 					result.ResultID, result.PathID,
@@ -159,9 +165,9 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 	return output, nil
 }
 
-func findSourceFile(remoteName string, sourceFiles []interfaces.SourceFile) *interfaces.SourceFile {
+func findSourceFile(resultID, remoteName string, sourceFiles []interfaces.SourceFile) *interfaces.SourceFile {
 	for _, v := range sourceFiles {
-		if v.RemoteName == remoteName {
+		if v.RemoteName == remoteName && v.ResultID == resultID {
 			return &v
 		}
 	}
