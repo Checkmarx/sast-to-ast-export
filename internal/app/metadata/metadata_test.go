@@ -140,7 +140,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 							{
 								PathID:           metaResult2.PathID,
 								SimilarityID:     metaResult2Data.SimilarityID,
-								ResultID:         metaResult1.ResultID,
+								ResultID:         metaResult2.ResultID,
 								SASTSimilarityID: similarityID2,
 							},
 						},
