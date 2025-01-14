@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_app_metadata -destination test/mocks/app/metadata/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/metadata Provider
 //
+
 // Package mock_app_metadata is a generated GoMock package.
 package mock_app_metadata
 

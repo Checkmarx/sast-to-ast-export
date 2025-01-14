@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_interfaces -destination test/mocks/app/ast_query_mapping/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces QueryMappingRepo
 //
+
 // Package mock_interfaces is a generated GoMock package.
 package mock_interfaces
 

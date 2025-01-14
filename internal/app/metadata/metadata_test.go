@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
@@ -148,5 +149,19 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 			},
 		},
 	}
+
+	sortRecordPaths(expectedResult)
+	sortRecordPaths(result)
+
 	assert.Equal(t, expectedResult, result)
+}
+
+func sortRecordPaths(record *Record) {
+	for _, query := range record.Queries {
+		for _, result := range query.Results {
+			sort.Slice(result.Paths, func(i, j int) bool {
+				return result.Paths[i].PathID < result.Paths[j].PathID
+			})
+		}
+	}
 }

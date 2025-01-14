@@ -32,6 +32,11 @@ type TriagedScan struct {
 	ScanID    int
 }
 
+type EngineConfig struct {
+	ProjectID             int
+	EngineConfigurationID int
+}
+
 type PresetJob struct {
 	PresetID int
 }

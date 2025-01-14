@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_app_method_line -destination test/mocks/app/method_line/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces MethodLineRepo
 //
+
 // Package mock_app_method_line is a generated GoMock package.
 package mock_app_method_line
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -package mock_preset_interfaces -destination test/mocks/app/preset/mock_provider.go github.com/checkmarxDev/ast-sast-export/internal/app/interfaces PresetProvider
 //
+
 // Package mock_preset_interfaces is a generated GoMock package.
 package mock_preset_interfaces
 
