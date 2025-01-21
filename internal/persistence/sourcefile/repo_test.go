@@ -105,7 +105,6 @@ func TestRepo_DownloadSourceFiles(t *testing.T) {
 
 		assertFileExistWithContent(t, filesToDownload, fileSources)
 	})
-
 }
 
 func assertFileExistWithContent(t *testing.T, filesToDownload []interfaces.SourceFile, fileSources map[string]string) {

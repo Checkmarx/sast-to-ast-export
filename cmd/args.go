@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//nolint:gocyclo,funlen
 func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	args := internal.Args{}
 	args.ProductName = productName
