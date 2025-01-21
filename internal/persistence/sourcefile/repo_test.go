@@ -13,11 +13,14 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+const (
+	file1 = "project/folder1/file1.go"
+	file2 = "project/folder1/file2.go"
+	file3 = "project/folder2/file3.go"
+)
+
 func TestRepo_DownloadSourceFiles(t *testing.T) {
 	scanID := "1000000"
-	file1 := "project/folder1/file1.go"
-	file2 := "project/folder1/file2.go"
-	file3 := "project/folder2/file3.go"
 
 	t.Run("success case", func(t *testing.T) {
 		tmpDir := t.TempDir()
@@ -121,13 +124,13 @@ func TestRepo_DownloadSourceFiles_WithExclusions(t *testing.T) {
 
 	// Create an exclude file with paths to exclude
 	excludeFilePath := fmt.Sprintf("%s/exclude.txt", tmpDir)
-	excludedFile := "project/folder1/file1.go"
-	err := os.WriteFile(excludeFilePath, []byte(excludedFile+"\n"), 0644)
+	excludedFile := file1
+	err := os.WriteFile(excludeFilePath, []byte(excludedFile+"\n"), 0600)
 	assert.NoError(t, err)
 
 	filesToDownload := []interfaces.SourceFile{
 		{RemoteName: excludedFile, LocalName: fmt.Sprintf("%s/%s", tmpDir, excludedFile)},
-		{RemoteName: "project/folder1/file2.go", LocalName: fmt.Sprintf("%s/project/folder1/file2.go", tmpDir)},
+		{RemoteName: file2, LocalName: fmt.Sprintf("%s/project/folder1/file2.go", tmpDir)},
 	}
 
 	soapResponse := soap.GetSourcesByScanIDResponse{
@@ -140,11 +143,12 @@ func TestRepo_DownloadSourceFiles_WithExclusions(t *testing.T) {
 		},
 	}
 	getSourcesHandler := func(_ string, files []string) (*soap.GetSourcesByScanIDResponse, error) {
-		assert.ElementsMatch(t, files, []string{"project/folder1/file2.go"}) // Ensure excluded file is not requested
+		assert.ElementsMatch(t, files, []string{file2})
 		return &soapResponse, nil
 	}
 
 	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
 	soapClientMock.EXPECT().GetSourcesByScanID(scanID, gomock.Any()).DoAndReturn(getSourcesHandler)
 	instance := NewRepo(soapClientMock)
