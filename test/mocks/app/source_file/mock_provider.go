@@ -40,15 +40,15 @@ func (m *MockSourceFileRepo) EXPECT() *MockSourceFileRepoMockRecorder {
 }
 
 // DownloadSourceFiles mocks base method.
-func (m *MockSourceFileRepo) DownloadSourceFiles(arg0 string, arg1 []interfaces.SourceFile) error {
+func (m *MockSourceFileRepo) DownloadSourceFiles(arg0 string, arg1 []interfaces.SourceFile, arg2 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DownloadSourceFiles", arg0, arg1)
+	ret := m.ctrl.Call(m, "DownloadSourceFiles", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DownloadSourceFiles indicates an expected call of DownloadSourceFiles.
-func (mr *MockSourceFileRepoMockRecorder) DownloadSourceFiles(arg0, arg1 any) *gomock.Call {
+func (mr *MockSourceFileRepoMockRecorder) DownloadSourceFiles(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadSourceFiles", reflect.TypeOf((*MockSourceFileRepo)(nil).DownloadSourceFiles), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadSourceFiles", reflect.TypeOf((*MockSourceFileRepo)(nil).DownloadSourceFiles), arg0, arg1, arg2)
 }
