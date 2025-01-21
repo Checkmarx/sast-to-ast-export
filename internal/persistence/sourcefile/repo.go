@@ -3,8 +3,11 @@ package sourcefile
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
+	"github.com/rs/zerolog/log"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 
@@ -25,10 +28,50 @@ func NewRepo(soapClient soap.Adapter) *Repo {
 	return &Repo{soapClient: soapClient}
 }
 
-func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles []interfaces.SourceFile) error {
+func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles []interfaces.SourceFile, rmvdir string) error {
+	// Check if rmvdir is provided
+	var excludePaths []string
+	var excludePatterns []*regexp.Regexp
+
+	if rmvdir != "" {
+		if _, err := os.Stat(rmvdir); os.IsNotExist(err) {
+			log.Fatal().Msgf("Exclude file %s does not exist", rmvdir)
+			return errors.New("exclude file does not exist")
+		}
+
+		var err error
+		excludePaths, excludePatterns, err = ReadExcludedPaths(rmvdir)
+		if err != nil {
+			return err
+		}
+
+		log.Info().Msgf("Exclusion patterns loaded from: %s", rmvdir)
+	} else {
+		log.Info().Msg("No exclusion file provided, processing all files.")
+	}
+
+	// Use the IsExcluded function to check if a file should be excluded
+	isExcluded := func(path string) bool {
+		for _, exclude := range excludePaths {
+			if path == exclude || strings.Contains(path, exclude) {
+				return true
+			}
+		}
+		for _, pattern := range excludePatterns {
+			if pattern.MatchString(path) {
+				return true
+			}
+		}
+		return false
+	}
+
 	var batches []Batch
 	currentBatch := 0
 	for _, v := range sourceFiles {
+		if isExcluded(v.RemoteName) {
+			log.Info().Msgf("Excluding problematic file: %s", v.RemoteName)
+			continue
+		}
 		if len(batches) < currentBatch+1 {
 			batches = append(batches, Batch{LocalFiles: []string{}, RemoteFiles: []string{}})
 		}
@@ -40,6 +83,7 @@ func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles []interfaces.Sourc
 			currentBatch++
 		}
 	}
+
 	for _, batch := range batches {
 		sourceResponse, sourceErr := e.soapClient.GetSourcesByScanID(scanID, batch.RemoteFiles)
 		if sourceErr != nil {

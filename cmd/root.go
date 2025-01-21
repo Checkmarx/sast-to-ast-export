@@ -27,6 +27,7 @@ const (
 	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
 	nestedTeams             = "nested-teams"
 	simIDVersionArg         = "simIDVersion"
+	excludeFileArg          = "exclude-file"
 
 	projectsActiveSinceDefaultValue = 180
 	emptyProjectsActiveSince        = 0
@@ -141,6 +142,8 @@ func init() {
 		"define version of the similarity ID calculation. Values: 0 - Default, 1 - Trim leading spaces, 2 - Remove all spaces.",
 	)
 
+	rootCmd.Flags().StringP(excludeFileArg, "", "", "txt file containing problematic remote files to exclude")
+
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
 	}
@@ -151,6 +154,9 @@ func init() {
 		panic(err)
 	}
 	if err := rootCmd.MarkFlagCustom(projectsActiveSinceArg, projectsActiveSinceUsage); err != nil {
+		panic(err)
+	}
+	if err := rootCmd.MarkFlagFilename(excludeFileArg, "txt"); err != nil {
 		panic(err)
 	}
 }

@@ -93,9 +93,9 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	).Return(metaResult2Data.SimilarityID, nil)
 	sourceProviderMock := mock_app_source_file.NewMockSourceFileRepo(ctrl)
 	sourceProviderMock.EXPECT().
-		DownloadSourceFiles(scanID, gomock.Any()).
+		DownloadSourceFiles(scanID, gomock.Any(), gomock.Eq("")).
 		DoAndReturn(
-			func(_ string, files []interfaces.SourceFile) error {
+			func(_ string, files []interfaces.SourceFile, rmvdir string) error {
 				expectedFiles := []string{
 					metaResult1.FirstNode.FileName,
 					metaResult1.LastNode.FileName,
@@ -107,6 +107,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 					result = append(result, v.RemoteName)
 				}
 				assert.ElementsMatch(t, expectedFiles, result)
+				assert.Equal(t, "", rmvdir)
 				return nil
 			},
 		)
@@ -118,7 +119,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	methodLineProvider.EXPECT().
 		GetMethodLinesByPath(scanID, metaQuery.QueryID).
 		Return(methodLinesResult, nil)
-	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir, 0)
+	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir, 0, "")
 
 	result, err := metadata.GetMetadataRecord(scanID, []*Query{metaQuery})
 	assert.NoError(t, err)

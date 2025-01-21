@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/checkmarxDev/ast-sast-export/internal"
+	"github.com/rs/zerolog/log"
 
 	"github.com/spf13/cobra"
 )
@@ -64,6 +67,27 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	args.SimIDVersion, err = cmd.Flags().GetInt(simIDVersionArg)
 	if err != nil {
 		panic(err)
+	}
+	args.ExcludeFile, err = cmd.Flags().GetString(excludeFileArg)
+	if err != nil {
+		panic(err)
+	}
+	if args.ExcludeFile != "" {
+		if _, err := os.Stat(args.ExcludeFile); os.IsNotExist(err) {
+			log.Fatal().Msgf("Exclude file '%s' does not exist", args.ExcludeFile)
+		}
+		if filepath.Ext(args.ExcludeFile) != ".txt" {
+
+			log.Fatal().Msgf("Exclude file '%s' must be a .txt file", args.ExcludeFile)
+		}
+		fileContent, err := os.ReadFile(args.ExcludeFile)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("Error reading exclude file: %s", args.ExcludeFile)
+		}
+		excludePaths := strings.Split(string(fileContent), "\n")
+		for i := range excludePaths {
+			excludePaths[i] = strings.TrimSpace(excludePaths[i])
+		}
 	}
 	return args
 }
