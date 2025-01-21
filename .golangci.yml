@@ -26,11 +26,13 @@ linters-settings:
     local-prefixes: github.com/golangci/golangci-lint
   golint:
     min-confidence: 0
-  mnd:
+  gomnd:
     settings:
       mnd:
+        # don't include the "operation" and "assign"
         checks: argument,case,condition,return
   govet:
+    check-shadowing: true
     settings:
       printf:
         funcs:
@@ -54,6 +56,7 @@ linters:
     - dogsled
     - dupl
     - errcheck
+    - exportloopref
     - funlen
     - gochecknoinits
     - goconst
@@ -61,7 +64,7 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - mnd
+    - gomnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -94,8 +97,10 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - mnd
-  exclude-dirs:
+        - gomnd
+
+run:
+  skip-dirs:
     - test/testdata_etc
     - internal/cache
     - internal/renameio
@@ -104,6 +109,6 @@ issues:
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration
 service:
-  golangci-lint-version: 1.54.2
+  golangci-lint-version: 1.28.1 # use the fixed version to not introduce new linters unexpectedly
   prepare:
-    - echo "Preparing environment"
+    - echo "here I can run custom commands, but no preparation needed for this repo"
