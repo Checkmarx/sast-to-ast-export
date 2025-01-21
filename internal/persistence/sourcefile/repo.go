@@ -28,28 +28,19 @@ func NewRepo(soapClient soap.Adapter) *Repo {
 	return &Repo{soapClient: soapClient}
 }
 
+//nolint:gocyclo
 func (e *Repo) DownloadSourceFiles(scanID string, sourceFiles []interfaces.SourceFile, rmvdir string) error {
 	// Check if rmvdir is provided
 	var excludePaths []string
 	var excludePatterns []*regexp.Regexp
 
 	if rmvdir != "" {
-		if _, err := os.Stat(rmvdir); os.IsNotExist(err) {
-			log.Fatal().Msgf("Exclude file %s does not exist", rmvdir)
-			return errors.New("exclude file does not exist")
-		}
-
 		var err error
 		excludePaths, excludePatterns, err = ReadExcludedPaths(rmvdir)
 		if err != nil {
 			return err
 		}
-
-		log.Info().Msgf("Exclusion patterns loaded from: %s", rmvdir)
-	} else {
-		log.Info().Msg("No exclusion file provided, processing all files.")
 	}
-
 	// Use the IsExcluded function to check if a file should be excluded
 	isExcluded := func(path string) bool {
 		for _, exclude := range excludePaths {

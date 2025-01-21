@@ -77,7 +77,6 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 			log.Fatal().Msgf("Exclude file '%s' does not exist", args.ExcludeFile)
 		}
 		if filepath.Ext(args.ExcludeFile) != ".txt" {
-
 			log.Fatal().Msgf("Exclude file '%s' must be a .txt file", args.ExcludeFile)
 		}
 		fileContent, err := os.ReadFile(args.ExcludeFile)

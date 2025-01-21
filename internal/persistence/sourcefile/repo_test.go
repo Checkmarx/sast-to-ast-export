@@ -18,7 +18,6 @@ func TestRepo_DownloadSourceFiles(t *testing.T) {
 	file1 := "project/folder1/file1.go"
 	file2 := "project/folder1/file2.go"
 	file3 := "project/folder2/file3.go"
-	//rmvdir := ""
 
 	t.Run("success case", func(t *testing.T) {
 		tmpDir := t.TempDir()
@@ -116,7 +115,6 @@ func assertFileExistWithContent(t *testing.T, filesToDownload []interfaces.Sourc
 	}
 }
 
-/*
 func TestRepo_DownloadSourceFiles_WithExclusions(t *testing.T) {
 	scanID := "1000001"
 	tmpDir := t.TempDir()
@@ -163,62 +161,3 @@ func TestRepo_DownloadSourceFiles_WithExclusions(t *testing.T) {
 	assert.NoError(t, fileErr)
 	assert.Equal(t, "file2 content", string(fileContent))
 }
-
-func TestRepo_DownloadSourceFiles_InvalidExcludeFile(t *testing.T) {
-	scanID := "1000002"
-	tmpDir := t.TempDir()
-	invalidExcludeFilePath := fmt.Sprintf("%s/invalid_exclude.txt", tmpDir)
-
-	filesToDownload := []interfaces.SourceFile{
-		{RemoteName: "project/folder2/file1.go", LocalName: fmt.Sprintf("%s/project/folder2/file1.go", tmpDir)},
-	}
-
-	ctrl := gomock.NewController(t)
-	soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
-	instance := NewRepo(soapClientMock)
-
-	err := instance.DownloadSourceFiles(scanID, filesToDownload, invalidExcludeFilePath)
-	assert.Error(t, err, "should fail if exclude file does not exist")
-}
-
-func TestRepo_DownloadSourceFiles_EmptyExcludeList(t *testing.T) {
-	scanID := "1000003"
-	tmpDir := t.TempDir()
-	emptyExcludeFilePath := fmt.Sprintf("%s/empty_exclude.txt", tmpDir)
-	err := os.WriteFile(emptyExcludeFilePath, []byte(""), 0644)
-	assert.NoError(t, err)
-
-	filesToDownload := []interfaces.SourceFile{
-		{RemoteName: "project/folder3/file1.go", LocalName: fmt.Sprintf("%s/project/folder3/file1.go", tmpDir)},
-	}
-
-	soapResponse := soap.GetSourcesByScanIDResponse{
-		GetSourcesByScanIDResult: soap.GetSourcesByScanIDResult{
-			CxWSResponseSourcesContent: soap.CxWSResponseSourcesContent{
-				CxWSResponseSourceContents: []soap.CxWSResponseSourceContent{
-					{Source: "file1 content"},
-				},
-			},
-		},
-	}
-	getSourcesHandler := func(_ string, files []string) (*soap.GetSourcesByScanIDResponse, error) {
-		assert.ElementsMatch(t, files, []string{"project/folder3/file1.go"}) // Ensure all files are downloaded
-		return &soapResponse, nil
-	}
-
-	ctrl := gomock.NewController(t)
-	soapClientMock := mock_integration_soap.NewMockAdapter(ctrl)
-	soapClientMock.EXPECT().GetSourcesByScanID(scanID, gomock.Any()).Return(&soapResponse, nil).Times(3)
-
-	soapClientMock.EXPECT().GetSourcesByScanID(scanID, gomock.Any()).DoAndReturn(getSourcesHandler)
-	instance := NewRepo(soapClientMock)
-
-	err = instance.DownloadSourceFiles(scanID, filesToDownload, emptyExcludeFilePath)
-	assert.NoError(t, err)
-
-	// Check that file was created
-	fileContent, fileErr := os.ReadFile(filesToDownload[0].LocalName)
-	assert.NoError(t, fileErr)
-	assert.Equal(t, "file1 content", string(fileContent))
-}
-*/

@@ -141,8 +141,11 @@ func init() {
 		0,
 		"define version of the similarity ID calculation. Values: 0 - Default, 1 - Trim leading spaces, 2 - Remove all spaces.",
 	)
-
-	rootCmd.Flags().StringP(excludeFileArg, "", "", "txt file containing problematic remote files to exclude")
+	rootCmd.Flags().StringP(
+		excludeFileArg,
+		"",
+		"",
+		"TXT file with remote file paths or patterns to exclude from export; each line should contain a path or regex pattern.")
 
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
