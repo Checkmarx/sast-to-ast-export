@@ -19,6 +19,8 @@ type Args struct {
 	QueryMappingFile string
 	NestedTeams      bool
 	SimIDVersion     int
+	ExcludeFile      string
+	ExcludeFiles     []string
 }
 
 type ReportJob struct {

@@ -21,6 +21,7 @@ type Factory struct {
 	methodLineProvider   interfaces.MethodLineRepo
 	tmpDir               string
 	simIDVersion         int
+	rmvDir               string
 }
 
 func NewMetadataFactory(
@@ -30,6 +31,7 @@ func NewMetadataFactory(
 	methodLineProvider interfaces.MethodLineRepo,
 	tmpDir string,
 	simIDVersion int,
+	rmvDir string,
 ) *Factory {
 	return &Factory{
 		astQueryIDProvider,
@@ -38,6 +40,7 @@ func NewMetadataFactory(
 		methodLineProvider,
 		tmpDir,
 		simIDVersion,
+		rmvDir,
 	}
 }
 
@@ -82,7 +85,7 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 				})
 			}
 		}
-		downloadErr := e.sourceProvider.DownloadSourceFiles(scanID, filesToDownload)
+		downloadErr := e.sourceProvider.DownloadSourceFiles(scanID, filesToDownload, e.rmvDir)
 		if downloadErr != nil {
 			return nil, errors.Wrap(downloadErr, "could not download source code")
 		}
