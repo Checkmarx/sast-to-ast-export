@@ -1260,7 +1260,7 @@ func TestFetchSelectedData(t *testing.T) {
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		args := Args{
 			Export:              []string{"presets", "projects"},
-			ProjectsIds:         projectIDs,
+			ProjectsIDs:         projectIDs,
 			TeamName:            teamName,
 			ProjectsActiveSince: 100,
 		}

@@ -13,7 +13,7 @@ type Args struct {
 	IsDefaultProjectActiveSince bool
 	Debug                       bool
 	DBConnectionString,
-	ProjectsIds,
+	ProjectsIDs,
 	TeamName string
 	RunTime          time.Time
 	QueryMappingFile string
