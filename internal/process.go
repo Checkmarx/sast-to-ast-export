@@ -72,7 +72,7 @@ func RunExport(args *Args) error {
 		Str("export", fmt.Sprintf("%v", args.Export)).
 		Str("queryMapping", args.QueryMappingFile).
 		Int("projectsActiveSince", args.ProjectsActiveSince).
-		Str("projectId", args.ProjectsIds).
+		Str("projectId", args.ProjectsIDs).
 		Str("projectTeam", args.TeamName).
 		Bool("nestedTeams", args.NestedTeams).
 		Bool("debug", args.Debug).
@@ -244,7 +244,7 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	var projects []*rest.Project
 	options := sliceutils.ConvertStringToInterface(args.Export)
 	if sliceutils.Contains(export2.ProjectsOption, options) {
-		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIds,
+		projects, errProjects = fetchProjectsData(client, exporter, args.ProjectsActiveSince, args.TeamName, args.ProjectsIDs,
 			args.IsDefaultProjectActiveSince)
 		if errProjects != nil {
 			return errProjects
@@ -266,12 +266,12 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 					return err
 				}
 			case export2.PresetsOption:
-				if err := fetchPresetsData(client, presetProvider, exporter, projects, args.ProjectsIds); err != nil {
+				if err := fetchPresetsData(client, presetProvider, exporter, projects, args.ProjectsIDs); err != nil {
 					return err
 				}
 			case export2.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
-					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIds, args); err != nil {
+					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIDs, args); err != nil {
 					return err
 				}
 			case export2.EngineConfigurationsOption:
@@ -359,12 +359,12 @@ func fetchTeamsData(client rest.Client, exporter export2.Exporter, args *Args) e
 }
 
 func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
-	teamName, projectsIds string, isDefaultProjectActiveSince bool) ([]*rest.Project, error) {
+	teamName, projectsIDs string, isDefaultProjectActiveSince bool) ([]*rest.Project, error) {
 	log.Info().Msg("collecting projects")
 	projects := []*rest.Project{}
 	projectOffset := 0
 	projectLimit := resultsPageLimit
-	fromDate := getDateFrom(resultsProjectActiveSince, isDefaultProjectActiveSince, projectsIds)
+	fromDate := getDateFrom(resultsProjectActiveSince, isDefaultProjectActiveSince, projectsIDs)
 	for {
 		log.Debug().
 			Str("fromDate", fromDate).
@@ -373,7 +373,7 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 			Msg("fetching projects with custom fields")
 		log.Info().Msg("searching for projects...")
 
-		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIds, projectOffset, projectLimit)
+		projectsItems, projectsErr := client.GetProjects(fromDate, teamName, projectsIDs, projectOffset, projectLimit)
 		if projectsErr != nil {
 			return nil, errors.Wrap(projectsErr, "failed getting projects")
 		}
@@ -441,7 +441,7 @@ func fetchPresetsData(
 	client rest.Client,
 	soapClient interfaces.PresetProvider,
 	exporter export2.Exporter,
-	projects []*rest.Project, projectsIds string) error {
+	projects []*rest.Project, projectsIDs string) error {
 	log.Info().Msg("collecting presets")
 	consumerCount := worker.GetNumCPU()
 	presetJobs := make(chan PresetJob)
@@ -450,7 +450,7 @@ func fetchPresetsData(
 	if listErr != nil {
 		return errors.Wrap(listErr, "error with getting preset list")
 	}
-	if projectsIds != "" {
+	if projectsIDs != "" {
 		presetList = filterPresetByProjectList(presetList, projects)
 		log.Info().Msgf("%d associated presets found", len(presetList))
 	}
@@ -499,13 +499,13 @@ func fetchPresetsData(
 
 func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
 	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
-	teamName, projectsIds string, args *Args,
+	teamName, projectsIDs string, args *Args,
 ) error {
 	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
-	fromDate := getDateFrom(resultsProjectActiveSince, args.IsDefaultProjectActiveSince, projectsIds)
-	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIds)
+	fromDate := getDateFrom(resultsProjectActiveSince, args.IsDefaultProjectActiveSince, projectsIDs)
+	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIDs)
 	if triagedScanErr != nil {
 		return triagedScanErr
 	}
@@ -571,7 +571,7 @@ func addAllResultsMappingToFile(metadataRecord []*metadata.Record, exporter expo
 	return nil
 }
 
-func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string) ([]TriagedScan, error) {
+func getTriagedScans(client rest.Client, fromDate, teamName, projectsIDs string) ([]TriagedScan, error) {
 	var output []TriagedScan
 	projectOffset := 0
 	projectLimit := resultsPageLimit
@@ -585,7 +585,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIds string)
 		log.Info().Msg("searching for results...")
 
 		// fetch current page
-		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIds, projectOffset,
+		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIDs, projectOffset,
 			projectLimit)
 		if fetchErr != nil {
 			log.Debug().Err(fetchErr).Msg("failed fetching project last scans")
@@ -873,8 +873,8 @@ func addCustomQueryIDs(astQueryProvider interfaces.ASTQueryProvider, astQueryMap
 	return nil
 }
 
-func getDateFrom(resultsProjectActiveSince int, isDefaultProjectActiveSince bool, projectIds string) string {
-	if isDefaultProjectActiveSince && projectIds != "" {
+func getDateFrom(resultsProjectActiveSince int, isDefaultProjectActiveSince bool, projectIDs string) string {
+	if isDefaultProjectActiveSince && projectIDs != "" {
 		return ""
 	}
 	return GetDateFromDays(resultsProjectActiveSince, time.Now())

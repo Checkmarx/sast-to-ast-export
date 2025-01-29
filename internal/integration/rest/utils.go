@@ -17,47 +17,47 @@ type Retry struct {
 }
 
 // GetFilterForProjects get filter string for projects list
-func GetFilterForProjects(fromDate, teamName, projectIds string) string {
-	if teamName == "" && projectIds == "" {
+func GetFilterForProjects(fromDate, teamName, projectIDs string) string {
+	if teamName == "" && projectIDs == "" {
 		return fmt.Sprintf("CreatedDate gt %s", fromDate)
 	}
 	if fromDate == "" {
-		return getProjectFilterForEmptyDate(projectIds, teamName)
+		return getProjectFilterForEmptyDate(projectIDs, teamName)
 	}
 	if teamName == "" {
-		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
+		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getProjectIdsFilter(projectIDs))
 	}
-	if projectIds == "" {
+	if projectIDs == "" {
 		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getTeamFilter(teamName))
 	}
 	return fmt.Sprintf("CreatedDate gt %s and %s and %s", fromDate, getTeamFilter(teamName),
-		getProjectIdsFilter(projectIds))
+		getProjectIdsFilter(projectIDs))
 }
 
 // GetFilterForProjectsWithLastScan get filter string for projects list with last scan
-func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string) string {
-	if teamName == "" && projectIds == "" {
+func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIDs string) string {
+	if teamName == "" && projectIDs == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s", fromDate)
 	}
 	if fromDate == "" {
-		return getProjectFilterForEmptyDate(projectIds, teamName)
+		return getProjectFilterForEmptyDate(projectIDs, teamName)
 	}
 	if teamName == "" {
-		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
+		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getProjectIdsFilter(projectIDs))
 	}
-	if projectIds == "" {
+	if projectIDs == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getTeamFilter(teamName))
 	}
 	return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s and %s", fromDate, getTeamFilter(teamName),
-		getProjectIdsFilter(projectIds))
+		getProjectIdsFilter(projectIDs))
 }
 
 // getProjectFilterForEmptyDate get project filter when date empty
-func getProjectFilterForEmptyDate(projectIds, teamName string) string {
+func getProjectFilterForEmptyDate(projectIDs, teamName string) string {
 	if teamName == "" {
-		return getProjectIdsFilter(projectIds)
+		return getProjectIdsFilter(projectIDs)
 	}
-	return fmt.Sprintf("%s and %s", getProjectIdsFilter(projectIds), getTeamFilter(teamName))
+	return fmt.Sprintf("%s and %s", getProjectIdsFilter(projectIDs), getTeamFilter(teamName))
 }
 
 // getTeamFilter get filter string for team
