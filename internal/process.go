@@ -830,14 +830,14 @@ func getRetryHTTPClient() *retryablehttp.Client {
 		RetryMax:     httpRetryMax,
 		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      retryablehttp.DefaultBackoff,
-		RequestLogHook: func(logger retryablehttp.Logger, request *http.Request, i int) {
+		RequestLogHook: func(_ retryablehttp.Logger, request *http.Request, i int) {
 			log.Debug().
 				Str("method", request.Method).
 				Str("url", request.URL.String()).
 				Int("attempt", i+1).
 				Msg("request")
 		},
-		ResponseLogHook: func(logger retryablehttp.Logger, response *http.Response) {
+		ResponseLogHook: func(_ retryablehttp.Logger, response *http.Response) {
 			log.Debug().
 				Str("method", response.Request.Method).
 				Str("url", response.Request.URL.String()).

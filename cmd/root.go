@@ -59,7 +59,7 @@ Produces:
 
 NOTE the minimum supported SAST version is 9.3. SAST installations below this version should be upgraded in order to run this export tool. 
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 
 		// Validate simIDVersion if provided
 		if simIDVersion < 0 || simIDVersion > 2 {
