@@ -17,47 +17,47 @@ type Retry struct {
 }
 
 // GetFilterForProjects get filter string for projects list
-func GetFilterForProjects(fromDate, teamName, projectIds string) string {
-	if teamName == "" && projectIds == "" {
+func GetFilterForProjects(fromDate, teamName, projectIDs string) string {
+	if teamName == "" && projectIDs == "" {
 		return fmt.Sprintf("CreatedDate gt %s", fromDate)
 	}
 	if fromDate == "" {
-		return getProjectFilterForEmptyDate(projectIds, teamName)
+		return getProjectFilterForEmptyDate(projectIDs, teamName)
 	}
 	if teamName == "" {
-		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
+		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getProjectIDsFilter(projectIDs))
 	}
-	if projectIds == "" {
+	if projectIDs == "" {
 		return fmt.Sprintf("CreatedDate gt %s and %s", fromDate, getTeamFilter(teamName))
 	}
 	return fmt.Sprintf("CreatedDate gt %s and %s and %s", fromDate, getTeamFilter(teamName),
-		getProjectIdsFilter(projectIds))
+		getProjectIDsFilter(projectIDs))
 }
 
 // GetFilterForProjectsWithLastScan get filter string for projects list with last scan
-func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIds string) string {
-	if teamName == "" && projectIds == "" {
+func GetFilterForProjectsWithLastScan(fromDate, teamName, projectIDs string) string {
+	if teamName == "" && projectIDs == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s", fromDate)
 	}
 	if fromDate == "" {
-		return getProjectFilterForEmptyDate(projectIds, teamName)
+		return getProjectFilterForEmptyDate(projectIDs, teamName)
 	}
 	if teamName == "" {
-		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getProjectIdsFilter(projectIds))
+		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getProjectIDsFilter(projectIDs))
 	}
-	if projectIds == "" {
+	if projectIDs == "" {
 		return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s", fromDate, getTeamFilter(teamName))
 	}
 	return fmt.Sprintf("LastScan/ScanCompletedOn gt %s and %s and %s", fromDate, getTeamFilter(teamName),
-		getProjectIdsFilter(projectIds))
+		getProjectIDsFilter(projectIDs))
 }
 
 // getProjectFilterForEmptyDate get project filter when date empty
-func getProjectFilterForEmptyDate(projectIds, teamName string) string {
+func getProjectFilterForEmptyDate(projectIDs, teamName string) string {
 	if teamName == "" {
-		return getProjectIdsFilter(projectIds)
+		return getProjectIDsFilter(projectIDs)
 	}
-	return fmt.Sprintf("%s and %s", getProjectIdsFilter(projectIds), getTeamFilter(teamName))
+	return fmt.Sprintf("%s and %s", getProjectIDsFilter(projectIDs), getTeamFilter(teamName))
 }
 
 // getTeamFilter get filter string for team
@@ -65,18 +65,18 @@ func getTeamFilter(teamName string) string {
 	return fmt.Sprintf("OwningTeam/FullName eq '%s'", teamName)
 }
 
-// getProjectIdsFilter get filter string for project-id option
-func getProjectIdsFilter(projectIds string) string {
-	if matched, _ := regexp.MatchString(`^\d+$`, projectIds); matched {
-		return fmt.Sprintf("Id eq %s", projectIds)
+// getProjectIDsFilter get filter string for project-id option
+func getProjectIDsFilter(projectIDs string) string {
+	if matched, _ := regexp.MatchString(`^\d+$`, projectIDs); matched {
+		return fmt.Sprintf("Id eq %s", projectIDs)
 	}
-	if matched, _ := regexp.MatchString(`^\d+(,\s?\d+)+$`, projectIds); matched {
-		return fmt.Sprintf("Id in (%s)", projectIds)
+	if matched, _ := regexp.MatchString(`^\d+(,\s?\d+)+$`, projectIDs); matched {
+		return fmt.Sprintf("Id in (%s)", projectIDs)
 	}
-	if matched, _ := regexp.MatchString(`^\d+\s?-\s?\d+$`, projectIds); matched {
-		ids := strings.Split(projectIds, "-")
-		min, max := getMinMax(ids)
-		return fmt.Sprintf("Id ge %d and Id le %d", min, max)
+	if matched, _ := regexp.MatchString(`^\d+\s?-\s?\d+$`, projectIDs); matched {
+		ids := strings.Split(projectIDs, "-")
+		minValue, maxValue := getMinMax(ids)
+		return fmt.Sprintf("Id ge %d and Id le %d", minValue, maxValue)
 	}
 
 	log.Warn().Msg("--project-id has wrong param. It should be like --project-id 1 or 1,3,8 or 1-3")
@@ -84,12 +84,12 @@ func getProjectIdsFilter(projectIds string) string {
 }
 
 // getMinMax get min and max values
-func getMinMax(ids []string) (min, max int) {
-	min, _ = strconv.Atoi(strings.Trim(ids[0], " "))
-	max, _ = strconv.Atoi(strings.Trim(ids[1], " "))
-	if min > max {
-		min, max = max, min
+func getMinMax(ids []string) (minValue, maxValue int) {
+	minValue, _ = strconv.Atoi(strings.Trim(ids[0], " "))
+	maxValue, _ = strconv.Atoi(strings.Trim(ids[1], " "))
+	if minValue > maxValue {
+		minValue, maxValue = maxValue, minValue
 	}
 
-	return min, max
+	return minValue, maxValue
 }

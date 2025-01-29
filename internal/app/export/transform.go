@@ -114,7 +114,7 @@ func TransformScanReport(xml []byte, options TransformOptions) ([]byte, error) {
 		teamPath = strings.ReplaceAll(s, "\\", "_")
 		return teamPath
 	})
-	out = replaceKeyValue(out, "Team", func(s string) string {
+	out = replaceKeyValue(out, "Team", func(_ string) string {
 		return teamPath
 	})
 	return out, nil

@@ -21,7 +21,7 @@ const (
 	projectsActiveSinceArg  = "projects-active-since"
 	debugArg                = "debug"
 	verboseArg              = "verbose"
-	projectsIds             = "project-id"
+	projectsIDs             = "project-id"
 	teamName                = "project-team"
 	queryMapping            = "query-mapping"
 	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
@@ -59,7 +59,7 @@ Produces:
 
 NOTE the minimum supported SAST version is 9.3. SAST installations below this version should be upgraded in order to run this export tool. 
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 
 		// Validate simIDVersion if provided
 		if simIDVersion < 0 || simIDVersion > 2 {
@@ -128,7 +128,7 @@ func init() {
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
 	rootCmd.Flags().StringP(queryMapping, "", queryMappingPathDefault, "path to file query mapping IDs from AST for triage")
 	rootCmd.Flags().StringP(teamName, "", "", "team name filter")
-	rootCmd.Flags().StringP(projectsIds, "", "", "project ID filter")
+	rootCmd.Flags().StringP(projectsIDs, "", "", "project ID filter")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
 	rootCmd.Flags().IntP(projectsActiveSinceArg, "", emptyProjectsActiveSince, projectsActiveSinceUsage)
 	rootCmd.Flags().Bool(debugArg, false, "activate debug mode")
