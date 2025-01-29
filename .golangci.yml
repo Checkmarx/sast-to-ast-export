@@ -29,10 +29,9 @@ linters-settings:
   gomnd:
     settings:
       mnd:
-        # don't include the "operation" and "assign"
         checks: argument,case,condition,return
   govet:
-    check-shadowing: true
+    shadow: true
     settings:
       printf:
         funcs:
@@ -48,15 +47,13 @@ linters-settings:
     locale: US
 
 linters:
-  # please, do not use `enable-all`: it's deprecated and will be removed soon.
-  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
   disable-all: true
   enable:
     - bodyclose
     - dogsled
     - dupl
     - errcheck
-    - exportloopref
+    - copyloopvar
     - funlen
     - gochecknoinits
     - goconst
@@ -64,7 +61,6 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - gomnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -86,30 +82,19 @@ linters:
     - typecheck
     - typechecker
     - depguard
-  # - gochecknoglobals
-  # - gocognit
-  # - godox
-  # - maligned
-  # - prealloc
 
 issues:
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gomnd
-        - revive
-
-run:
-  skip-dirs:
+  exclude-dirs:
     - test/testdata_etc
     - internal/cache
     - internal/renameio
     - internal/robustio
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - revive
 
-# golangci.com configuration
-# https://github.com/golangci/golangci/wiki/Configuration
 service:
-  golangci-lint-version: 1.28.1 # use the fixed version to not introduce new linters unexpectedly
+  golangci-lint-version: 1.63.4 # Updated to match latest stable version
   prepare:
-    - echo "here I can run custom commands, but no preparation needed for this repo"
+    - echo "Custom preparation commands go here"
