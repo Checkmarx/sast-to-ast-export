@@ -1,0 +1,136 @@
+{
+  "EngineConfig": {
+    "Configurations": {
+      "Configuration": [
+        {
+          "Name": "Multi-language Scan",
+          "Keys": {
+            "Key": [
+              {
+                "Name": "MULTI_LANGUAGE_MODE",
+                "Value": "2"
+              },
+              {
+                "Name": "LANGUAGE_THRESHOLD",
+                "Value": "0.0"
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Japanese (Shift-JIS)",
+          "Keys": {
+            "Key": [
+              {
+                "Name": "MEMORY_LIMIT",
+                "Value": "250"
+              },
+              {
+                "Name": "ENCODING",
+                "Value": "shift_jis"
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Korean",
+          "Keys": {
+            "Key": [
+              {
+                "Name": "MEMORY_LIMIT",
+                "Value": "250"
+              },
+              {
+                "Name": "ENCODING",
+                "Value": "ks_c_5601-1987"
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Fast Scan",
+          "Keys": {
+            "Key": [
+              {
+                "Name": "ABS_INT_ENABLED",
+                "Value": "false"
+              },
+              {
+                "Name": "LAZY_FLOW_MAX_DEPTH_COUNT",
+                "Value": "100000"
+              },
+              {
+                "Name": "RESOLVE_TYPE_MAX_RECURSION_DEPTH",
+                "Value": "10"
+              },
+              {
+                "Name": "CALCULATE_CONFIDENCE_LEVEL",
+                "Value": "false"
+              },
+              {
+                "Name": "MULTI_LANGUAGE_MODE",
+                "Value": "5"
+              },
+              {
+                "Name": "GST_ENABLED",
+                "Value": "false"
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Default Configuration",
+          "Keys": {
+            "Key": null
+          }
+        },
+        {
+          "Name": "Fast Scan With File Exclusions",
+          "Keys": {
+            "Key": [
+              {
+                "Name": "ABS_INT_ENABLED",
+                "Value": "false"
+              },
+              {
+                "Name": "LAZY_FLOW_MAX_DEPTH_COUNT",
+                "Value": "100000"
+              },
+              {
+                "Name": "RESOLVE_TYPE_MAX_RECURSION_DEPTH",
+                "Value": "10"
+              },
+              {
+                "Name": "CALCULATE_CONFIDENCE_LEVEL",
+                "Value": "false"
+              },
+              {
+                "Name": "MULTI_LANGUAGE_MODE",
+                "Value": "5"
+              },
+              {
+                "Name": "GST_ENABLED",
+                "Value": "false"
+              },
+              {
+                "Name": "PREDEFINED_FILE_EXCLUSIONS_ENABLED",
+                "Value": "true"
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Intermediate Scan",
+          "Keys": {
+            "Key": [
+              {
+                "Name": "ABS_INT_DATA_FLOW_TIMEOUT_SECONDS",
+                "Value": "300"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
