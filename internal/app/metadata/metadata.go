@@ -2,12 +2,15 @@ package metadata
 
 import (
 	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/interfaces"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/report"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/worker"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/similarity"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type Provider interface {
@@ -97,7 +100,12 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 			for _, result := range q.Results {
 				firstSourceFile := findSourceFile(result.ResultID, result.FirstNode.FileName, filesToDownload)
 				lastSourceFile := findSourceFile(result.ResultID, result.LastNode.FileName, filesToDownload)
-				methodLines := findResultPath(result.PathID, methodLinesByPath).MethodLines
+				resultPath := findResultPath(result.PathID, methodLinesByPath)
+				if resultPath == nil {
+					log.Info().Msgf("Result path not found for ID: %s", result.ResultID)
+					continue
+				}
+				methodLines := resultPath.MethodLines
 				similarityCalculationJobs <- SimilarityCalculationJob{
 					result.ResultID, result.PathID,
 					firstSourceFile.LocalName, result.FirstNode.Name, result.FirstNode.Line, result.FirstNode.Column, methodLines[0],
@@ -110,8 +118,11 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 
 		// consume calculation jobs
 		similarityCalculationResults := make(chan SimilarityCalculationResult, len(query.Results))
+		var wg sync.WaitGroup
 		for consumerID := 1; consumerID <= worker.GetNumCPU(); consumerID++ {
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				for job := range similarityCalculationJobs {
 					similarityID, similarityIDErr := e.similarityIDProvider.Calculate(
 						job.Filename1, job.Name1, job.Line1, job.Column1, job.MethodLine1,
@@ -128,6 +139,11 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 				}
 			}()
 		}
+
+		go func() {
+			wg.Wait()
+			close(similarityCalculationResults) // Ensure it's closed only after all workers finish
+		}()
 
 		// handle calculation results
 		for _, result := range query.Results {
@@ -179,7 +195,7 @@ func findSourceFile(resultID, remoteName string, sourceFiles []interfaces.Source
 
 func findResultPath(pathID string, methodLines []*interfaces.ResultPath) *interfaces.ResultPath {
 	for _, v := range methodLines {
-		if v.PathID == pathID {
+		if v != nil && strings.TrimSpace(v.PathID) == pathID {
 			return v
 		}
 	}
