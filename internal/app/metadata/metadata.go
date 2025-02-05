@@ -102,7 +102,8 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 				lastSourceFile := findSourceFile(result.ResultID, result.LastNode.FileName, filesToDownload)
 				resultPath := findResultPath(result.PathID, methodLinesByPath)
 				if resultPath == nil {
-					log.Info().Msgf("Result path not found for ID: %s, on file name: %s and pathId %s", result.ResultID, result.FirstNode.FileName, result.PathID)
+					log.Info().Msgf("Result path not found for ID: %s, on file name: %s and pathId %s",
+						result.ResultID, result.FirstNode.FileName, result.PathID)
 					continue
 				}
 				methodLines := resultPath.MethodLines
