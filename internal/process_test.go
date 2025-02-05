@@ -1599,6 +1599,7 @@ func TestExportResultsToFile(t *testing.T) {
 	})
 }
 
+//nolint:funlen
 func TestFetchProjects(t *testing.T) {
 	teamName := TeamName
 	projectsIds := projectIDs
