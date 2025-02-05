@@ -1253,6 +1253,61 @@ func TestFetchSelectedData(t *testing.T) {
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
 			Return([]*rest.Project{}, nil)
 		client.EXPECT().GetEngineConfigurations(1).Return(engineConfigResponse, nil)
+		client.EXPECT().GetEngineMappingFile().Return(&rest.EngineKeysConfigMapping{
+			EngineConfig: struct {
+				Configurations struct {
+					Configuration []struct {
+						Name string `json:"Name"`
+						Keys struct {
+							Key []struct {
+								Name  string `json:"Name"`
+								Value string `json:"Value"`
+							} `json:"Key"`
+						} `json:"Keys"`
+					} `json:"Configuration"`
+				} `json:"Configurations"`
+			}{
+				Configurations: struct {
+					Configuration []struct {
+						Name string `json:"Name"`
+						Keys struct {
+							Key []struct {
+								Name  string `json:"Name"`
+								Value string `json:"Value"`
+							} `json:"Key"`
+						} `json:"Keys"`
+					} `json:"Configuration"`
+				}{
+					Configuration: []struct {
+						Name string `json:"Name"`
+						Keys struct {
+							Key []struct {
+								Name  string `json:"Name"`
+								Value string `json:"Value"`
+							} `json:"Key"`
+						} `json:"Keys"`
+					}{
+						{
+							Name: "Multi-language Scan",
+							Keys: struct {
+								Key []struct {
+									Name  string `json:"Name"`
+									Value string `json:"Value"`
+								} `json:"Key"`
+							}{
+								Key: []struct {
+									Name  string `json:"Name"`
+									Value string `json:"Value"`
+								}{
+									{Name: "MULTI_LANGUAGE_MODE", Value: "2"},
+									{Name: "LANGUAGE_THRESHOLD", Value: "0.0"},
+								},
+							},
+						},
+					},
+				},
+			},
+		}, nil).AnyTimes()
 		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
 		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
@@ -1547,6 +1602,7 @@ func TestExportResultsToFile(t *testing.T) {
 func TestFetchProjects(t *testing.T) {
 	teamName := TeamName
 	projectsIds := projectIDs
+
 	t.Run("fetch projects successfully", func(t *testing.T) {
 		projects := []*rest.Project{
 			{
@@ -1564,16 +1620,44 @@ func TestFetchProjects(t *testing.T) {
 		}
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
-			Return([]*rest.Project{}, nil)
-		client.EXPECT().GetEngineConfigurations(gomock.Any()).Return([]byte(`{
-			"engineConfiguration": {
-				"id": 1,
-				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
-			}
-		}`), nil).AnyTimes()
 
+		client.EXPECT().
+			GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).
+			Return(projects, nil)
+
+		client.EXPECT().
+			GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
+			Return([]*rest.Project{}, nil)
+
+		client.EXPECT().
+			GetEngineConfigurations(1).
+			Return([]byte(`{
+				"project": {
+					"id": 1,
+					"link": { "rel": "project", "uri": "/projects/1" }
+				},
+				"preset": {
+					"id": 36,
+					"link": { "rel": "preset", "uri": "/sast/presets/36" }
+				},
+				"engineConfiguration": {
+					"id": 1,
+					"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
+				}
+			}`), nil).AnyTimes()
+		client.EXPECT().GetEngineMappingFile().Return(&rest.EngineKeysConfigMapping{}, nil).AnyTimes()
+		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`{
+				"engineConfigurations": [
+					{
+						"id": 1,
+						"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
+					},
+					{
+						"id": 4,
+						"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/4" }
+					}
+				]
+			}`), nil).AnyTimes()
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
@@ -1667,6 +1751,20 @@ func TestFetchProjects(t *testing.T) {
 			Return([]*rest.Project{}, nil)
 		client.EXPECT().GetEngineConfigurations(1).Return(engineConfigResponse1, nil)
 		client.EXPECT().GetEngineConfigurations(4).Return(engineConfigResponse4, nil)
+		client.EXPECT().GetEngineMappingFile().Return(&rest.EngineKeysConfigMapping{}, nil).AnyTimes()
+		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`{
+			"engineConfigurations": [
+				{
+					"id": 1,
+					"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
+				},
+				{
+					"id": 4,
+					"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/4" }
+				}
+			]
+		}`), nil).AnyTimes()
+
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()

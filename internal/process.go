@@ -53,7 +53,8 @@ const (
 	scanReportCreateMinSleep = 1 * time.Second
 	scanReportCreateMaxSleep = 5 * time.Minute
 
-	destQueryMappingFile = "query_mapping.json"
+	destQueryMappingFile     = "query_mapping.json"
+	engineConfigKeysFileName = "engine_configurations_keys.json"
 )
 
 type ReportConsumeOutput struct {
@@ -274,11 +275,6 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIDs, args); err != nil {
 					return err
 				}
-			case export2.EngineConfigurationsOption:
-				if err := exporter.AddFileWithDataSource(export2.EngineConfigurationMappingFileName,
-					client.GetEngineConfigurationMappings); err != nil {
-					return err
-				}
 			}
 		}
 	}
@@ -390,10 +386,17 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 		export2.NewJSONDataSource(projects)); err != nil {
 		return nil, err
 	}
+	if err := exporter.AddFileWithDataSource(export2.EngineConfigurationMappingFileName,
+		client.GetEngineConfigurationMappings); err != nil {
+		return nil, err
+	}
 	if err := getProjectConfigurations(client, projects, exporter); err != nil {
 		return nil, errors.Wrap(err, "failed getting and exporting project configurations")
 	}
-
+	addFileErr2 := addEngineKeysMappingFile(client, exporter)
+	if addFileErr2 != nil {
+		return nil, errors.Wrap(addFileErr2, "could not add engine keys mapping file")
+	}
 	return projects, nil
 }
 
@@ -624,6 +627,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIDs string)
 
 func getProjectConfigurations(client rest.Client, projects []*rest.Project, exporter export2.Exporter) error {
 	var engineConfigs []EngineConfig
+	log.Info().Msg("collecting engine configurations")
 	for _, project := range projects {
 		configs, err := client.GetEngineConfigurations(project.ID)
 		if err != nil {
@@ -657,6 +661,14 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 	}
 
 	return nil
+}
+
+func addEngineKeysMappingFile(client rest.Client, exporter export2.Exporter) error {
+	mapping, err := client.GetEngineMappingFile()
+	if err != nil {
+		return fmt.Errorf("failed to fetch engine config mapping: %w", err)
+	}
+	return exporter.AddFileWithDataSource(engineConfigKeysFileName, export2.NewJSONDataSource(mapping))
 }
 
 func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {

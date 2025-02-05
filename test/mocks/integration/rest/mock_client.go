@@ -99,6 +99,21 @@ func (mr *MockClientMockRecorder) GetEngineConfigurations(arg0 any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEngineConfigurations", reflect.TypeOf((*MockClient)(nil).GetEngineConfigurations), arg0)
 }
 
+// GetEngineMappingFile mocks base method.
+func (m *MockClient) GetEngineMappingFile() (*rest.EngineKeysConfigMapping, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEngineMappingFile")
+	ret0, _ := ret[0].(*rest.EngineKeysConfigMapping)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEngineMappingFile indicates an expected call of GetEngineMappingFile.
+func (mr *MockClientMockRecorder) GetEngineMappingFile() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEngineMappingFile", reflect.TypeOf((*MockClient)(nil).GetEngineMappingFile))
+}
+
 // GetEngineServers mocks base method.
 func (m *MockClient) GetEngineServers() ([]*rest.EngineServer, error) {
 	m.ctrl.T.Helper()

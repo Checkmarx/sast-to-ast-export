@@ -31,7 +31,7 @@ const (
 	engineServersEndpoint         = "/CxRestAPI/help/sast/engineServers"
 	scanSettingsEndpoint          = "/CxRestAPI/sast/scanSettings"
 	engineConfigurationsEndpoint  = "/CxRestAPI/sast/engineConfigurations"
-
+	engineConfigURL               = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/EngineConfigMapping.json"
 	// ScanReportTypeXML defines SAST report type XML
 	ScanReportTypeXML = "XML"
 )
@@ -56,6 +56,7 @@ type Client interface {
 	GetEngineServers() ([]*EngineServer, error)
 	GetEngineConfigurations(projectID int) ([]byte, error)
 	GetEngineConfigurationMappings() ([]byte, error)
+	GetEngineMappingFile() (*EngineKeysConfigMapping, error)
 }
 
 type RetryableHTTPAdapter interface {
@@ -463,4 +464,27 @@ func (c *APIClient) GetEngineConfigurations(projectID int) ([]byte, error) {
 
 func (c *APIClient) GetEngineConfigurationMappings() ([]byte, error) {
 	return c.getResponseBody(engineConfigurationsEndpoint)
+}
+
+func (c *APIClient) GetEngineMappingFile() (*EngineKeysConfigMapping, error) {
+	resp, err := http.Get(engineConfigURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch engine config: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch engine config: received status code %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var mapping EngineKeysConfigMapping
+	if err := json.Unmarshal(body, &mapping); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+	return &mapping, nil
 }
