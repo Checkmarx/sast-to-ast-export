@@ -69,6 +69,21 @@ func (mr *MockClientMockRecorder) CreateScanReport(arg0, arg1, arg2 any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScanReport", reflect.TypeOf((*MockClient)(nil).CreateScanReport), arg0, arg1, arg2)
 }
 
+// GetConfigurationsKeys mocks base method.
+func (m *MockClient) GetConfigurationsKeys() (*rest.EngineKeysConfigMapping, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConfigurationsKeys")
+	ret0, _ := ret[0].(*rest.EngineKeysConfigMapping)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConfigurationsKeys indicates an expected call of GetConfigurationsKeys.
+func (mr *MockClientMockRecorder) GetConfigurationsKeys() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigurationsKeys", reflect.TypeOf((*MockClient)(nil).GetConfigurationsKeys))
+}
+
 // GetEngineConfigurationMappings mocks base method.
 func (m *MockClient) GetEngineConfigurationMappings() ([]byte, error) {
 	m.ctrl.T.Helper()

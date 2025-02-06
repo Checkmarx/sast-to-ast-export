@@ -143,6 +143,22 @@ type (
 		Value string `json:"value"`
 	}
 
+	EngineKeysConfigMapping struct {
+		EngineConfig struct {
+			Configurations struct {
+				Configuration []struct {
+					Name string `json:"Name"`
+					Keys struct {
+						Key []struct {
+							Name  string `json:"Name"`
+							Value string `json:"Value"`
+						} `json:"Key"`
+					} `json:"Keys"`
+				} `json:"Configuration"`
+			} `json:"Configurations"`
+		} `json:"EngineConfig"`
+	}
+
 	LinkEngineServer struct {
 		Rel string `json:"rel"`
 		URI string `json:"uri"`
