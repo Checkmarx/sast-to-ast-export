@@ -633,16 +633,14 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 		if err != nil {
 			log.Error().Err(err).
 				Int("projectID", project.ID).
-				Msg("error with getting engine configurations details")
-			return errors.Wrap(err, "error with getting engine configurations details")
+				Msg("Skipping project due to error with getting engine configurations details")
+			continue
 		}
-
 		var engineConfiguration rest.EngineConfigurations
 		if err := json.Unmarshal(configs, &engineConfiguration); err != nil {
-			log.Error().Err(err).Msg("failed to unmarshal scan settings")
-			return err
+			log.Error().Err(err).Msg("Skipping project due to failed unmarshalling of scan settings")
+			continue
 		}
-
 		engineConfigs = append(engineConfigs, EngineConfig{
 			ProjectID:             engineConfiguration.Project.ID,
 			EngineConfigurationID: engineConfiguration.EngineConfiguration.ID,
