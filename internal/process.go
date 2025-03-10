@@ -386,16 +386,8 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 		export2.NewJSONDataSource(projects)); err != nil {
 		return nil, err
 	}
-	if err := exporter.AddFileWithDataSource(export2.EngineConfigurationMappingFileName,
-		client.GetEngineConfigurationMappings); err != nil {
-		return nil, err
-	}
 	if err := getProjectConfigurations(client, projects, exporter); err != nil {
 		return nil, errors.Wrap(err, "failed getting and exporting project configurations")
-	}
-	addFileErr := addEngineKeysMappingFile(client, exporter)
-	if addFileErr != nil {
-		return nil, errors.Wrap(addFileErr, "could not add engine keys mapping file")
 	}
 	return projects, nil
 }
@@ -539,15 +531,18 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 		reportIndex := i + 1
 		if consumeOutput.Err == nil {
 			log.Info().
+				Str("progress", fmt.Sprintf("%d/%d", reportIndex, reportCount)).
 				Int("projectID", consumeOutput.ProjectID).
 				Int("scanID", consumeOutput.ScanID).
-				Msgf("collected result %d/%d", reportIndex, reportCount)
+				Msg("Successfully collected scan result")
+
 		} else {
 			reportConsumeErrorCount++
 			log.Warn().
 				Int("projectID", consumeOutput.ProjectID).
 				Int("scanID", consumeOutput.ScanID).
-				Msgf("failed collecting result %d/%d", reportIndex, reportCount)
+				Err(consumeOutput.Err).
+				Msg("Failed to collect scan result")
 		}
 	}
 
@@ -579,13 +574,13 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIDs string)
 	projectOffset := 0
 	projectLimit := resultsPageLimit
 
+	log.Info().Msg("searching for results...")
 	for {
 		log.Debug().
 			Str("fromDate", fromDate).
 			Int("offset", projectOffset).
 			Int("limit", projectLimit).
 			Msg("fetching project last scans")
-		log.Info().Msg("searching for results...")
 
 		// fetch current page
 		projects, fetchErr := client.GetProjectsWithLastScanID(fromDate, teamName, projectsIDs, projectOffset,
@@ -615,7 +610,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIDs string)
 			}
 			if len(*triagedResults) > 0 {
 				output = append(output, TriagedScan{project.ID, project.LastScanID})
-				log.Info().Msgf("fetching %d triaged results found from projectId %d scanId %d", len(*triagedResults), project.ID, project.LastScanID)
+				log.Info().Msgf("%d triaged results found from projectId=%d scanId=%d", len(*triagedResults), project.ID, project.LastScanID)
 			}
 		}
 
@@ -626,8 +621,32 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIDs string)
 }
 
 func getProjectConfigurations(client rest.Client, projects []*rest.Project, exporter export2.Exporter) error {
-	var engineConfigs []EngineConfig
+	var engineConfigs []JoinedConfig
 	log.Info().Msg("collecting engine configurations")
+
+	// Fetch engine configuration mappings
+	mappingsData, err := client.GetEngineConfigurationMappings()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get engine configuration mappings")
+		return err
+	}
+
+	// Parse the engine configuration mappings
+	var engineMappings []EngineConfigMapping
+	if err := json.Unmarshal(mappingsData, &engineMappings); err != nil {
+		log.Error().Err(err).Msg("Failed to unmarshal engine configuration mappings")
+		return err
+	}
+
+	// Fetch engine keys and create a map for quick lookup by name
+	engineKeysMap := readEngineConfigurationsKeys(client)
+
+	// Create a map for quick lookup of engine configuration names by ID
+	engineConfigMap := make(map[int]string)
+	for _, mapping := range engineMappings {
+		engineConfigMap[mapping.EngineConfigurationID] = mapping.Name
+	}
+
 	for _, project := range projects {
 		configs, err := client.GetEngineConfigurations(project.ID)
 		if err != nil {
@@ -641,9 +660,15 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 			log.Error().Err(err).Msg("Skipping project due to failed unmarshalling of scan settings")
 			continue
 		}
-		engineConfigs = append(engineConfigs, EngineConfig{
-			ProjectID:             engineConfiguration.Project.ID,
-			EngineConfigurationID: engineConfiguration.EngineConfiguration.ID,
+
+		engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
+		keys := engineKeysMap[engineConfigName]
+
+		engineConfigs = append(engineConfigs, JoinedConfig{
+			ProjectID:               engineConfiguration.Project.ID,
+			EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
+			EngineConfigurationName: engineConfigName,
+			ConfigurationKeys:       keys,
 		})
 	}
 
@@ -659,14 +684,6 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 	}
 
 	return nil
-}
-
-func addEngineKeysMappingFile(client rest.Client, exporter export2.Exporter) error {
-	mapping, err := client.GetConfigurationsKeys()
-	if err != nil {
-		return fmt.Errorf("failed to fetch engine config mapping: %w", err)
-	}
-	return exporter.AddFileWithDataSource(engineConfigKeysFileName, export2.NewJSONDataSource(mapping))
 }
 
 func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
@@ -888,4 +905,52 @@ func getDateFrom(resultsProjectActiveSince int, isDefaultProjectActiveSince bool
 		return ""
 	}
 	return GetDateFromDays(resultsProjectActiveSince, time.Now())
+}
+
+func readEngineConfigurationsKeys(client rest.Client) map[string][]EngineKey {
+	mapping, err := client.GetConfigurationsKeys()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to fetch engine config mapping")
+		return map[string][]EngineKey{}
+	}
+
+	mappingBytes, err := json.Marshal(mapping)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to marshal engine config mapping")
+		return map[string][]EngineKey{}
+	}
+
+	var engineKeysData EngineKeysData
+	if err := json.Unmarshal(mappingBytes, &engineKeysData); err != nil {
+		log.Error().Err(err).Msg("Failed to unmarshal engine keys")
+		return map[string][]EngineKey{}
+	}
+
+	engineKeysMap := make(map[string][]EngineKey)
+
+	for _, config := range engineKeysData.EngineConfig.Configurations.Configuration {
+		switch keys := config.Keys.(type) {
+		case map[string]interface{}:
+			if keyArray, ok := keys["Key"].([]interface{}); ok {
+				var engineKeys []EngineKey
+				for _, key := range keyArray {
+					if keyMap, ok := key.(map[string]interface{}); ok {
+						name, nameOk := keyMap["Name"].(string)
+						value, valueOk := keyMap["Value"].(string)
+						if nameOk && valueOk {
+							engineKeys = append(engineKeys, EngineKey{
+								Name:  name,
+								Value: value,
+							})
+						}
+					}
+				}
+				engineKeysMap[config.Name] = engineKeys
+			}
+		default:
+			log.Warn().Msg("Keys is of an unexpected type")
+		}
+	}
+
+	return engineKeysMap
 }
