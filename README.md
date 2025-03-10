@@ -10,7 +10,7 @@
 <p align="center">
     SAST to AST Export is a standalone Checkmarx tool.
 <br />
-    <a href="https://docs.checkmarx.com/en/34965-68666-migrating-from-sast-to-checkmarx-one.html"><strong>Explore the docs »</strong></a>
+    <a href="https://docs.checkmarx.com/en/34965-68666-migrating-from-sast-to-checkmarx-one.html"><strong>Explore the documentation »</strong></a>
     <br />
     <br />
     <a href="https://github.com/Checkmarx/sast-to-ast-export/issues/new/choose">Report Bug</a>
@@ -20,11 +20,19 @@
 
 # SAST to AST Export
 
-Exports SAST triaged results for importing in AST.
+Exports triaged SAST results for import into AST.
 
 ## Description
 
 Fetches SAST triaged results and exports as an encrypted package, which can then be imported in AST.
+
+## Repo
+
+#### Owners:
+
+[Thanos](https://github.com/orgs/CheckmarxDev/teams/ast-thanos) (previously)
+
+[AceOfSpades](https://github.com/orgs/CheckmarxDev/teams/sast-aceofspades) (current)
 
 ## Getting Started
 
@@ -55,18 +63,19 @@ Run export with:
 
  * Replace `username` and `password` with user credentials.
  * Replace `http://localhost` with the url to SAST, if necessary.
-* Please refer to [Wiki](https://docs.checkmarx.com/en/34965-68670-cxsast_exporter.html) for more details
+* For detailed usage instructions, please refer to [Wiki](https://docs.checkmarx.com/en/34965-68670-cxsast_exporter.html)
 
 ## Additional Documentation
 
-Importing SAST to Checkmarx One [Wiki](https://docs.checkmarx.com/en/34965-68672-importing-sast-to-checkmarx-one.html)
-
-Internal information [Wiki](https://checkmarx.com/resource/documents/en/34965-68669-sast-cli-export-tool.html)
+* Technical Design [Internal Wiki](https://checkmarx.atlassian.net/wiki/spaces/AID/pages/5981241403/SAST+exporter+technical+design)
+* Importing SAST to Checkmarx One [Wiki](https://docs.checkmarx.com/en/34965-68672-importing-sast-to-checkmarx-one.html)
+* Importer Repo [Wiki](https://github.com/CheckmarxDev/sast-migration)
 
 ## Similarity Calculator
 
 The exporter relies on a Windows binary for similarity calculation.
 This is internally built by Checkmarx and provided in the `external` folder for inclusion with the build. 
+[Internal repo](https://github.com/CheckmarxDev/ast-sast-similarity-calculator)
 
 ## Contributing
 
