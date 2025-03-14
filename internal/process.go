@@ -53,8 +53,7 @@ const (
 	scanReportCreateMinSleep = 1 * time.Second
 	scanReportCreateMaxSleep = 5 * time.Minute
 
-	destQueryMappingFile     = "query_mapping.json"
-	engineConfigKeysFileName = "engine_configurations_keys.json"
+	destQueryMappingFile = "query_mapping.json"
 )
 
 type ReportConsumeOutput struct {
@@ -535,7 +534,6 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 				Int("projectID", consumeOutput.ProjectID).
 				Int("scanID", consumeOutput.ScanID).
 				Msg("Successfully collected scan result")
-
 		} else {
 			reportConsumeErrorCount++
 			log.Warn().

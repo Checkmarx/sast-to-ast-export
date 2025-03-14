@@ -33,8 +33,6 @@ const (
 	SamlRoleMappingsFileName = "saml_role_mappings.json"
 	// SamlTeamMappingsFileName salm teams mapping file
 	SamlTeamMappingsFileName = "saml_team_mappings.json"
-	// EngineConfiguration mapping file
-	EngineConfigurationMappingFileName = "engine_configuration_mappings.json"
 	// EngineConfigurationPerProject file
 	EngineConfigurationPerProjectFileName = "engine_configuration_per_project.json"
 	// TeamsFileName teams file
