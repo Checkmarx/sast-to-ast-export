@@ -530,17 +530,17 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 		reportIndex := i + 1
 		if consumeOutput.Err == nil {
 			log.Info().
-				Str("progress", fmt.Sprintf("%d/%d", reportIndex, reportCount)).
 				Int("projectID", consumeOutput.ProjectID).
 				Int("scanID", consumeOutput.ScanID).
-				Msg("Successfully collected scan result")
+				Str("progress", fmt.Sprintf("%d/%d", reportIndex, reportCount)).
+				Msg("Successfully collected results")
 		} else {
 			reportConsumeErrorCount++
 			log.Warn().
 				Int("projectID", consumeOutput.ProjectID).
 				Int("scanID", consumeOutput.ScanID).
 				Err(consumeOutput.Err).
-				Msg("Failed to collect scan result")
+				Msg("Failed to collect scan results")
 		}
 	}
 
