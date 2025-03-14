@@ -1170,7 +1170,6 @@ func TestFetchResultsData(t *testing.T) {
 //nolint:funlen
 func TestFetchSelectedData(t *testing.T) {
 	teamName := TeamName
-	//projectsIds := projectIDs
 	projectPage := []rest.ProjectWithLastScanID{
 		{ID: 1, LastScanID: 1},
 		{ID: 2, LastScanID: 2},
@@ -1822,7 +1821,6 @@ func TestFetchProjects(t *testing.T) {
 			},
 		}
 		client.EXPECT().GetConfigurationsKeys().Return(&engineKeysConfig, nil).AnyTimes()
-		//client.EXPECT().GetConfigurationsKeys().Return(engineKeysConfig, nil).AnyTimes()
 		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`[]`), nil).AnyTimes()
 
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
