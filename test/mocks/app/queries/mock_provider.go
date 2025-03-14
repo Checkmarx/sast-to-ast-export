@@ -39,6 +39,21 @@ func (m *MockQueriesRepo) EXPECT() *MockQueriesRepoMockRecorder {
 	return m.recorder
 }
 
+// GetCustomStatesList mocks base method.
+func (m *MockQueriesRepo) GetCustomStatesList() (*soap.GetResultStateListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCustomStatesList")
+	ret0, _ := ret[0].(*soap.GetResultStateListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCustomStatesList indicates an expected call of GetCustomStatesList.
+func (mr *MockQueriesRepoMockRecorder) GetCustomStatesList() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomStatesList", reflect.TypeOf((*MockQueriesRepo)(nil).GetCustomStatesList))
+}
+
 // GetQueriesList mocks base method.
 func (m *MockQueriesRepo) GetQueriesList() (*soap.GetQueryCollectionResponse, error) {
 	m.ctrl.T.Helper()

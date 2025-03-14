@@ -437,6 +437,20 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 		return errors.Wrap(errExp, "error with exporting custom queries list to file")
 	}
 
+	log.Info().Msg("collecting custom states")
+	customStateResp, err := client.GetCustomStatesList()
+	if err != nil {
+		return errors.Wrap(err, "error with getting custom states list")
+	}
+	customStateData, marshalErr := xml.MarshalIndent(customStateResp, "  ", "    ")
+	if marshalErr != nil {
+		return errors.Wrap(marshalErr, "marshal error with getting custom states list")
+	}
+
+	if errExp := exporter.AddFile(export2.CustomStatesFileName, customStateData); errExp != nil {
+		return errors.Wrap(errExp, "error with exporting custom states list to file")
+	}
+
 	return nil
 }
 
