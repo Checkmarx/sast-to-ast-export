@@ -139,6 +139,30 @@ type (
 		LanguageStateDate string   `xml:"LanguageStateDate"`
 	}
 
+	GetResultStateListRequest struct {
+		XMLName xml.Name `xml:"chec:GetResultStateList"`
+	}
+
+	GetResultStateListResponse struct {
+		XMLName                  xml.Name                 `xml:"GetResultStateListResponse"`
+		GetResultStateListResult GetResultStateListResult `xml:"GetResultStateListResult"`
+	}
+
+	GetResultStateListResult struct {
+		XMLName         xml.Name        `xml:"GetResultStateListResult"`
+		ResultStateList ResultStateList `xml:"ResultStateList"`
+	}
+	ResultStateList struct {
+		XMLName     xml.Name      `xml:"ResultStateList"`
+		ResultState []ResultState `xml:"ResultState"`
+	}
+	ResultState struct {
+		XMLName          xml.Name `xml:"ResultState"`
+		ResultName       string   `xml:"ResultName"`
+		ResultID         int      `xml:"ResultID"`
+		ResultPermission string   `xml:"ResultPermission"`
+	}
+
 	Queries struct {
 		XMLName   xml.Name    `xml:"Queries"`
 		CxWSQuery []CxWSQuery `xml:"CxWSQuery"`

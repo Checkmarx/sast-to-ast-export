@@ -13,3 +13,7 @@ func NewRepo(soapClient soap.Adapter) *Repo {
 func (e *Repo) GetQueriesList() (*soap.GetQueryCollectionResponse, error) {
 	return e.soapClient.GetQueryCollection()
 }
+
+func (e *Repo) GetCustomStatesList() (*soap.GetResultStateListResponse, error) {
+	return e.soapClient.GetCustomStateCollection()
+}

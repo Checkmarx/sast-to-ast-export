@@ -54,6 +54,21 @@ func (mr *MockASTQueryProviderMockRecorder) GetCustomQueriesList() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomQueriesList", reflect.TypeOf((*MockASTQueryProvider)(nil).GetCustomQueriesList))
 }
 
+// GetCustomStatesList mocks base method.
+func (m *MockASTQueryProvider) GetCustomStatesList() (*soap.GetResultStateListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCustomStatesList")
+	ret0, _ := ret[0].(*soap.GetResultStateListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCustomStatesList indicates an expected call of GetCustomStatesList.
+func (mr *MockASTQueryProviderMockRecorder) GetCustomStatesList() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomStatesList", reflect.TypeOf((*MockASTQueryProvider)(nil).GetCustomStatesList))
+}
+
 // GetQueryID mocks base method.
 func (m *MockASTQueryProvider) GetQueryID(arg0, arg1, arg2, arg3 string) (string, error) {
 	m.ctrl.T.Helper()

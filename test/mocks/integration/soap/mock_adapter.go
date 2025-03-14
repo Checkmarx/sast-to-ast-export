@@ -39,6 +39,21 @@ func (m *MockAdapter) EXPECT() *MockAdapterMockRecorder {
 	return m.recorder
 }
 
+// GetCustomStateCollection mocks base method.
+func (m *MockAdapter) GetCustomStateCollection() (*soap.GetResultStateListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCustomStateCollection")
+	ret0, _ := ret[0].(*soap.GetResultStateListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCustomStateCollection indicates an expected call of GetCustomStateCollection.
+func (mr *MockAdapterMockRecorder) GetCustomStateCollection() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomStateCollection", reflect.TypeOf((*MockAdapter)(nil).GetCustomStateCollection))
+}
+
 // GetInstallationSettings mocks base method.
 func (m *MockAdapter) GetInstallationSettings() (*soap.GetInstallationSettingsResponse, error) {
 	m.ctrl.T.Helper()

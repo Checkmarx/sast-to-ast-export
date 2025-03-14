@@ -27,6 +27,7 @@ type Adapter interface {
 	GetQueryCollection() (*GetQueryCollectionResponse, error)
 	GetPresetDetails(ID int) (*GetPresetDetailsResponse, error)
 	GetInstallationSettings() (*GetInstallationSettingsResponse, error)
+	GetCustomStateCollection() (*GetResultStateListResponse, error)
 }
 
 type Client struct {
@@ -109,6 +110,23 @@ func (e *Client) GetQueryCollection() (*GetQueryCollectionResponse, error) {
 	}
 	if !response.GetQueryCollectionResult.IsSuccessful {
 		return nil, fmt.Errorf("%s: %s", errSoapCallFailed, errCannotGetQueryList)
+	}
+	return &response, nil
+}
+
+func (e *Client) GetCustomStateCollection() (*GetResultStateListResponse, error) {
+	requestBytes, requestMarshalErr := xml.Marshal(GetResultStateListRequest{})
+	if requestMarshalErr != nil {
+		return nil, errors.Wrap(requestMarshalErr, errRequestMarshalFailed)
+	}
+	envelope, callErr := e.call("GetResultStateList", requestBytes)
+	if callErr != nil {
+		return nil, errors.Wrap(callErr, errSoapCallFailed)
+	}
+	var response GetResultStateListResponse
+	unmarshalErr := xml.Unmarshal(envelope.Body.Contents, &response)
+	if unmarshalErr != nil {
+		return nil, errors.Wrap(unmarshalErr, errResponseUnmarshalFailed)
 	}
 	return &response, nil
 }
