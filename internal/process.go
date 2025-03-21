@@ -626,14 +626,12 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 	mappingsData, err := client.GetEngineConfigurationMappings()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get engine configuration mappings")
-		return err
 	}
 
 	// Parse the engine configuration mappings
 	var engineMappings []EngineConfigMapping
 	if err := json.Unmarshal(mappingsData, &engineMappings); err != nil {
 		log.Error().Err(err).Msg("Failed to unmarshal engine configuration mappings")
-		return err
 	}
 
 	// Fetch engine keys and create a map for quick lookup by name

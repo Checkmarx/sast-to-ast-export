@@ -445,8 +445,7 @@ func (c *APIClient) GetEngineConfigurations(projectID int) ([]byte, error) {
 	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
 	req.Header.Set("Content-Type", "application/json;v=1.1")
 	if requestErr != nil {
-		log.Error().Err(requestErr).Msg("Failed to create HTTP request")
-		return nil, requestErr
+		log.Error().Err(requestErr).Msgf("Failed to create HTTP request for projectID %d", projectID)
 	}
 
 	q := req.URL.Query()
@@ -456,8 +455,7 @@ func (c *APIClient) GetEngineConfigurations(projectID int) ([]byte, error) {
 	body, getErr := c.getResponseBodyFromRequest(req)
 
 	if getErr != nil {
-		log.Error().Err(getErr).Msg("Failed to get response body from request")
-		return nil, getErr
+		log.Error().Err(getErr).Msgf("Failed to get response body from request for projectID %d", projectID)
 	}
 	return body, nil
 }
