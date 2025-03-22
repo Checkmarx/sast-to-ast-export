@@ -1,0 +1,37 @@
+<GetResultStateListResponse>
+      <GetResultStateListResult>
+          <ResultStateList>
+              <ResultState>
+                  <ResultName>To Verify</ResultName>
+                  <ResultID>0</ResultID>
+                  <ResultPermission>set-result-state-toverify</ResultPermission>
+              </ResultState>
+              <ResultState>
+                  <ResultName>Not Exploitable</ResultName>
+                  <ResultID>1</ResultID>
+                  <ResultPermission>set-result-state-notexploitable</ResultPermission>
+              </ResultState>
+              <ResultState>
+                  <ResultName>Confirmed by Security Team</ResultName>
+                  <ResultID>2</ResultID>
+                  <ResultPermission>set-result-state-confirmedbysecurityteam</ResultPermission>
+              </ResultState>
+              <ResultState>
+                  <ResultName>Urgent</ResultName>
+                  <ResultID>3</ResultID>
+                  <ResultPermission>set-result-state-urgent</ResultPermission>
+              </ResultState>
+              <ResultState>
+                  <ResultName>Proposed Not Exploitable</ResultName>
+                  <ResultID>4</ResultID>
+                  <ResultPermission>set-result-state-proposednotexploitable</ResultPermission>
+              </ResultState>
+              <ResultState>
+                  <ResultName>Accepted</ResultName>
+                  <ResultID>5</ResultID>
+                  <ResultPermission>set-result-state-accepted</ResultPermission>
+              </ResultState>
+          </ResultStateList>
+      </GetResultStateListResult>
+</GetResultStateListResponse>
+ 
