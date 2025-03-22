@@ -72,9 +72,9 @@ func (e *Provider) GetCustomStatesList() (*soap.GetResultStateListResponse, erro
 	output.GetResultStateListResult.ResultStateList.XMLName = xml.Name{Local: "GetResultStateListResult"}
 	output.GetResultStateListResult.ResultStateList.ResultState = []soap.ResultState{}
 
-	//nolint:gocritic
 	output.GetResultStateListResult.ResultStateList.ResultState =
-		append(output.GetResultStateListResult.ResultStateList.ResultState, statesResponse.GetResultStateListResult.ResultStateList.ResultState...)
+		append(output.GetResultStateListResult.ResultStateList.ResultState,
+			statesResponse.GetResultStateListResult.ResultStateList.ResultState...)
 
 	return &output, nil
 }
