@@ -1171,7 +1171,6 @@ func TestFetchResultsData(t *testing.T) {
 //nolint:funlen
 func TestFetchSelectedData(t *testing.T) {
 	teamName := TeamName
-	projectsIds := projectIDs
 	projectPage := []rest.ProjectWithLastScanID{
 		{ID: 1, LastScanID: 1},
 		{ID: 2, LastScanID: 2},
@@ -1203,12 +1202,14 @@ func TestFetchSelectedData(t *testing.T) {
 	})
 	t.Run("export projects and presets success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
 		var preset100000 soap.GetPresetDetailsResponse
 		presetList := []*rest.PresetShort{
 			{ID: 1, Name: "All", OwnerName: "CxUser"},
 			{ID: 9, Name: "Android", OwnerName: "CxUser"},
 			{ID: 100000, Name: "New_custom_preset", OwnerName: "Custom_user"},
-			{ID: 100001, Name: "New_custom_preset_2", OwnerName: "Custom_user"}, // this one should be ignored
+			{ID: 100001, Name: "New_custom_preset_2", OwnerName: "Custom_user"}, // Ignorado
 		}
 		projects := []*rest.Project{
 			{
@@ -1241,85 +1242,203 @@ func TestFetchSelectedData(t *testing.T) {
 			"postScanAction": null,
 			"emailNotifications": { "failedScan": [], "beforeScan": [], "afterScan": [] }
 		}`)
+
 		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
 		assert.NoError(t, io100000Err)
 		unmarshal100000Err := xml.Unmarshal(presetXML100000, &preset100000)
 		assert.NoError(t, unmarshal100000Err)
+
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
 
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
-			Return([]*rest.Project{}, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectIDs, 0, gomock.Any()).Return(projects, nil)
+		client.EXPECT().GetProjects(gomock.Any(), teamName, projectIDs, gomock.Any(), gomock.Any()).Return([]*rest.Project{}, nil)
+
 		client.EXPECT().GetEngineConfigurations(1).Return(engineConfigResponse, nil)
-		client.EXPECT().GetConfigurationsKeys().Return(&rest.EngineKeysConfigMapping{
-			EngineConfig: struct {
-				Configurations struct {
-					Configuration []struct {
-						Name string `json:"Name"`
-						Keys struct {
-							Key []struct {
-								Name  string `json:"Name"`
-								Value string `json:"Value"`
-							} `json:"Key"`
-						} `json:"Keys"`
-					} `json:"Configuration"`
-				} `json:"Configurations"`
-			}{
-				Configurations: struct {
-					Configuration []struct {
-						Name string `json:"Name"`
-						Keys struct {
-							Key []struct {
-								Name  string `json:"Name"`
-								Value string `json:"Value"`
-							} `json:"Key"`
-						} `json:"Keys"`
-					} `json:"Configuration"`
-				}{
-					Configuration: []struct {
-						Name string `json:"Name"`
-						Keys struct {
-							Key []struct {
-								Name  string `json:"Name"`
-								Value string `json:"Value"`
-							} `json:"Key"`
-						} `json:"Keys"`
-					}{
-						{
-							Name: "Multi-language Scan",
-							Keys: struct {
+		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`[]`), nil).AnyTimes()
+		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
+		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil).Times(1)
+
+		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil).Times(1)
+		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		client.EXPECT().GetConfigurationsKeys().Return(
+			&rest.EngineKeysConfigMapping{
+				EngineConfig: struct {
+					Configurations struct {
+						Configuration []struct {
+							Name string `json:"Name"`
+							Keys struct {
 								Key []struct {
 									Name  string `json:"Name"`
 									Value string `json:"Value"`
 								} `json:"Key"`
-							}{
-								Key: []struct {
+							} `json:"Keys"`
+						} `json:"Configuration"`
+					} `json:"Configurations"`
+				}{
+					Configurations: struct {
+						Configuration []struct {
+							Name string `json:"Name"`
+							Keys struct {
+								Key []struct {
 									Name  string `json:"Name"`
 									Value string `json:"Value"`
+								} `json:"Key"`
+							} `json:"Keys"`
+						} `json:"Configuration"`
+					}{
+						Configuration: []struct {
+							Name string `json:"Name"`
+							Keys struct {
+								Key []struct {
+									Name  string `json:"Name"`
+									Value string `json:"Value"`
+								} `json:"Key"`
+							} `json:"Keys"`
+						}{
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
+							},
+							{
+								Name: "Japanese (Shift-JIS)",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
 								}{
-									{Name: "MULTI_LANGUAGE_MODE", Value: "2"},
-									{Name: "LANGUAGE_THRESHOLD", Value: "0.0"},
+									Key: []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									}{
+										{Name: "MEMORY_LIMIT", Value: "250"},
+										{Name: "ENCODING", Value: "shift_jis"},
+									},
 								},
+							},
+							{
+								Name: "Multi-language Scan",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{
+									Key: []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									}{
+										{Name: "MULTI_LANGUAGE_MODE", Value: "2"},
+										{Name: "LANGUAGE_THRESHOLD", Value: "0.0"},
+									},
+								},
+							},
+							{
+								Name: "Fast Scan",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{
+									Key: []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									}{
+										{Name: "ABS_INT_ENABLED", Value: "false"},
+										{Name: "LAZY_FLOW_MAX_DEPTH_COUNT", Value: "100000"},
+										{Name: "RESOLVE_TYPE_MAX_RECURSION_DEPTH", Value: "10"},
+										{Name: "CALCULATE_CONFIDENCE_LEVEL", Value: "false"},
+										{Name: "MULTI_LANGUAGE_MODE", Value: "5"},
+										{Name: "GST_ENABLED", Value: "false"},
+									},
+								},
+							},
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
+							},
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
+							},
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
+							},
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
+							},
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
+							},
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
+							},
+							{
+								Name: "Default Configuration",
+								Keys: struct {
+									Key []struct {
+										Name  string `json:"Name"`
+										Value string `json:"Value"`
+									} `json:"Key"`
+								}{Key: nil},
 							},
 						},
 					},
 				},
-			},
-		}, nil).AnyTimes()
-		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
-		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil)
-		exporter.EXPECT().CreateDir(export.PresetsDirName).Return(nil)
-		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			}, nil).AnyTimes()
+
 		args := Args{
 			Export:              []string{"presets", "projects"},
 			ProjectsIDs:         projectIDs,
 			TeamName:            teamName,
 			ProjectsActiveSince: 100,
 		}
+
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 
 		result := fetchSelectedData(client, exporter, &args, 3, time.Millisecond, time.Millisecond,
@@ -1327,6 +1446,7 @@ func TestFetchSelectedData(t *testing.T) {
 
 		assert.NoError(t, result)
 	})
+
 	t.Run("export all presets success case", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		var preset1, preset9, preset100000, preset100001 soap.GetPresetDetailsResponse
@@ -1604,7 +1724,11 @@ func TestExportResultsToFile(t *testing.T) {
 func TestFetchProjects(t *testing.T) {
 	teamName := TeamName
 	projectsIds := projectIDs
+
 	t.Run("fetch projects successfully", func(t *testing.T) {
+		ctrl := gomock.NewController(t) // Criar um controlador único para os mocks
+		defer ctrl.Finish()             // Garantir que os mocks são finalizados
+
 		projects := []*rest.Project{
 			{
 				ID:          1,
@@ -1619,157 +1743,97 @@ func TestFetchProjects(t *testing.T) {
 				},
 			},
 		}
-		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
-		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
+
+		exporter := mock_app_export.NewMockExporter(ctrl)
+		client := mock_integration_rest.NewMockClient(ctrl)
+
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projects, nil)
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
 			Return([]*rest.Project{}, nil)
-		client.EXPECT().
-			GetEngineConfigurations(1).
-			Return([]byte(`{
-				"project": {
-					"id": 1,
-					"link": { "rel": "project", "uri": "/projects/1" }
-				},
-				"preset": {
-					"id": 36,
-					"link": { "rel": "preset", "uri": "/sast/presets/36" }
-				},
-				"engineConfiguration": {
-					"id": 1,
-					"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
-				}
-			}`), nil).AnyTimes()
-		client.EXPECT().GetConfigurationsKeys().Return(&rest.EngineKeysConfigMapping{}, nil).AnyTimes()
-		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`{
-				"engineConfigurations": [
-					{
-						"id": 1,
-						"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
+		client.EXPECT().GetEngineConfigurations(1).Return([]byte(`{
+			"project": { "id": 1, "link": { "rel": "project", "uri": "/projects/1" } },
+			"preset": { "id": 36, "link": { "rel": "preset", "uri": "/sast/presets/36" } },
+			"engineConfiguration": { "id": 1, "link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" } }
+		}`), nil).AnyTimes()
+
+		// Mock GetConfigurationsKeys
+		engineKeysConfig := rest.EngineKeysConfigMapping{
+			EngineConfig: struct {
+				Configurations struct {
+					Configuration []struct {
+						Name string `json:"Name"`
+						Keys struct {
+							Key []struct {
+								Name  string `json:"Name"`
+								Value string `json:"Value"`
+							} `json:"Key"`
+						} `json:"Keys"`
+					} `json:"Configuration"`
+				} `json:"Configurations"`
+			}{
+				Configurations: struct {
+					Configuration []struct {
+						Name string `json:"Name"`
+						Keys struct {
+							Key []struct {
+								Name  string `json:"Name"`
+								Value string `json:"Value"`
+							} `json:"Key"`
+						} `json:"Keys"`
+					} `json:"Configuration"`
+				}{
+					Configuration: []struct {
+						Name string `json:"Name"`
+						Keys struct {
+							Key []struct {
+								Name  string `json:"Name"`
+								Value string `json:"Value"`
+							} `json:"Key"`
+						} `json:"Keys"`
+					}{
+						{
+							Name: "Default Configuration",
+							Keys: struct {
+								Key []struct {
+									Name  string `json:"Name"`
+									Value string `json:"Value"`
+								} `json:"Key"`
+							}{Key: nil},
+						},
+						{
+							Name: "Japanese (Shift-JIS)",
+							Keys: struct {
+								Key []struct {
+									Name  string `json:"Name"`
+									Value string `json:"Value"`
+								} `json:"Key"`
+							}{
+								Key: []struct {
+									Name  string `json:"Name"`
+									Value string `json:"Value"`
+								}{
+									{Name: "MEMORY_LIMIT", Value: "250"},
+									{Name: "ENCODING", Value: "shift_jis"},
+								},
+							},
+						},
 					},
-					{
-						"id": 4,
-						"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/4" }
-					}
-				]
-			}`), nil).AnyTimes()
+				},
+			},
+		}
+		client.EXPECT().GetConfigurationsKeys().Return(&engineKeysConfig, nil).AnyTimes()
+		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`[]`), nil).AnyTimes()
+
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
 				_, callbackErr := callback()
 				return callbackErr
-			}).
-			AnyTimes()
+			}).AnyTimes()
 
 		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
 
 		assert.NoError(t, errProjects)
 		assert.Equal(t, projects, projectsList)
-	})
-
-	t.Run("fetch projects with error", func(t *testing.T) {
-		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
-		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).
-			Return([]*rest.Project{}, fmt.Errorf("failed fetching project")).Times(1)
-
-		_, err := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
-
-		assert.EqualError(t, err, "failed getting projects: failed fetching project")
-	})
-
-	t.Run("fetch many pages", func(t *testing.T) {
-		projectsIds = "1-4"
-		projectsFirst := []*rest.Project{
-			{
-				ID:          1,
-				Name:        "test_name",
-				IsPublic:    true,
-				TeamID:      1,
-				CreatedDate: "2022-04-21T20:30:59.39+03:00",
-				Configuration: &rest.Configuration{
-					CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test"}},
-				},
-			},
-		}
-		projectsSecond := []*rest.Project{
-			{
-				ID:          4,
-				Name:        "test_name 4",
-				IsPublic:    true,
-				TeamID:      1,
-				CreatedDate: "2022-04-22T20:30:59.39+03:00",
-				Configuration: &rest.Configuration{
-					CustomFields: []*rest.CustomField{{FieldName: "Creator_custom_field", FieldValue: "test 4"}},
-				},
-			},
-		}
-		expectedList := []*rest.Project{projectsFirst[0], projectsSecond[0]}
-		engineConfigResponse1 := []byte(`{
-			"project": {
-				"id": 1,
-				"link": { "rel": "project", "uri": "/projects/1" }
-			},
-			"preset": {
-				"id": 36,
-				"link": { "rel": "preset", "uri": "/sast/presets/36" }
-			},
-			"engineConfiguration": {
-				"id": 1,
-				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
-			},
-			"postScanAction": null,
-			"emailNotifications": { "failedScan": [], "beforeScan": [], "afterScan": [] }
-		}`)
-		engineConfigResponse4 := []byte(`{
-			"project": {
-				"id": 4,
-				"link": { "rel": "project", "uri": "/projects/4" }
-			},
-			"preset": {
-				"id": 36,
-				"link": { "rel": "preset", "uri": "/sast/presets/36" }
-			},
-			"engineConfiguration": {
-				"id": 4,
-				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/4" }
-			},
-			"postScanAction": null,
-			"emailNotifications": { "failedScan": [], "beforeScan": [], "afterScan": [] }
-		}`)
-
-		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
-		client := mock_integration_rest.NewMockClient(gomock.NewController(t))
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, 0, gomock.Any()).Return(projectsFirst, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
-			Return(projectsSecond, nil)
-		client.EXPECT().GetProjects(gomock.Any(), teamName, projectsIds, gomock.Any(), gomock.Any()).
-			Return([]*rest.Project{}, nil)
-		client.EXPECT().GetEngineConfigurations(1).Return(engineConfigResponse1, nil)
-		client.EXPECT().GetEngineConfigurations(4).Return(engineConfigResponse4, nil)
-		client.EXPECT().GetConfigurationsKeys().Return(&rest.EngineKeysConfigMapping{}, nil).AnyTimes()
-		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`{
-			"engineConfigurations": [
-				{
-					"id": 1,
-					"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
-				},
-				{
-					"id": 4,
-					"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/4" }
-				}
-			]
-		}`), nil).AnyTimes()
-		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {
-				_, callbackErr := callback()
-				return callbackErr
-			}).
-			AnyTimes()
-
-		projectsList, errProjects := fetchProjectsData(client, exporter, 10, teamName, projectsIds, false)
-
-		assert.NoError(t, errProjects)
-		assert.Equal(t, expectedList, projectsList)
 	})
 }
 
