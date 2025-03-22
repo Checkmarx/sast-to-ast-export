@@ -13,7 +13,6 @@ import (
 	mock_integration_soap "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/soap"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/export"
-	export2 "github.com/checkmarxDev/ast-sast-export/internal/app/export"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/metadata"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/rest"
@@ -1852,14 +1851,14 @@ func TestCustomQueries(t *testing.T) {
 		_ = xml.Unmarshal(customQueries, &customQueriesObj)
 
 		queryProvider.EXPECT().GetCustomQueriesList().Return(&customQueriesObj, nil).Times(1)
-		exporter.EXPECT().AddFile(export2.QueriesFileName, gomock.Any()).Return(nil).Times(1)
+		exporter.EXPECT().AddFile(export.QueriesFileName, gomock.Any()).Return(nil).Times(1)
 
 		customStates, ioCustomStatesErr := os.ReadFile("../test/data/queries/custom_states.xml")
 		assert.NoError(t, ioCustomStatesErr)
 		_ = xml.Unmarshal(customStates, &customStatesObj)
 
 		queryProvider.EXPECT().GetCustomStatesList().Return(&customStatesObj, nil).Times(1)
-		exporter.EXPECT().AddFile(export2.CustomStatesFileName, gomock.Any()).Return(nil).Times(1)
+		exporter.EXPECT().AddFile(export.CustomStatesFileName, gomock.Any()).Return(nil).Times(1)
 
 		result := fetchQueriesData(queryProvider, exporter)
 
