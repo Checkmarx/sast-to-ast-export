@@ -1839,14 +1839,26 @@ func TestFetchProjects(t *testing.T) {
 func TestCustomQueries(t *testing.T) {
 	t.Run("fetch custom queries", func(t *testing.T) {
 		var customQueriesObj soap.GetQueryCollectionResponse
+		var customStatesObj soap.GetResultStateListResponse
 		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+
 		customQueries, ioCustomErr := os.ReadFile("../test/data/queries/custom_queries.xml")
 		assert.NoError(t, ioCustomErr)
 		_ = xml.Unmarshal(customQueries, &customQueriesObj)
+
 		queryProvider.EXPECT().GetCustomQueriesList().Return(&customQueriesObj, nil).Times(1)
-		exporter.EXPECT().AddFile(export.QueriesFileName, gomock.Any()).Return(nil)
+		exporter.EXPECT().AddFile(export.QueriesFileName, gomock.Any()).Return(nil).Times(1)
+
+		customStates, ioCustomStatesErr := os.ReadFile("../test/data/queries/custom_states.xml")
+		assert.NoError(t, ioCustomStatesErr)
+		_ = xml.Unmarshal(customStates, &customStatesObj)
+
+		queryProvider.EXPECT().GetCustomStatesList().Return(&customStatesObj, nil).Times(1)
+		exporter.EXPECT().AddFile(export.CustomStatesFileName, gomock.Any()).Return(nil).Times(1)
 
 		result := fetchQueriesData(queryProvider, exporter)
 

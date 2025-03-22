@@ -59,6 +59,26 @@ func (e *Provider) GetCustomQueriesList() (*soap.GetQueryCollectionResponse, err
 	return &output, nil
 }
 
+func (e *Provider) GetCustomStatesList() (*soap.GetResultStateListResponse, error) {
+	var output soap.GetResultStateListResponse
+	statesResponse, err := e.queryProvider.GetCustomStatesList()
+	if err != nil {
+		return nil, err
+	}
+
+	// Populate the SOAP response
+	output.XMLName = xml.Name{Local: "GetCustomStatesResponse"}
+	output.GetResultStateListResult.XMLName = xml.Name{Local: "GetCustomStatesResult"}
+	output.GetResultStateListResult.ResultStateList.XMLName = xml.Name{Local: "GetResultStateListResult"}
+	output.GetResultStateListResult.ResultStateList.ResultState = []soap.ResultState{}
+
+	output.GetResultStateListResult.ResultStateList.ResultState =
+		append(output.GetResultStateListResult.ResultStateList.ResultState,
+			statesResponse.GetResultStateListResult.ResultStateList.ResultState...)
+
+	return &output, nil
+}
+
 func (e *Provider) getMappedID(sastID string) string {
 	for _, queryMap := range e.mapping {
 		if queryMap.SastID == sastID {

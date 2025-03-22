@@ -49,6 +49,8 @@ const (
 	InstallationFileName = "installation.json"
 	// ResultsMappingFileName file
 	ResultsMappingFileName = "results_mapping.csv"
+	// CustomStatesFileName file
+	CustomStatesFileName = "custom_states.xml"
 
 	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"
