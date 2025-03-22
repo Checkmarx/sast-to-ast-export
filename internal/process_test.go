@@ -1776,76 +1776,23 @@ func TestFetchProjects(t *testing.T) {
 func TestCustomQueries(t *testing.T) {
 	t.Run("fetch custom queries", func(t *testing.T) {
 		var customQueriesObj soap.GetQueryCollectionResponse
-		ctrl := gomock.NewController(t)
-		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
-		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
-		customQueries, ioCustomErr := os.ReadFile("../test/data/queries/custom_queries.xml")
-		assert.NoError(t, ioCustomErr)
-		_ = xml.Unmarshal(customQueries, &customQueriesObj)
-		queryProvider.EXPECT().GetCustomQueriesList().Return(&customQueriesObj, nil).Times(1)
-		exporter.EXPECT().AddFile(export2.QueriesFileName, gomock.Any()).Return(nil)
-
-		result := fetchQueriesData(queryProvider, exporter)
-
-		assert.NoError(t, result)
-	})
-
-	t.Run("fetch custom states", func(t *testing.T) {
-		var customQueriesObj soap.GetQueryCollectionResponse
 		var customStatesObj soap.GetResultStateListResponse
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
-		exporter := mock_app_export.NewMockExporter(ctrl)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
 
-		customQueries, ioCustomErr := os.ReadFile("../test/data/queries/custom_states.xml")
+		customQueries, ioCustomErr := os.ReadFile("../test/data/queries/custom_queries.xml")
 		assert.NoError(t, ioCustomErr)
-		err := xml.Unmarshal(customQueries, &customQueriesObj)
+		_ = xml.Unmarshal(customQueries, &customQueriesObj)
+
 		queryProvider.EXPECT().GetCustomQueriesList().Return(&customQueriesObj, nil).Times(1)
 		exporter.EXPECT().AddFile(export2.QueriesFileName, gomock.Any()).Return(nil).Times(1)
 
-		customStatesXML := []byte(`
-            <GetResultStateListResponse>
-      <GetResultStateListResult>
-          <ResultStateList>
-              <ResultState>
-                  <ResultName>To Verify</ResultName>
-                  <ResultID>0</ResultID>
-                  <ResultPermission>set-result-state-toverify</ResultPermission>
-              </ResultState>
-              <ResultState>
-                  <ResultName>Not Exploitable</ResultName>
-                  <ResultID>1</ResultID>
-                  <ResultPermission>set-result-state-notexploitable</ResultPermission>
-              </ResultState>
-              <ResultState>
-                  <ResultName>Confirmed by Security Team</ResultName>
-                  <ResultID>2</ResultID>
-                  <ResultPermission>set-result-state-confirmedbysecurityteam</ResultPermission>
-              </ResultState>
-              <ResultState>
-                  <ResultName>Urgent</ResultName>
-                  <ResultID>3</ResultID>
-                  <ResultPermission>set-result-state-urgent</ResultPermission>
-              </ResultState>
-              <ResultState>
-                  <ResultName>Proposed Not Exploitable</ResultName>
-                  <ResultID>4</ResultID>
-                  <ResultPermission>set-result-state-proposednotexploitable</ResultPermission>
-              </ResultState>
-              <ResultState>
-                  <ResultName>Accepted</ResultName>
-                  <ResultID>5</ResultID>
-                  <ResultPermission>set-result-state-accepted</ResultPermission>
-              </ResultState>
-          </ResultStateList>
-      </GetResultStateListResult>
-</GetResultStateListResponse>
- 
-        `)
-		err = xml.Unmarshal(customStatesXML, &customStatesObj)
-		assert.NoError(t, err)
+		customStates, ioCustomStatesErr := os.ReadFile("../test/data/queries/custom_states.xml")
+		assert.NoError(t, ioCustomStatesErr)
+		_ = xml.Unmarshal(customStates, &customStatesObj)
 
 		queryProvider.EXPECT().GetCustomStatesList().Return(&customStatesObj, nil).Times(1)
 		exporter.EXPECT().AddFile(export2.CustomStatesFileName, gomock.Any()).Return(nil).Times(1)
