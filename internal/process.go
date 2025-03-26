@@ -36,7 +36,7 @@ import (
 	"github.com/checkmarxDev/ast-sast-export/internal/persistence/sourcefile"
 	"github.com/checkmarxDev/ast-sast-export/pkg/sliceutils"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )

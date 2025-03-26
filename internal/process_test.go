@@ -22,7 +22,7 @@ import (
 	mock_app_export "github.com/checkmarxDev/ast-sast-export/test/mocks/app/export"
 	mock_app_metadata "github.com/checkmarxDev/ast-sast-export/test/mocks/app/metadata"
 	mock_integration_rest "github.com/checkmarxDev/ast-sast-export/test/mocks/integration/rest"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
