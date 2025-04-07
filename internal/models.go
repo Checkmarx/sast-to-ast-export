@@ -1,6 +1,9 @@
 package internal
 
-import "time"
+import (
+	"encoding/xml"
+	"time"
+)
 
 type Args struct {
 	URL,
@@ -21,6 +24,7 @@ type Args struct {
 	SimIDVersion     int
 	ExcludeFile      string
 	ExcludeFiles     []string
+	CustomExtensions string
 }
 
 type ReportJob struct {
@@ -77,4 +81,16 @@ type EngineKeysData struct {
 			Configuration []Configuration `json:"Configuration"`
 		} `json:"Configurations"`
 	} `json:"EngineConfig"`
+}
+
+type CustomExtensionsList struct {
+	XMLName         xml.Name          `xml:"CustomExtensionsList"`
+	CustomExtension []CustomExtension `xml:"CustomExtension"`
+}
+
+type CustomExtension struct {
+	XMLName       xml.Name `xml:"CustomExtension"`
+	Language      string   `xml:"Language"`
+	Extension     string   `xml:"Extension"`
+	LanguageGroup string   `xml:"LanguageGroup"`
 }

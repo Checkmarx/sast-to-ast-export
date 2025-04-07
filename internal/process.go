@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/checkmarxDev/ast-sast-export/internal/app/resultsmapping"
@@ -119,6 +120,11 @@ func RunExport(args *Args) error {
 		}(&exportValues)
 	}
 
+	// Fetch custom extensions if provided via cli
+	if err := fetchCustomExtensions(args, &exportValues); err != nil {
+		return errors.Wrap(err, "failed to fetch custom extensions")
+	}
+
 	soapClient := soap.NewClient(args.URL, client.Token, retryHTTPClient)
 	sourceRepo := sourcefile.NewRepo(soapClient)
 	methodLineRepo := methodline.NewRepo(soapClient)
@@ -167,6 +173,7 @@ func RunExport(args *Args) error {
 		metadataTempDir,
 		args.SimIDVersion,
 		args.ExcludeFile,
+		args.CustomExtensions,
 	)
 
 	addErr := addCustomQueryIDs(astQueryProvider, astQueryMappingProvider)
@@ -963,4 +970,50 @@ func readEngineConfigurationsKeys(client rest.Client) map[string][]EngineKey {
 	}
 
 	return engineKeysMap
+}
+
+func fetchCustomExtensions(args *Args, exporter export2.Exporter) error {
+	if args.CustomExtensions == "" {
+		return nil
+	}
+
+	// Split the input string by space to get language, extension and language group
+	parts := strings.Split(args.CustomExtensions, " ")
+	if len(parts) < 3 || len(parts)%3 != 0 {
+		return fmt.Errorf("invalid custom extensions format. Expected: Language Extension LanguageGroup [Language Extension LanguageGroup ...]")
+	}
+
+	customExtensions := &CustomExtensionsList{
+		CustomExtension: make([]CustomExtension, 0),
+	}
+
+	// Process each set of three parts (Language, Extension, LanguageGroup)
+	for i := 0; i < len(parts); i += 3 {
+		if i+2 >= len(parts) {
+			break
+		}
+
+		language := parts[i]
+		extension := parts[i+1]
+		languageGroup := parts[i+2]
+
+		customExtensions.CustomExtension = append(customExtensions.CustomExtension, CustomExtension{
+			Language:      language,
+			Extension:     extension,
+			LanguageGroup: languageGroup,
+		})
+	}
+
+	// Marshal the custom extensions to XML
+	customExtensionsData, err := xml.MarshalIndent(customExtensions, "  ", "    ")
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal custom extensions")
+	}
+
+	// Save the custom extensions to a file
+	if err := exporter.AddFile(export2.CustomExtensionsFileName, customExtensionsData); err != nil {
+		return errors.Wrap(err, "failed to save custom extensions")
+	}
+
+	return nil
 }

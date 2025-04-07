@@ -25,6 +25,7 @@ type Factory struct {
 	tmpDir               string
 	simIDVersion         int
 	rmvDir               string
+	customExtensions     string
 }
 
 func NewMetadataFactory(
@@ -35,6 +36,7 @@ func NewMetadataFactory(
 	tmpDir string,
 	simIDVersion int,
 	rmvDir string,
+	customExtensions string,
 ) *Factory {
 	return &Factory{
 		astQueryIDProvider,
@@ -44,6 +46,7 @@ func NewMetadataFactory(
 		tmpDir,
 		simIDVersion,
 		rmvDir,
+		customExtensions,
 	}
 }
 

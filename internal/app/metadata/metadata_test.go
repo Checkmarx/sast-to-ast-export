@@ -119,7 +119,7 @@ func TestMetadataFactory_GetMetadataForQueryAndResult(t *testing.T) {
 	methodLineProvider.EXPECT().
 		GetMethodLinesByPath(scanID, metaQuery.QueryID).
 		Return(methodLinesResult, nil)
-	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir, 0, "")
+	metadata := NewMetadataFactory(astQueryIDProviderMock, similarityIDProviderMock, sourceProviderMock, methodLineProvider, tmpDir, 0, "", "")
 
 	result, err := metadata.GetMetadataRecord(scanID, []*Query{metaQuery})
 	assert.NoError(t, err)

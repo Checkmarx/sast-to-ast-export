@@ -28,6 +28,7 @@ const (
 	nestedTeams             = "nested-teams"
 	simIDVersionArg         = "simIDVersion"
 	excludeFileArg          = "exclude-file"
+	addCustomExtArg         = "addCustomExt"
 
 	projectsActiveSinceDefaultValue = 180
 	emptyProjectsActiveSince        = 0
@@ -147,6 +148,11 @@ func init() {
 		"",
 		"TXT file with remote file paths or patterns to exclude from export; each line should contain a path or regex pattern.")
 
+	rootCmd.Flags().StringP(
+		addCustomExtArg,
+		"",
+		"",
+		"add custom extensions via CLI e.g. --addCustomExt 'Perl esp PERL_EXTENSIONS'.")
 	if err := rootCmd.MarkFlagRequired(userArg); err != nil {
 		panic(err)
 	}
