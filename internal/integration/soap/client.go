@@ -47,7 +47,9 @@ func NewClient(baseURL string, authToken *rest.AccessToken, adapter rest.Retryab
 func (e *Client) GetSourcesByScanID(scanID string, filenames []string) (*GetSourcesByScanIDResponse, error) {
 	var fixedFilenames []string
 	for _, filename := range filenames {
-		if filename == "" { // this is a workaround for the empty filename issue where there are triaged results
+		if filename == "" { // this is a workaround for the empty filename issue where exists triaged results
+			log.Info().Msgf("Empty FileName with triaged results found on scanID %s, it will be ignored.",
+				scanID)
 			continue
 		}
 		if string(filename[0]) != "/" {
