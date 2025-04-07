@@ -89,5 +89,9 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 			excludePaths[i] = strings.TrimSpace(excludePaths[i])
 		}
 	}
+	args.CustomExtensions, err = cmd.Flags().GetString(addCustomExtArg)
+	if err != nil {
+		panic(err)
+	}
 	return args
 }
