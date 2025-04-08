@@ -193,4 +193,16 @@ type (
 			ID int `json:"id"`
 		} `json:"engineConfiguration"`
 	}
+
+	Link struct {
+		Rel string `json:"rel"`
+		URI string `json:"uri"`
+	}
+
+	ProjectExcludeSettings struct {
+		ProjectID             int    `json:"projectId"`
+		ExcludeFoldersPattern string `json:"excludeFoldersPattern"`
+		ExcludeFilesPattern   string `json:"excludeFilesPattern"`
+		Link                  Link   `json:"link"`
+	}
 )
