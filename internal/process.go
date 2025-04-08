@@ -1076,6 +1076,7 @@ func fetchProjectExcludeSettings(client rest.Client, exporter export2.Exporter, 
 
 		// Filter projects based on provided IDs
 		for _, project := range projects {
+			//nolint:dupl
 			if idMap[strconv.Itoa(project.ID)] {
 				log.Info().Int("projectID", project.ID).Msg("collecting project exclude settings")
 				excludeSettings, err := client.GetProjectExcludeSettings(project.ID)
