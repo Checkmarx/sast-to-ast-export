@@ -20,5 +20,6 @@ const (
 )
 
 func GetOptions() []string {
-	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption, PresetsOption, EngineConfigurationsOption, FiltersOption}
+	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption,
+		PresetsOption, EngineConfigurationsOption, FiltersOption}
 }

@@ -723,7 +723,7 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 
 			engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
 			keys := engineKeysMap[engineConfigName]
-
+			//nolint:dupl
 			engineConfigs = append(engineConfigs, JoinedConfig{
 				ProjectID:               engineConfiguration.Project.ID,
 				EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
