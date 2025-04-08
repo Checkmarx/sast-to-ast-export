@@ -276,6 +276,14 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 				if err := fetchPresetsData(client, presetProvider, exporter, projects, args.ProjectsIDs); err != nil {
 					return err
 				}
+			case export2.FiltersOption:
+				if err := fetchProjectExcludeSettings(client, exporter, projects, args.ProjectsIDs); err != nil {
+					return err
+				}
+			case export2.EngineConfigurationsOption:
+				if err := getProjectConfigurations(client, projects, exporter, args.ProjectsIDs); err != nil {
+					return err
+				}
 			case export2.ResultsOption:
 				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
 					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIDs, args); err != nil {
@@ -391,9 +399,6 @@ func fetchProjectsData(client rest.Client, exporter export2.Exporter, resultsPro
 	if err := exporter.AddFileWithDataSource(export2.ProjectsFileName,
 		export2.NewJSONDataSource(projects)); err != nil {
 		return nil, err
-	}
-	if err := getProjectConfigurations(client, projects, exporter); err != nil {
-		return nil, errors.Wrap(err, "failed getting and exporting project configurations")
 	}
 	return projects, nil
 }
@@ -639,7 +644,7 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIDs string)
 	return output, nil
 }
 
-func getProjectConfigurations(client rest.Client, projects []*rest.Project, exporter export2.Exporter) error {
+func getProjectConfigurations(client rest.Client, projects []*rest.Project, exporter export2.Exporter, projectIDs string) error {
 	var engineConfigs []JoinedConfig
 	log.Info().Msg("collecting engine configurations")
 
@@ -664,29 +669,69 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 		engineConfigMap[mapping.EngineConfigurationID] = mapping.Name
 	}
 
-	for _, project := range projects {
-		configs, err := client.GetEngineConfigurations(project.ID)
-		if err != nil {
-			log.Error().Err(err).
-				Int("projectID", project.ID).
-				Msg("Skipping project due to error with getting engine configurations details")
-			continue
-		}
-		var engineConfiguration rest.EngineConfigurations
-		if err := json.Unmarshal(configs, &engineConfiguration); err != nil {
-			log.Error().Err(err).Msg("Skipping project due to failed unmarshalling of scan settings")
-			continue
+	// If specific project IDs are provided, filter the projects
+	if projectIDs != "" {
+		// Split the project IDs string into individual IDs
+		ids := strings.Split(projectIDs, ",")
+		idMap := make(map[string]bool)
+		for _, id := range ids {
+			idMap[id] = true
 		}
 
-		engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
-		keys := engineKeysMap[engineConfigName]
+		// Filter projects based on provided IDs
+		for _, project := range projects {
+			//nolint:dupl,gocritic
+			if idMap[strconv.Itoa(project.ID)] {
+				configs, err := client.GetEngineConfigurations(project.ID)
+				if err != nil {
+					log.Error().Err(err).
+						Int("projectID", project.ID).
+						Msg("Skipping project due to error with getting engine configurations details")
+					continue
+				}
+				var engineConfiguration rest.EngineConfigurations
+				if err := json.Unmarshal(configs, &engineConfiguration); err != nil {
+					log.Error().Err(err).Msg("Skipping project due to failed unmarshalling of scan settings")
+					continue
+				}
 
-		engineConfigs = append(engineConfigs, JoinedConfig{
-			ProjectID:               engineConfiguration.Project.ID,
-			EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
-			EngineConfigurationName: engineConfigName,
-			ConfigurationKeys:       keys,
-		})
+				engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
+				keys := engineKeysMap[engineConfigName]
+
+				engineConfigs = append(engineConfigs, JoinedConfig{
+					ProjectID:               engineConfiguration.Project.ID,
+					EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
+					EngineConfigurationName: engineConfigName,
+					ConfigurationKeys:       keys,
+				})
+			}
+		}
+	} else {
+		// If no specific IDs provided, process all projects
+		//nolint:dupl
+		for _, project := range projects {
+			configs, err := client.GetEngineConfigurations(project.ID)
+			if err != nil {
+				log.Error().Err(err).
+					Int("projectID", project.ID).
+					Msg("Skipping project due to error with getting engine configurations details")
+				continue
+			}
+			var engineConfiguration rest.EngineConfigurations
+			if err := json.Unmarshal(configs, &engineConfiguration); err != nil {
+				log.Error().Err(err).Msg("Skipping project due to failed unmarshalling of scan settings")
+				continue
+			}
+
+			engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
+			keys := engineKeysMap[engineConfigName]
+			engineConfigs = append(engineConfigs, JoinedConfig{
+				ProjectID:               engineConfiguration.Project.ID,
+				EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
+				EngineConfigurationName: engineConfigName,
+				ConfigurationKeys:       keys,
+			})
+		}
 	}
 
 	if len(engineConfigs) > 0 {
@@ -1013,6 +1058,56 @@ func fetchCustomExtensions(args *Args, exporter export2.Exporter) error {
 	// Save the custom extensions to a file
 	if err := exporter.AddFile(export2.CustomExtensionsFileName, customExtensionsData); err != nil {
 		return errors.Wrap(err, "failed to save custom extensions")
+	}
+
+	return nil
+}
+
+func fetchProjectExcludeSettings(client rest.Client, exporter export2.Exporter, projects []*rest.Project, projectIDs string) error {
+	var allExcludeSettings []*rest.ProjectExcludeSettings
+
+	// If specific project IDs are provided, filter the projects
+	if projectIDs != "" {
+		// Split the project IDs string into individual IDs
+		ids := strings.Split(projectIDs, ",")
+		idMap := make(map[string]bool)
+		for _, id := range ids {
+			idMap[id] = true
+		}
+
+		// Filter projects based on provided IDs
+		for _, project := range projects {
+			//nolint:dupl,gocritic
+			if idMap[strconv.Itoa(project.ID)] {
+				log.Info().Int("projectID", project.ID).Msg("collecting project exclude settings")
+				excludeSettings, err := client.GetProjectExcludeSettings(project.ID)
+				if err != nil {
+					return errors.Wrapf(err, "failed to get exclude settings for project %d", project.ID)
+				}
+				allExcludeSettings = append(allExcludeSettings, excludeSettings)
+			}
+		}
+	} else {
+		// If no specific IDs provided, process all projects
+		for _, project := range projects {
+			log.Info().Int("projectID", project.ID).Msg("collecting project exclude settings")
+			excludeSettings, err := client.GetProjectExcludeSettings(project.ID)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get exclude settings for project %d", project.ID)
+			}
+			allExcludeSettings = append(allExcludeSettings, excludeSettings)
+		}
+	}
+
+	// Marshal all settings to JSON
+	excludeSettingsData, err := json.MarshalIndent(allExcludeSettings, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal exclude settings")
+	}
+
+	// Save all settings to a file
+	if err := exporter.AddFile(export2.ProjectExcludeSettingsFileName, excludeSettingsData); err != nil {
+		return errors.Wrap(err, "failed to save exclude settings")
 	}
 
 	return nil

@@ -1225,22 +1225,6 @@ func TestFetchSelectedData(t *testing.T) {
 				},
 			},
 		}
-		engineConfigResponse := []byte(`{
-			"project": {
-				"id": 1,
-				"link": { "rel": "project", "uri": "/projects/1" }
-			},
-			"preset": {
-				"id": 36,
-				"link": { "rel": "preset", "uri": "/sast/presets/36" }
-			},
-			"engineConfiguration": {
-				"id": 1,
-				"link": { "rel": "engineConfiguration", "uri": "/sast/engineConfigurations/1" }
-			},
-			"postScanAction": null,
-			"emailNotifications": { "failedScan": [], "beforeScan": [], "afterScan": [] }
-		}`)
 
 		presetXML100000, io100000Err := os.ReadFile("../test/data/presets/100000.xml")
 		assert.NoError(t, io100000Err)
@@ -1255,7 +1239,6 @@ func TestFetchSelectedData(t *testing.T) {
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectIDs, 0, gomock.Any()).Return(projects, nil)
 		client.EXPECT().GetProjects(gomock.Any(), teamName, projectIDs, gomock.Any(), gomock.Any()).Return([]*rest.Project{}, nil)
 
-		client.EXPECT().GetEngineConfigurations(1).Return(engineConfigResponse, nil)
 		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`[]`), nil).AnyTimes()
 		client.EXPECT().GetPresets().Return(presetList, nil).Times(1)
 		presetProvider.EXPECT().GetPresetDetails(100000).Return(&preset100000, nil).Times(1)
@@ -1362,60 +1345,6 @@ func TestFetchSelectedData(t *testing.T) {
 										{Name: "GST_ENABLED", Value: "false"},
 									},
 								},
-							},
-							{
-								Name: "Default Configuration",
-								Keys: struct {
-									Key []struct {
-										Name  string `json:"Name"`
-										Value string `json:"Value"`
-									} `json:"Key"`
-								}{Key: nil},
-							},
-							{
-								Name: "Default Configuration",
-								Keys: struct {
-									Key []struct {
-										Name  string `json:"Name"`
-										Value string `json:"Value"`
-									} `json:"Key"`
-								}{Key: nil},
-							},
-							{
-								Name: "Default Configuration",
-								Keys: struct {
-									Key []struct {
-										Name  string `json:"Name"`
-										Value string `json:"Value"`
-									} `json:"Key"`
-								}{Key: nil},
-							},
-							{
-								Name: "Default Configuration",
-								Keys: struct {
-									Key []struct {
-										Name  string `json:"Name"`
-										Value string `json:"Value"`
-									} `json:"Key"`
-								}{Key: nil},
-							},
-							{
-								Name: "Default Configuration",
-								Keys: struct {
-									Key []struct {
-										Name  string `json:"Name"`
-										Value string `json:"Value"`
-									} `json:"Key"`
-								}{Key: nil},
-							},
-							{
-								Name: "Default Configuration",
-								Keys: struct {
-									Key []struct {
-										Name  string `json:"Name"`
-										Value string `json:"Value"`
-									} `json:"Key"`
-								}{Key: nil},
 							},
 							{
 								Name: "Default Configuration",
@@ -1821,7 +1750,6 @@ func TestFetchProjects(t *testing.T) {
 			},
 		}
 		client.EXPECT().GetConfigurationsKeys().Return(&engineKeysConfig, nil).AnyTimes()
-		client.EXPECT().GetEngineConfigurationMappings().Return([]byte(`[]`), nil).AnyTimes()
 
 		exporter.EXPECT().AddFileWithDataSource(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ string, callback func() ([]byte, error)) error {

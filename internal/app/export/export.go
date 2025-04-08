@@ -53,7 +53,8 @@ const (
 	CustomStatesFileName = "custom_states.xml"
 	// CustomExtensionsFileName file
 	CustomExtensionsFileName = "custom_extensions.xml"
-
+	// ProjectExcludeSettings
+	ProjectExcludeSettingsFileName = "project_filters_exclusions.json"
 	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"
 

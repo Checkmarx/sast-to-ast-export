@@ -14,9 +14,12 @@ const (
 	// PresetsOption represent presets
 	PresetsOption = "presets"
 	// EngineConfigurations represent the configurations engine scan can have
-	EngineConfigurationsOption = "engineConfigurations"
+	EngineConfigurationsOption = "configs"
+	// Filters and exclude settings
+	FiltersOption = "filters"
 )
 
 func GetOptions() []string {
-	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption, PresetsOption, EngineConfigurationsOption}
+	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption,
+		PresetsOption, EngineConfigurationsOption, FiltersOption}
 }

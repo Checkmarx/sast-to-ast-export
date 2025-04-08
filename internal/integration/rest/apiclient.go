@@ -19,19 +19,21 @@ const (
 	presetsEndpoint       = "/CxRestAPI/sast/presets"
 	projectsODataEndpoint = "/Cxwebinterface/odata/v1/Projects"
 
-	ldapServersEndpoint           = "/CxRestAPI/auth/LDAPServers"
-	ldapRoleMappingsEndpoint      = "/CxRestAPI/auth/LDAPRoleMappings"
-	ldapTeamMappingsEndpoint      = "/CxRestAPI/auth/LDAPTeamMappings"
-	samlIdentityProvidersEndpoint = "/CxRestAPI/auth/SamlIdentityProviders"
-	samlRoleMappingsEndpoint      = "/CxRestAPI/auth/SamlRoleMappings"
-	teamMappingsEndpoint          = "/CxRestAPI/auth/SamlTeamMappings"
-	reportsCheckStatusEndpoint    = "/CxRestAPI/help/reports/sastScan/%d/status"
-	reportsResultEndpoint         = "/CxRestAPI/help/reports/sastScan/%d"
-	createReportIDEndpoint        = "/CxRestAPI/help/reports/sastScan"
-	engineServersEndpoint         = "/CxRestAPI/help/sast/engineServers"
-	scanSettingsEndpoint          = "/CxRestAPI/sast/scanSettings"
-	engineConfigurationsEndpoint  = "/CxRestAPI/sast/engineConfigurations"
-	engineConfigURL               = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/EngineConfigMapping.json"
+	ldapServersEndpoint            = "/CxRestAPI/auth/LDAPServers"
+	ldapRoleMappingsEndpoint       = "/CxRestAPI/auth/LDAPRoleMappings"
+	ldapTeamMappingsEndpoint       = "/CxRestAPI/auth/LDAPTeamMappings"
+	samlIdentityProvidersEndpoint  = "/CxRestAPI/auth/SamlIdentityProviders"
+	samlRoleMappingsEndpoint       = "/CxRestAPI/auth/SamlRoleMappings"
+	teamMappingsEndpoint           = "/CxRestAPI/auth/SamlTeamMappings"
+	reportsCheckStatusEndpoint     = "/CxRestAPI/help/reports/sastScan/%d/status"
+	reportsResultEndpoint          = "/CxRestAPI/help/reports/sastScan/%d"
+	createReportIDEndpoint         = "/CxRestAPI/help/reports/sastScan"
+	engineServersEndpoint          = "/CxRestAPI/help/sast/engineServers"
+	scanSettingsEndpoint           = "/CxRestAPI/sast/scanSettings"
+	engineConfigurationsEndpoint   = "/CxRestAPI/sast/engineConfigurations"
+	projectExcludeSettingsEndpoint = "/CxRestAPI/projects/%d/sourceCode/excludeSettings"
+
+	engineConfigURL = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/EngineConfigMapping.json"
 	// ScanReportTypeXML defines SAST report type XML
 	ScanReportTypeXML = "XML"
 )
@@ -57,6 +59,7 @@ type Client interface {
 	GetEngineConfigurations(projectID int) ([]byte, error)
 	GetEngineConfigurationMappings() ([]byte, error)
 	GetConfigurationsKeys() (*EngineKeysConfigMapping, error)
+	GetProjectExcludeSettings(projectID int) (*ProjectExcludeSettings, error)
 }
 
 type RetryableHTTPAdapter interface {
@@ -485,4 +488,30 @@ func (c *APIClient) GetConfigurationsKeys() (*EngineKeysConfigMapping, error) {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 	return &mapping, nil
+}
+
+func (c *APIClient) GetProjectExcludeSettings(projectID int) (*ProjectExcludeSettings, error) {
+	log.Debug().Int("projectID", projectID).Msg("Fetching project exclude settings")
+
+	endpoint := fmt.Sprintf(projectExcludeSettingsEndpoint, projectID)
+	url := fmt.Sprintf("%s%s", c.BaseURL, endpoint)
+
+	req, requestErr := CreateRequest(http.MethodGet, url, nil, c.Token)
+	if requestErr != nil {
+		log.Error().Err(requestErr).Msgf("Failed to create HTTP request for projectID %d", projectID)
+		return nil, requestErr
+	}
+
+	body, getErr := c.getResponseBodyFromRequest(req)
+	if getErr != nil {
+		log.Error().Err(getErr).Msgf("Failed to get response body from request for projectID %d", projectID)
+		return nil, getErr
+	}
+
+	var excludeSettings ProjectExcludeSettings
+	if err := json.Unmarshal(body, &excludeSettings); err != nil {
+		log.Error().Err(err).Msgf("Failed to unmarshal response body for projectID %d", projectID)
+		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+	return &excludeSettings, nil
 }
