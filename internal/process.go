@@ -707,6 +707,7 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 		}
 	} else {
 		// If no specific IDs provided, process all projects
+		//nolint:dupl
 		for _, project := range projects {
 			configs, err := client.GetEngineConfigurations(project.ID)
 			if err != nil {
@@ -723,7 +724,6 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 
 			engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
 			keys := engineKeysMap[engineConfigName]
-			//nolint:dupl
 			engineConfigs = append(engineConfigs, JoinedConfig{
 				ProjectID:               engineConfiguration.Project.ID,
 				EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
