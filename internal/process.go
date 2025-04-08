@@ -680,6 +680,7 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 
 		// Filter projects based on provided IDs
 		for _, project := range projects {
+			//nolint:dupl
 			if idMap[strconv.Itoa(project.ID)] {
 				configs, err := client.GetEngineConfigurations(project.ID)
 				if err != nil {
