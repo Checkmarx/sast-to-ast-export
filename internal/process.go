@@ -40,6 +40,8 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/checkmarxDev/ast-sast-export/internal/app/common"
 )
 
 const (
@@ -72,6 +74,7 @@ func RunExport(args *Args) error {
 		Str("url", args.URL).
 		Str("export", fmt.Sprintf("%v", args.Export)).
 		Str("queryMapping", args.QueryMappingFile).
+		Str("queryRenaming", args.QueryRenamingFile).
 		Int("projectsActiveSince", args.ProjectsActiveSince).
 		Str("projectId", args.ProjectsIDs).
 		Str("projectTeam", args.TeamName).
@@ -80,11 +83,16 @@ func RunExport(args *Args) error {
 		Int("consumers", consumerCount).
 		Msg("starting export")
 
+	err := common.LoadRename(args.QueryRenamingFile)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize query rename mapping")
+	}
+
 	retryHTTPClient := getRetryHTTPClient()
 	// create api client
-	client, err := rest.NewSASTClient(args.URL, retryHTTPClient)
-	if err != nil {
-		return errors.Wrap(err, "could not create REST client")
+	client, clientErr := rest.NewSASTClient(args.URL, retryHTTPClient)
+	if clientErr != nil {
+		return errors.Wrap(clientErr, "could not create REST client")
 	}
 
 	// authenticate

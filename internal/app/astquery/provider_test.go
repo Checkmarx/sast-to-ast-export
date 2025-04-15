@@ -4,13 +4,16 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/checkmarxDev/ast-sast-export/internal/app/common"
 	"github.com/checkmarxDev/ast-sast-export/internal/app/querymapping"
 	"github.com/checkmarxDev/ast-sast-export/internal/integration/soap"
 	mock_interfaces "github.com/checkmarxDev/ast-sast-export/test/mocks/app/ast_query_mapping"
 	mock_interfaces_queries "github.com/checkmarxDev/ast-sast-export/test/mocks/app/queries"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -26,6 +29,10 @@ func TestProvider_GetQueryID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	queryProvider := mock_interfaces_queries.NewMockQueriesRepo(ctrl)
 	queryMappingProvider := mock_interfaces.NewMockQueryMappingRepo(ctrl)
+
+	testRenameFile := filepath.Join("..", "..", "..", "data", "renames.json")
+	err := common.LoadRename(testRenameFile)
+	require.NoError(t, err, "Failed to load common rename map for test")
 
 	queryIDTests := []QueryIDTest{
 		{"Kotlin", "Kotlin_High_Risk", "Code_Injection", "1", "15158446363146771540"},

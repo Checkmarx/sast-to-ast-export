@@ -53,6 +53,10 @@ func GetArgs(cmd *cobra.Command, productName string) internal.Args {
 	if err != nil {
 		panic(err)
 	}
+	args.QueryRenamingFile, err = cmd.Flags().GetString(renaming)
+	if err != nil {
+		panic(err)
+	}
 	args.NestedTeams, err = cmd.Flags().GetBool(nestedTeams)
 	if err != nil {
 		panic(err)

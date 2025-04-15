@@ -1,9 +1,11 @@
 package common
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type AstQueryIDTest struct {
@@ -11,6 +13,11 @@ type AstQueryIDTest struct {
 }
 
 func TestGetAstQueryID(t *testing.T) {
+	testRenameFile := filepath.Join("..", "..", "..", "data", "renames.json")
+
+	err := LoadRename(testRenameFile)
+	require.NoError(t, err, "Failed to load rename map for test from ../../../data/renames.json")
+
 	astQueryIDTests := []AstQueryIDTest{
 		{"Kotlin", "Kotlin_High_Risk", "Code_Injection", "15158446363146771540"},
 		{"CSharp", "General", "Find_SQL_Injection_Evasion_Attack", "8984835614866342550"},
