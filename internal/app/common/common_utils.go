@@ -22,8 +22,6 @@ type RenameEntry struct {
 
 var renameMap map[string]uint64
 
-const defaultEngineConfigURL = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/refs/heads/master/data/renames.json"
-
 // GetAstQueryID returns the query ID for AST
 func GetAstQueryID(language, name, group string) (string, error) {
 	if renameMap == nil {
@@ -50,7 +48,7 @@ func hash(s string) (uint64, error) {
 }
 
 // LoadRename attempts to load the rename mapping from the specified source (file path or URL).
-// This function should be called ONCE during application initialization (e.g., in RunExport).
+// This function should be called ONCE during application initialization
 func LoadRename(renameSource string) error {
 	var data []byte
 	var err error
@@ -62,7 +60,7 @@ func LoadRename(renameSource string) error {
 	// Check if it's a URL or a local file path
 	if strings.HasPrefix(renameSource, "http://") || strings.HasPrefix(renameSource, "https://") {
 		// Load from URL
-		resp, httpErr := http.Get(renameSource)
+		resp, httpErr := http.Get(renameSource) //nolint:gosec
 		if httpErr != nil {
 			return fmt.Errorf("failed to fetch rename data from URL '%s': %w", renameSource, httpErr)
 		}
