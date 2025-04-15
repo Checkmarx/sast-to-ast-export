@@ -6,8 +6,9 @@ import (
 	"hash/fnv"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
-	"sync"
+	"strings"
 )
 
 const queryIDIntBase = 10
@@ -19,24 +20,18 @@ type RenameEntry struct {
 	NewPathAstID uint64 `json:"newPathAstID"`
 }
 
-var (
-	renameMap map[string]uint64
-	loadOnce  sync.Once
-	loadErr   error
-)
+var renameMap map[string]uint64
 
-const engineConfigURL = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/refs/heads/master/data/renames.json"
+const defaultEngineConfigURL = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/refs/heads/master/data/renames.json"
 
 // GetAstQueryID returns the query ID for AST
 func GetAstQueryID(language, name, group string) (string, error) {
-	// Ensure the rename data is loaded before accessing it
-	if err := LoadRename(); err != nil {
-		return "", err
+	if renameMap == nil {
+		return "", fmt.Errorf("rename data not loaded or initialization failed")
 	}
 
 	sourcePath := fmt.Sprintf("queries/%s/%s/%s/%s.cs", language, group, name, name)
 
-	// Check if path is in renames.json
 	if oldAstID, exists := renameMap[sourcePath]; exists {
 		return strconv.FormatUint(oldAstID, queryIDIntBase), nil
 	}
@@ -54,40 +49,53 @@ func hash(s string) (uint64, error) {
 	return h.Sum64(), err
 }
 
-// Overwritten queries that have been renamed between sast versions need to have the original AST ID
-// And AST ID is calculated by hashing the path of the query, this means we need to store the old AST ID for the new path
-func LoadRename() error {
-	// Load renames.json from engineConfigURL, ensuring it runs only once
-	loadOnce.Do(func() {
-		resp, err := http.Get(engineConfigURL)
-		if err != nil {
-			loadErr = fmt.Errorf("failed to fetch rename data: %w", err)
-			return
+// LoadRename attempts to load the rename mapping from the specified source (file path or URL).
+// This function should be called ONCE during application initialization (e.g., in RunExport).
+func LoadRename(renameSource string) error {
+	var data []byte
+	var err error
+
+	if renameSource == "" {
+		return fmt.Errorf("rename source (file path or URL) cannot be empty")
+	}
+
+	// Check if it's a URL or a local file path
+	if strings.HasPrefix(renameSource, "http://") || strings.HasPrefix(renameSource, "https://") {
+		// Load from URL
+		resp, httpErr := http.Get(renameSource)
+		if httpErr != nil {
+			return fmt.Errorf("failed to fetch rename data from URL '%s': %w", renameSource, httpErr)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			loadErr = fmt.Errorf("failed to fetch rename data: HTTP %d", resp.StatusCode)
-			return
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("failed to fetch rename data from URL '%s': HTTP %d, Body: %s", renameSource, resp.StatusCode, string(bodyBytes))
 		}
 
-		body, err := io.ReadAll(resp.Body)
+		data, err = io.ReadAll(resp.Body)
 		if err != nil {
-			loadErr = fmt.Errorf("failed to read response body: %w", err)
-			return
+			return fmt.Errorf("failed to read response body from URL '%s': %w", renameSource, err)
 		}
-
-		var entries []RenameEntry
-		if err := json.Unmarshal(body, &entries); err != nil {
-			loadErr = fmt.Errorf("failed to parse JSON: %w", err)
-			return
+	} else {
+		// Load from local file
+		data, err = os.ReadFile(renameSource)
+		if err != nil {
+			return fmt.Errorf("failed to read rename file '%s': %w", renameSource, err)
 		}
+	}
 
-		renameMap = make(map[string]uint64)
-		for _, entry := range entries {
-			renameMap[entry.NewPath] = entry.OldPathAstID
-		}
-	})
+	var entries []RenameEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return fmt.Errorf("failed to parse rename JSON data from source '%s': %w", renameSource, err)
+	}
 
-	return loadErr
+	currentRenameMap := make(map[string]uint64)
+	for _, entry := range entries {
+		currentRenameMap[entry.NewPath] = entry.OldPathAstID
+	}
+
+	renameMap = currentRenameMap
+
+	return nil
 }

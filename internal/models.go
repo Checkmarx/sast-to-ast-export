@@ -18,8 +18,10 @@ type Args struct {
 	DBConnectionString,
 	ProjectsIDs,
 	TeamName string
-	RunTime          time.Time
-	QueryMappingFile string
+	RunTime           time.Time
+	QueryMappingFile  string
+	QueryRenamingFile string
+
 	NestedTeams      bool
 	SimIDVersion     int
 	ExcludeFile      string

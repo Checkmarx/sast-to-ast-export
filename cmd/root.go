@@ -24,7 +24,9 @@ const (
 	projectsIDs             = "project-id"
 	teamName                = "project-team"
 	queryMapping            = "query-mapping"
+	renaming                = "query-renaming"
 	queryMappingPathDefault = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/master/data/mapping.json"
+	renamingDefault         = "https://raw.githubusercontent.com/Checkmarx/sast-to-ast-export/refs/heads/master/data/renames.json"
 	nestedTeams             = "nested-teams"
 	simIDVersionArg         = "simIDVersion"
 	excludeFileArg          = "exclude-file"
@@ -128,6 +130,7 @@ func init() {
 	rootCmd.Flags().StringP(passArg, "", "", "SAST password")
 	rootCmd.Flags().StringP(urlArg, "", "", "SAST url")
 	rootCmd.Flags().StringP(queryMapping, "", queryMappingPathDefault, "path to file query mapping IDs from AST for triage")
+	rootCmd.Flags().StringP(renaming, "", renamingDefault, "path to file query renaming IDs from AST for overrides")
 	rootCmd.Flags().StringP(teamName, "", "", "team name filter")
 	rootCmd.Flags().StringP(projectsIDs, "", "", "project ID filter")
 	rootCmd.Flags().StringSliceP(exportArg, "", export.GetOptions(), "SAST export options")
