@@ -293,7 +293,7 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 					return err
 				}
 			case export2.ResultsOption:
-				if err := fetchResultsData(client, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
+				if err := fetchResultsData(client, astQueryProvider, exporter, args.ProjectsActiveSince, retryAttempts, retryMinSleep,
 					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIDs, args); err != nil {
 					return err
 				}
@@ -525,7 +525,7 @@ func fetchPresetsData(
 	return nil
 }
 
-func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProjectActiveSince int,
+func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter, resultsProjectActiveSince int,
 	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
 	teamName, projectsIDs string, args *Args,
 ) error {
@@ -550,7 +550,7 @@ func fetchResultsData(client rest.Client, exporter export2.Exporter, resultsProj
 	reportConsumeOutputs := make(chan ReportConsumeOutput, reportCount)
 
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
-		go consumeReports(client, exporter, consumerID, reportJobs, reportConsumeOutputs,
+		go consumeReports(client, astQueryProvider, exporter, consumerID, reportJobs, reportConsumeOutputs,
 			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider, args)
 	}
 
@@ -767,10 +767,18 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 	close(reportJobs)
 }
 
-func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
+func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter, workerID int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
 	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.Provider, args *Args,
 ) {
+	// Fetch the state mapping once at the start of the function
+	stateMapping, err := astQueryProvider.GetStateMapping()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to fetch state mapping")
+		// Since this is a worker function, we'll log the error and continue processing reports without state mapping
+		stateMapping = make(map[string]string) // Empty mapping to avoid nil pointer issues
+	}
+
 	for reportJob := range reportJobs {
 		l := log.With().
 			Int("ProjectID", reportJob.ProjectID).
@@ -778,7 +786,7 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			Int("worker", workerID).
 			Logger()
 
-		// create scan report
+		// Create scan report
 		var reportData []byte
 		var reportCreateErr error
 		retry := rest.Retry{
@@ -803,13 +811,46 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			continue
 		}
 
-		// generate metadata json
+		// Generate metadata json
 		var reportReader report.CxXMLResults
 		unmarshalErr := xml.Unmarshal(reportData, &reportReader)
 		if unmarshalErr != nil {
+			l.Error().Err(unmarshalErr).Msg("Failed to unmarshal XML report data")
 			done <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 			continue
 		}
+
+		if len(stateMapping) > 0 {
+			// Log the number of results whose states will be updated based on the stateMapping
+			statesToUpdateCount := 0
+			for _, query := range reportReader.Queries {
+				for _, result := range query.Results {
+					if _, exists := stateMapping[result.State]; exists {
+						statesToUpdateCount++
+					}
+				}
+			}
+			l.Info().Msgf("Found %d results with states that will be updated based on the mapping", statesToUpdateCount)
+
+			// Modify the reportReader to update states based on the stateMapping
+			for i, query := range reportReader.Queries {
+				for j, result := range query.Results {
+					if newStateID, exists := stateMapping[result.State]; exists {
+						l.Info().Msgf("Found result with state='%s' (NodeId: %s, FileName: %s, Line: %s), updating to state='%s'", result.State, result.NodeID, result.FileName, result.Line, newStateID)
+						reportReader.Queries[i].Results[j].State = newStateID
+					}
+				}
+			}
+		}
+		// Marshal the modified reportReader back to XML with indentation
+		modifiedReportData, marshalErr := xml.MarshalIndent(&reportReader, "", "  ")
+		if marshalErr != nil {
+			l.Debug().Err(marshalErr).Msg("failed to marshal modified report data")
+			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+			continue
+		}
+
+		// Generate metadata json
 		metadataQueries := metadata.GetQueriesFromReport(&reportReader)
 		metadataRecord, metadataRecordErr := metadataProvider.GetMetadataRecord(reportReader.ScanID, metadataQueries)
 		if metadataRecordErr != nil {
@@ -830,9 +871,9 @@ func consumeReports(client rest.Client, exporter export2.Exporter, workerID int,
 			continue
 		}
 
-		// export report
+		// Export report with the modified data
 		transformedReportData, transformErr := export2.TransformScanReport(
-			reportData, export2.TransformOptions{NestedTeams: args.NestedTeams},
+			modifiedReportData, export2.TransformOptions{NestedTeams: args.NestedTeams},
 		)
 		if transformErr != nil {
 			l.Debug().Err(transformErr).Msg("failed transforming report data")

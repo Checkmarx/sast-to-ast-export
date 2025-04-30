@@ -904,6 +904,7 @@ func TestConsumeReports(t *testing.T) {
 	reportJobs <- ReportJob{ProjectID: 4, ScanID: 4, ReportType: rest.ScanReportTypeXML}
 	close(reportJobs)
 	ctrl := gomock.NewController(t)
+	queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 	client := mock_integration_rest.NewMockClient(ctrl)
 	exporter := mock_app_export.NewMockExporter(ctrl)
 	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
@@ -947,7 +948,7 @@ func TestConsumeReports(t *testing.T) {
 	outputCh := make(chan ReportConsumeOutput, reportCount)
 	args := &Args{}
 
-	consumeReports(client, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider, args)
+	consumeReports(client, queryProvider, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider, args)
 
 	close(outputCh)
 	expected := []ReportConsumeOutput{
@@ -1047,6 +1048,9 @@ func TestAddAllResultsMappingToFile(t *testing.T) {
 }
 
 func TestFetchResultsData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+
 	t.Run("success case", func(t *testing.T) {
 		projectPage := []rest.ProjectWithLastScanID{
 			{ID: 1, LastScanID: 1},
@@ -1085,7 +1089,7 @@ func TestFetchResultsData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 		args := &Args{}
 
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond, time.Millisecond,
+		result := fetchResultsData(client, queryProvider, exporter, 10, 3, time.Millisecond, time.Millisecond,
 			metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
@@ -1117,7 +1121,7 @@ func TestFetchResultsData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 		args := &Args{}
 
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
+		result := fetchResultsData(client, queryProvider, exporter, 10, 3, time.Millisecond,
 			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.EqualError(t, result, "failed getting triaged scan")
@@ -1160,7 +1164,7 @@ func TestFetchResultsData(t *testing.T) {
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 		args := &Args{}
 
-		result := fetchResultsData(client, exporter, 10, 3, time.Millisecond,
+		result := fetchResultsData(client, queryProvider, exporter, 10, 3, time.Millisecond,
 			time.Millisecond, metadataProvider, teamName, projectsIds, args)
 
 		assert.NoError(t, result)
