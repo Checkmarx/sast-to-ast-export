@@ -525,9 +525,9 @@ func fetchPresetsData(
 	return nil
 }
 
-func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter, resultsProjectActiveSince int,
-	retryAttempts int, retryMinSleep, retryMaxSleep time.Duration, metadataProvider metadata.Provider,
-	teamName, projectsIDs string, args *Args,
+func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter,
+	resultsProjectActiveSince int, retryAttempts int, retryMinSleep, retryMaxSleep time.Duration,
+	metadataProvider metadata.Provider, teamName, projectsIDs string, args *Args,
 ) error {
 	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
@@ -767,6 +767,7 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 	close(reportJobs)
 }
 
+//nolint:gocyclo
 func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter, workerID int,
 	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
 	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.Provider, args *Args,
@@ -826,8 +827,10 @@ func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProv
 			// Log the number of results whose states will be updated based on the stateMapping
 			statesToUpdateCount := 0
 			statesUpdated := false // Flag to track if any state was updated
-			for _, query := range reportReader.Queries {
-				for _, result := range query.Results {
+			for i := range reportReader.Queries {
+				query := &reportReader.Queries[i]
+				for j := range query.Results {
+					result := &query.Results[j]
 					if _, exists := stateMapping[result.State]; exists {
 						statesToUpdateCount++
 					}
@@ -838,10 +841,14 @@ func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProv
 				l.Info().Msgf("Found %d results with states that will be updated based on the mapping", statesToUpdateCount)
 
 				// Modify the reportReader to update states based on the stateMapping
-				for i, query := range reportReader.Queries {
-					for j, result := range query.Results {
+				for i := range reportReader.Queries {
+					query := &reportReader.Queries[i]
+					for j := range query.Results {
+						result := &query.Results[j]
 						if newStateID, exists := stateMapping[result.State]; exists {
-							l.Info().Msgf("Found result with state='%s' (NodeId: %s, FileName: %s, Line: %s), updating to state='%s'", result.State, result.NodeID, result.FileName, result.Line, newStateID)
+							l.Info().Msgf("Found result with state='%s' (NodeId: %s, FileName: %s, Line: %s), updating to state='%s'",
+								result.State, result.NodeID, result.FileName, result.Line, newStateID)
+							// Directly modify the element in the slice
 							reportReader.Queries[i].Results[j].State = newStateID
 							statesUpdated = true // Mark that a state was updated
 						}

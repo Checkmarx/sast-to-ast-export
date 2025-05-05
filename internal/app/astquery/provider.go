@@ -138,14 +138,14 @@ func (e *Provider) GetCustomStatesList() (*soap.GetResultStateListResponse, erro
 			// Check if the ResultName matches the default state for this ID
 			if state.ResultName != defaultStateByID.ResultName {
 				// Overwrite detected: same ID, different name
-				log.Warn().Msgf("Detected overwrite for ID %d: default name '%s', SOAP name '%s'", state.ResultID, defaultStateByID.ResultName, state.ResultName)
+				log.Warn().Msgf("Detected overwrite for ID %d: default name '%s', SOAP name '%s'",
+					state.ResultID, defaultStateByID.ResultName, state.ResultName)
 				maxID++
 				newState := soap.ResultState{
 					ResultName:       state.ResultName,
 					ResultID:         maxID,
 					ResultPermission: state.ResultPermission,
 				}
-				//log.Info().Msgf("Assigned new ID %d to overwritten state '%s'", maxID, state.ResultName)
 				newStates = append(newStates, newState)
 				// Ensure the default state is included
 				if !containsState(newStates, defaultStateByID.ResultID) {
