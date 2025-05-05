@@ -850,13 +850,16 @@ func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProv
 
 				// Marshal the modified reportReader back to XML only if states were updated
 				if statesUpdated {
-					modifiedReportData, marshalErr := xml.MarshalIndent(&reportReader, "", "  ")
+					modifiedReportDataBytes, marshalErr := xml.MarshalIndent(&reportReader, "", "  ")
 					if marshalErr != nil {
 						l.Debug().Err(marshalErr).Msg("failed to marshal modified report data")
 						done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
 						continue
 					}
-					dataToTransform = modifiedReportData // Use modified data for transformation
+					// Prepend XML declaration
+					xmlDeclaration := []byte("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+					modifiedReportDataWithDecl := append(xmlDeclaration, modifiedReportDataBytes...)
+					dataToTransform = modifiedReportDataWithDecl // Use modified data with declaration for transformation
 				}
 			}
 		}
