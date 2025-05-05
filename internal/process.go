@@ -820,9 +820,12 @@ func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProv
 			continue
 		}
 
+		// Prepare data for transformation and export
+		dataToTransform := reportData // Default to original data
 		if len(stateMapping) > 0 {
 			// Log the number of results whose states will be updated based on the stateMapping
 			statesToUpdateCount := 0
+			statesUpdated := false // Flag to track if any state was updated
 			for _, query := range reportReader.Queries {
 				for _, result := range query.Results {
 					if _, exists := stateMapping[result.State]; exists {
@@ -830,24 +833,32 @@ func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProv
 					}
 				}
 			}
-			l.Info().Msgf("Found %d results with states that will be updated based on the mapping", statesToUpdateCount)
 
-			// Modify the reportReader to update states based on the stateMapping
-			for i, query := range reportReader.Queries {
-				for j, result := range query.Results {
-					if newStateID, exists := stateMapping[result.State]; exists {
-						l.Info().Msgf("Found result with state='%s' (NodeId: %s, FileName: %s, Line: %s), updating to state='%s'", result.State, result.NodeID, result.FileName, result.Line, newStateID)
-						reportReader.Queries[i].Results[j].State = newStateID
+			if statesToUpdateCount > 0 {
+				l.Info().Msgf("Found %d results with states that will be updated based on the mapping", statesToUpdateCount)
+
+				// Modify the reportReader to update states based on the stateMapping
+				for i, query := range reportReader.Queries {
+					for j, result := range query.Results {
+						if newStateID, exists := stateMapping[result.State]; exists {
+							l.Info().Msgf("Found result with state='%s' (NodeId: %s, FileName: %s, Line: %s), updating to state='%s'", result.State, result.NodeID, result.FileName, result.Line, newStateID)
+							reportReader.Queries[i].Results[j].State = newStateID
+							statesUpdated = true // Mark that a state was updated
+						}
 					}
 				}
+
+				// Marshal the modified reportReader back to XML only if states were updated
+				if statesUpdated {
+					modifiedReportData, marshalErr := xml.MarshalIndent(&reportReader, "", "  ")
+					if marshalErr != nil {
+						l.Debug().Err(marshalErr).Msg("failed to marshal modified report data")
+						done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+						continue
+					}
+					dataToTransform = modifiedReportData // Use modified data for transformation
+				}
 			}
-		}
-		// Marshal the modified reportReader back to XML with indentation
-		modifiedReportData, marshalErr := xml.MarshalIndent(&reportReader, "", "  ")
-		if marshalErr != nil {
-			l.Debug().Err(marshalErr).Msg("failed to marshal modified report data")
-			done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
 		}
 
 		// Generate metadata json
@@ -871,9 +882,9 @@ func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProv
 			continue
 		}
 
-		// Export report with the modified data
+		// Export report using the selected data (original or modified)
 		transformedReportData, transformErr := export2.TransformScanReport(
-			modifiedReportData, export2.TransformOptions{NestedTeams: args.NestedTeams},
+			dataToTransform, export2.TransformOptions{NestedTeams: args.NestedTeams},
 		)
 		if transformErr != nil {
 			l.Debug().Err(transformErr).Msg("failed transforming report data")
