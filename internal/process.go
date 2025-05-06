@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -532,6 +533,14 @@ func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryPr
 	consumerCount := worker.GetNumCPU()
 	reportJobs := make(chan ReportJob)
 
+	// Fetch the state mapping once, before starting the report consumers
+	stateMapping, err := astQueryProvider.GetStateMapping()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to fetch state mapping for all reports")
+		// Default to an empty mapping to avoid nil pointer issues and allow processing to continue
+		stateMapping = make(map[string]string)
+	}
+
 	fromDate := getDateFrom(resultsProjectActiveSince, args.IsDefaultProjectActiveSince, projectsIDs)
 	triagedScans, triagedScanErr := getTriagedScans(client, fromDate, teamName, projectsIDs)
 	if triagedScanErr != nil {
@@ -549,9 +558,143 @@ func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryPr
 	reportCount := len(triagedScans)
 	reportConsumeOutputs := make(chan ReportConsumeOutput, reportCount)
 
+	// Define the report consumer function as a closure
+	consumeReportForWorker := func(currentWorkerID int) {
+		// This closure captures:
+		// client, exporter, args, metadataProvider (from fetchResultsData params)
+		// retryAttempts, retryMinSleep, retryMaxSleep (from fetchResultsData params)
+		// reportJobs, reportConsumeOutputs (channels defined in fetchResultsData)
+		// stateMapping (defined in fetchResultsData)
+
+		for reportJob := range reportJobs {
+			l := log.With().
+				Int("ProjectID", reportJob.ProjectID).
+				Int("ScanID", reportJob.ScanID).
+				Int("worker", currentWorkerID).
+				Logger()
+
+			// Create scan report
+			var reportData []byte
+			var reportCreateErr error
+			retry := rest.Retry{ // This retry struct was locally defined in original consumeReports
+				Attempts: 10, // This is the attempts for client.CreateScanReport's internal retry mechanism
+				MinSleep: 1 * time.Second,
+				MaxSleep: 5 * time.Minute,
+			}
+			// The loop for retrying CreateScanReport uses retryAttempts from fetchResultsData
+			for i := 1; i <= retryAttempts; i++ {
+				reportData, reportCreateErr = client.CreateScanReport(reportJob.ScanID, reportJob.ReportType, retry)
+				if reportCreateErr != nil {
+					l.Debug().Err(reportCreateErr).
+						Int("attempt", i).
+						Msg("failed creating scan report")
+					time.Sleep(retryablehttp.DefaultBackoff(retryMinSleep, retryMaxSleep, i, nil))
+				} else {
+					break
+				}
+			}
+			if len(reportData) == 0 {
+				// scanReportCreateAttempts is a global constant used for the error message context
+				l.Debug().Err(reportCreateErr).Msgf("failed creating scan report after %d attempts", scanReportCreateAttempts)
+				reportConsumeOutputs <- ReportConsumeOutput{Err: reportCreateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+
+			// Generate metadata json
+			var reportReader report.CxXMLResults
+			unmarshalErr := xml.Unmarshal(reportData, &reportReader)
+			if unmarshalErr != nil {
+				l.Error().Err(unmarshalErr).Msg("Failed to unmarshal XML report data")
+				reportConsumeOutputs <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+
+			// Prepare data for transformation and export
+			dataToTransform := reportData // Default to original data
+			if len(stateMapping) > 0 {
+				statesToUpdateCount := 0
+				statesUpdated := false
+				for i := range reportReader.Queries {
+					query := &reportReader.Queries[i]
+					for j := range query.Results {
+						result := &query.Results[j]
+						if _, exists := stateMapping[result.State]; exists {
+							statesToUpdateCount++
+						}
+					}
+				}
+
+				if statesToUpdateCount > 0 {
+					l.Info().Msgf("Found %d results with states that will be updated based on the mapping", statesToUpdateCount)
+					for i := range reportReader.Queries {
+						query := &reportReader.Queries[i]
+						for j := range query.Results {
+							result := &query.Results[j]
+							if newStateID, exists := stateMapping[result.State]; exists {
+								l.Info().Msgf("Found result with state='%s' (NodeId: %s, FileName: %s, Line: %s), updating to state='%s'",
+									result.State, result.NodeID, result.FileName, result.Line, newStateID)
+								reportReader.Queries[i].Results[j].State = newStateID
+								statesUpdated = true
+							}
+						}
+					}
+
+					if statesUpdated {
+						var buf bytes.Buffer
+						buf.Write([]byte(`<?xml version="1.0" encoding="utf-8"?>
+`))
+						encoder := xml.NewEncoder(&buf)
+						encoder.Indent("", "  ")
+						if errEnc := encoder.Encode(&reportReader); errEnc != nil {
+							l.Debug().Err(errEnc).Msg("failed to encode modified report data into buffer")
+							reportConsumeOutputs <- ReportConsumeOutput{Err: errEnc, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+							continue
+						}
+						dataToTransform = buf.Bytes()
+					}
+				}
+			}
+
+			metadataQueries := metadata.GetQueriesFromReport(&reportReader)
+			metadataRecord, metadataRecordErr := metadataProvider.GetMetadataRecord(reportReader.ScanID, metadataQueries)
+			if metadataRecordErr != nil {
+				l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
+				reportConsumeOutputs <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+			metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
+			if metadataRecordJSONErr != nil {
+				l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
+				reportConsumeOutputs <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+			exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
+			if exportMetadataErr != nil {
+				l.Debug().Err(exportMetadataErr).Msg("failed saving metadata")
+				reportConsumeOutputs <- ReportConsumeOutput{Err: exportMetadataErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+
+			transformedReportData, transformErr := export2.TransformScanReport(
+				dataToTransform, export2.TransformOptions{NestedTeams: args.NestedTeams},
+			)
+			if transformErr != nil {
+				l.Debug().Err(transformErr).Msg("failed transforming report data")
+				reportConsumeOutputs <- ReportConsumeOutput{Err: transformErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
+				continue
+			}
+			exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), transformedReportData)
+			if exportErr != nil {
+				l.Debug().Err(exportErr).Msg("failed saving result")
+				reportConsumeOutputs <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
+			} else {
+				reportConsumeOutputs <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
+			}
+		}
+	} // End of consumeReportForWorker closure
+
 	for consumerID := 1; consumerID <= consumerCount; consumerID++ {
-		go consumeReports(client, astQueryProvider, exporter, consumerID, reportJobs, reportConsumeOutputs,
-			retryAttempts, retryMinSleep, retryMaxSleep, metadataProvider, args)
+		go consumeReportForWorker(consumerID) // Call the closure
 	}
 
 	metadataRecord := make([]*metadata.Record, 0)
@@ -765,150 +908,6 @@ func produceReports(triagedScans []TriagedScan, reportJobs chan<- ReportJob) {
 		}
 	}
 	close(reportJobs)
-}
-
-//nolint:gocyclo
-func consumeReports(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter, workerID int,
-	reportJobs <-chan ReportJob, done chan<- ReportConsumeOutput, maxAttempts int,
-	attemptMinSleep, attemptMaxSleep time.Duration, metadataProvider metadata.Provider, args *Args,
-) {
-	// Fetch the state mapping once at the start of the function
-	stateMapping, err := astQueryProvider.GetStateMapping()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to fetch state mapping")
-		// Since this is a worker function, we'll log the error and continue processing reports without state mapping
-		stateMapping = make(map[string]string) // Empty mapping to avoid nil pointer issues
-	}
-
-	for reportJob := range reportJobs {
-		l := log.With().
-			Int("ProjectID", reportJob.ProjectID).
-			Int("ScanID", reportJob.ScanID).
-			Int("worker", workerID).
-			Logger()
-
-		// Create scan report
-		var reportData []byte
-		var reportCreateErr error
-		retry := rest.Retry{
-			Attempts: 10,
-			MinSleep: 1 * time.Second,
-			MaxSleep: 5 * time.Minute,
-		}
-		for i := 1; i <= maxAttempts; i++ {
-			reportData, reportCreateErr = client.CreateScanReport(reportJob.ScanID, reportJob.ReportType, retry)
-			if reportCreateErr != nil {
-				l.Debug().Err(reportCreateErr).
-					Int("attempt", i).
-					Msg("failed creating scan report")
-				time.Sleep(retryablehttp.DefaultBackoff(attemptMinSleep, attemptMaxSleep, i, nil))
-			} else {
-				break
-			}
-		}
-		if len(reportData) == 0 {
-			l.Debug().Err(reportCreateErr).Msgf("failed creating scan report after %d attempts", scanReportCreateAttempts)
-			done <- ReportConsumeOutput{Err: reportCreateErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
-		}
-
-		// Generate metadata json
-		var reportReader report.CxXMLResults
-		unmarshalErr := xml.Unmarshal(reportData, &reportReader)
-		if unmarshalErr != nil {
-			l.Error().Err(unmarshalErr).Msg("Failed to unmarshal XML report data")
-			done <- ReportConsumeOutput{Err: unmarshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
-		}
-
-		// Prepare data for transformation and export
-		dataToTransform := reportData // Default to original data
-		if len(stateMapping) > 0 {
-			// Log the number of results whose states will be updated based on the stateMapping
-			statesToUpdateCount := 0
-			statesUpdated := false // Flag to track if any state was updated
-			for i := range reportReader.Queries {
-				query := &reportReader.Queries[i]
-				for j := range query.Results {
-					result := &query.Results[j]
-					if _, exists := stateMapping[result.State]; exists {
-						statesToUpdateCount++
-					}
-				}
-			}
-
-			if statesToUpdateCount > 0 {
-				l.Info().Msgf("Found %d results with states that will be updated based on the mapping", statesToUpdateCount)
-
-				// Modify the reportReader to update states based on the stateMapping
-				for i := range reportReader.Queries {
-					query := &reportReader.Queries[i]
-					for j := range query.Results {
-						result := &query.Results[j]
-						if newStateID, exists := stateMapping[result.State]; exists {
-							l.Info().Msgf("Found result with state='%s' (NodeId: %s, FileName: %s, Line: %s), updating to state='%s'",
-								result.State, result.NodeID, result.FileName, result.Line, newStateID)
-							// Directly modify the element in the slice
-							reportReader.Queries[i].Results[j].State = newStateID
-							statesUpdated = true // Mark that a state was updated
-						}
-					}
-				}
-
-				// Marshal the modified reportReader back to XML only if states were updated
-				if statesUpdated {
-					modifiedReportDataBytes, marshalErr := xml.MarshalIndent(&reportReader, "", "  ")
-					if marshalErr != nil {
-						l.Debug().Err(marshalErr).Msg("failed to marshal modified report data")
-						done <- ReportConsumeOutput{Err: marshalErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-						continue
-					}
-					// Prepend XML declaration
-					xmlDeclaration := []byte("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-					modifiedReportDataWithDecl := append(xmlDeclaration, modifiedReportDataBytes...)
-					dataToTransform = modifiedReportDataWithDecl // Use modified data with declaration for transformation
-				}
-			}
-		}
-
-		// Generate metadata json
-		metadataQueries := metadata.GetQueriesFromReport(&reportReader)
-		metadataRecord, metadataRecordErr := metadataProvider.GetMetadataRecord(reportReader.ScanID, metadataQueries)
-		if metadataRecordErr != nil {
-			l.Debug().Err(metadataRecordErr).Msg("failed creating metadata")
-			done <- ReportConsumeOutput{Err: metadataRecordErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
-		}
-		metadataRecordJSON, metadataRecordJSONErr := json.Marshal(metadataRecord)
-		if metadataRecordJSONErr != nil {
-			l.Debug().Err(metadataRecordJSONErr).Msg("failed marshaling metadata")
-			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
-		}
-		exportMetadataErr := exporter.AddFile(fmt.Sprintf(scansMetadataFileName, reportJob.ProjectID), metadataRecordJSON)
-		if exportMetadataErr != nil {
-			l.Debug().Err(metadataRecordJSONErr).Msg("failed saving metadata")
-			done <- ReportConsumeOutput{Err: metadataRecordJSONErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
-		}
-
-		// Export report using the selected data (original or modified)
-		transformedReportData, transformErr := export2.TransformScanReport(
-			dataToTransform, export2.TransformOptions{NestedTeams: args.NestedTeams},
-		)
-		if transformErr != nil {
-			l.Debug().Err(transformErr).Msg("failed transforming report data")
-			done <- ReportConsumeOutput{Err: transformErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID}
-			continue
-		}
-		exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), transformedReportData)
-		if exportErr != nil {
-			l.Debug().Err(exportErr).Msg("failed saving result")
-			done <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
-		} else {
-			done <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
-		}
-	}
 }
 
 func filterPresetByProjectList(presets []*rest.PresetShort, projects []*rest.Project) []*rest.PresetShort {

@@ -258,7 +258,8 @@ func (e *Provider) GetStateMapping() (map[string]string, error) {
 		if defaultStateByName, existsByName := defaultStateByName[state.ResultName]; existsByName {
 			if state.ResultID != defaultStateByName.ResultID {
 				// Overwrite detected: same name, different ID
-				log.Warn().Msgf("Detected overwrite for state '%s': default ID %d, SOAP ID %d", state.ResultName, defaultStateByName.ResultID, state.ResultID)
+				log.Warn().Msgf("Detected overwrite for state '%s': default ID %d, SOAP ID %d",
+					state.ResultName, defaultStateByName.ResultID, state.ResultID)
 				maxID++
 				// Add to mapping: old ID -> new ID
 				stateMapping[strconv.Itoa(defaultStateByName.ResultID)] = strconv.Itoa(maxID)

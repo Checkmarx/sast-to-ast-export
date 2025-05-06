@@ -893,91 +893,6 @@ func TestProduceReports(t *testing.T) {
 	}
 }
 
-func TestConsumeReports(t *testing.T) {
-	report1, ioErr := os.ReadFile("../test/data/process/report1.xml")
-	assert.NoError(t, ioErr)
-	reportCount := 4
-	reportJobs := make(chan ReportJob, reportCount)
-	reportJobs <- ReportJob{ProjectID: 1, ScanID: 1, ReportType: rest.ScanReportTypeXML}
-	reportJobs <- ReportJob{ProjectID: 2, ScanID: 2, ReportType: rest.ScanReportTypeXML}
-	reportJobs <- ReportJob{ProjectID: 3, ScanID: 3, ReportType: rest.ScanReportTypeXML}
-	reportJobs <- ReportJob{ProjectID: 4, ScanID: 4, ReportType: rest.ScanReportTypeXML}
-	close(reportJobs)
-
-	ctrl := gomock.NewController(t)
-	queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
-	client := mock_integration_rest.NewMockClient(ctrl)
-	exporter := mock_app_export.NewMockExporter(ctrl)
-	queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
-
-	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
-		Return(report1, nil).
-		MinTimes(1).
-		MaxTimes(1)
-	client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
-		Return([]byte{}, fmt.Errorf("failed getting report #2")).
-		MinTimes(1)
-	client.EXPECT().CreateScanReport(gomock.Eq(3), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
-		Return([]byte("3"), nil).
-		MinTimes(1).
-		MaxTimes(1)
-	client.EXPECT().CreateScanReport(gomock.Eq(4), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
-		Return(report1, nil).
-		MinTimes(1).
-		MaxTimes(1)
-	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 1), gomock.Any()).Return(nil)
-	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 1)), report1).
-		DoAndReturn(func(_ string, data []byte) error {
-			assert.Equal(t, string(report1), string(data))
-			return nil
-		}).
-		MinTimes(1).
-		MaxTimes(1)
-
-	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 3)), gomock.Any()).
-		Return(fmt.Errorf("EOF")).
-		MinTimes(1).
-		MaxTimes(1)
-
-	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 4), gomock.Any()).Return(nil)
-	exporter.EXPECT().AddFile(gomock.Eq(fmt.Sprintf(scansFileName, 4)), gomock.Any()).
-		Return(nil).
-		MinTimes(1).
-		MaxTimes(1)
-	metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
-	metadataRecord := &metadata.Record{
-		Queries: []*metadata.RecordQuery{},
-	}
-	metadataProvider.EXPECT().GetMetadataRecord(gomock.Any(), gomock.Any()).Return(metadataRecord, nil).AnyTimes()
-	outputCh := make(chan ReportConsumeOutput, reportCount)
-	args := &Args{}
-
-	consumeReports(client, queryProvider, exporter, 1, reportJobs, outputCh, 3, time.Millisecond, time.Millisecond, metadataProvider, args)
-
-	close(outputCh)
-	expected := []ReportConsumeOutput{
-		{Err: nil, ProjectID: 1, ScanID: 1},
-		{Err: fmt.Errorf("failed getting report #2"), ProjectID: 2, ScanID: 2},
-		{Err: fmt.Errorf("EOF"), ProjectID: 3, ScanID: 3},
-		{Err: nil, ProjectID: 4, ScanID: 4},
-	}
-	var outputs []ReportConsumeOutput
-	for i := 0; i < reportCount; i++ {
-		out := <-outputCh
-		outputs = append(outputs, out)
-	}
-	for i := 0; i < reportCount; i++ {
-		out := outputs[i]
-		if expected[i].Err == nil {
-			assert.NoError(t, out.Err)
-		} else {
-			assert.EqualError(t, out.Err, expected[i].Err.Error())
-		}
-		assert.Equal(t, expected[i].ProjectID, out.ProjectID)
-		assert.Equal(t, expected[i].ScanID, out.ScanID)
-	}
-}
-
 func TestAddAllResultsMappingToFile(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	exporter := mock_app_export.NewMockExporter(ctrl)
@@ -1057,8 +972,6 @@ func TestAddAllResultsMappingToFile(t *testing.T) {
 }
 
 func TestFetchResultsData(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 
 	t.Run("success case", func(t *testing.T) {
 		projectPage := []rest.ProjectWithLastScanID{
@@ -1068,6 +981,9 @@ func TestFetchResultsData(t *testing.T) {
 		teamName := TeamName
 		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
+
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(teamName), gomock.Eq(projectsIds),
@@ -1096,9 +1012,6 @@ func TestFetchResultsData(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
-		metadataProvider.EXPECT().GetMetadataRecord(gomock.Eq(1), gomock.Any()).Return(nil, nil).AnyTimes()
-		metadataProvider.EXPECT().GetMetadataRecord(gomock.Eq(2), gomock.Any()).Return(nil, nil).AnyTimes()
-		queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
 		args := &Args{}
 
 		result := fetchResultsData(client, queryProvider, exporter, 10, 3, time.Millisecond, time.Millisecond,
@@ -1115,6 +1028,9 @@ func TestFetchResultsData(t *testing.T) {
 		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
+
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(teamName), gomock.Eq(projectsIds), gomock.Eq(0),
 				gomock.Eq(resultsPageLimit)).
@@ -1146,6 +1062,9 @@ func TestFetchResultsData(t *testing.T) {
 		teamName := TeamName
 		projectsIds := projectIDs
 		ctrl := gomock.NewController(t)
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
+
 		client := mock_integration_rest.NewMockClient(ctrl)
 		client.EXPECT().
 			GetProjectsWithLastScanID(gomock.Any(), gomock.Eq(teamName), gomock.Eq(projectsIds), gomock.Eq(0),
@@ -1174,9 +1093,6 @@ func TestFetchResultsData(t *testing.T) {
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		exporter.EXPECT().AddFile(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
-		metadataProvider.EXPECT().GetMetadataRecord(gomock.Eq(1), gomock.Any()).Return(nil, nil).AnyTimes()
-		metadataProvider.EXPECT().GetMetadataRecord(gomock.Eq(2), gomock.Any()).Return(nil, nil).AnyTimes()
-		queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
 		args := &Args{}
 
 		result := fetchResultsData(client, queryProvider, exporter, 10, 3, time.Millisecond,
@@ -1533,6 +1449,7 @@ func TestFetchSelectedData(t *testing.T) {
 			{ID: 1, LastScanID: 1},
 			{ID: 2, LastScanID: 2},
 		}
+		queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
 		client.EXPECT().GetSamlTeamMappings().Return([]*rest.SamlTeamMapping{}, nil)
@@ -1571,6 +1488,8 @@ func TestFetchSelectedData(t *testing.T) {
 		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
 		presetProvider := mock_preset_interfaces.NewMockPresetProvider(ctrl)
 		client := mock_integration_rest.NewMockClient(ctrl)
+		queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
+
 		client.EXPECT().GetUsers().Return([]*rest.User{}, nil)
 		client.EXPECT().GetTeams().Return([]*rest.Team{}, nil).Times(2)
 		client.EXPECT().GetSamlTeamMappings().Return([]*rest.SamlTeamMapping{}, nil)

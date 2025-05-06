@@ -12,9 +12,19 @@
                 <ResultPermission>set-result-state-notexploitable</ResultPermission>
             </ResultState>
             <ResultState>
-                <ResultName>Confirmed by Security Team</ResultName>
+                <ResultName>Confirmed</ResultName>
                 <ResultID>2</ResultID>
-                <ResultPermission>set-result-state-confirmedbysecurityteam</ResultPermission>
+                <ResultPermission>set-result-state-confirmed</ResultPermission>
+            </ResultState>
+            <ResultState>
+                <ResultName>Urgent</ResultName>
+                <ResultID>3</ResultID>
+                <ResultPermission>set-result-state-urgent</ResultPermission>
+            </ResultState>
+            <ResultState>
+                <ResultName>Proposed Not Exploitable</ResultName>
+                <ResultID>4</ResultID>
+                <ResultPermission>set-result-state-proposednotexploitable</ResultPermission>
             </ResultState>
         </ResultStateList>
     </GetResultStateListResult>
