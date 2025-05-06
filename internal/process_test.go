@@ -972,7 +972,6 @@ func TestAddAllResultsMappingToFile(t *testing.T) {
 }
 
 func TestFetchResultsData(t *testing.T) {
-
 	t.Run("success case", func(t *testing.T) {
 		projectPage := []rest.ProjectWithLastScanID{
 			{ID: 1, LastScanID: 1},
