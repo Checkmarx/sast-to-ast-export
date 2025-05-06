@@ -526,7 +526,7 @@ func fetchPresetsData(
 	return nil
 }
 
-//nolint:gocyclo
+//nolint:gocyclo,funlen
 func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter,
 	resultsProjectActiveSince int, retryAttempts int, retryMinSleep, retryMaxSleep time.Duration,
 	metadataProvider metadata.Provider, teamName, projectsIDs string, args *Args,

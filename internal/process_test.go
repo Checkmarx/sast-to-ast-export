@@ -1102,6 +1102,101 @@ func TestFetchResultsData(t *testing.T) {
 	})
 }
 
+func TestConsumeReports(t *testing.T) {
+	report1, ioErr := os.ReadFile("../test/data/process/report1.xml")
+	assert.NoError(t, ioErr)
+	ctrl := gomock.NewController(t)
+	client := mock_integration_rest.NewMockClient(ctrl)
+	exporter := mock_app_export.NewMockExporter(ctrl)
+	queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+	queryProvider.EXPECT().GetStateMapping().Return(map[string]string{}, nil).AnyTimes()
+
+	// Add expectations for GetProjectsWithLastScanID
+	projectPage := []rest.ProjectWithLastScanID{
+		{ID: 1, LastScanID: 1},
+		{ID: 2, LastScanID: 2},
+		{ID: 3, LastScanID: 3},
+		{ID: 4, LastScanID: 4},
+	}
+	client.EXPECT().
+		GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(0), gomock.Any()).
+		Return(&projectPage, nil).
+		AnyTimes()
+	client.EXPECT().
+		GetProjectsWithLastScanID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&[]rest.ProjectWithLastScanID{}, nil).
+		AnyTimes()
+
+	// Add expectations for GetTriagedResultsByScanID
+	client.EXPECT().
+		GetTriagedResultsByScanID(gomock.Eq(1)).
+		Return(&[]rest.TriagedScanResult{{ID: 1}}, nil).
+		AnyTimes()
+	client.EXPECT().
+		GetTriagedResultsByScanID(gomock.Eq(2)).
+		Return(&[]rest.TriagedScanResult{{ID: 2}}, nil).
+		AnyTimes()
+	client.EXPECT().
+		GetTriagedResultsByScanID(gomock.Eq(3)).
+		Return(&[]rest.TriagedScanResult{{ID: 3}}, nil).
+		AnyTimes()
+	client.EXPECT().
+		GetTriagedResultsByScanID(gomock.Eq(4)).
+		Return(&[]rest.TriagedScanResult{{ID: 4}}, nil).
+		AnyTimes()
+
+	client.EXPECT().CreateScanReport(gomock.Eq(1), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
+		Return(report1, nil).
+		MinTimes(1).
+		MaxTimes(1)
+	client.EXPECT().CreateScanReport(gomock.Eq(2), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
+		Return([]byte{}, fmt.Errorf("failed getting report #2")).
+		MinTimes(1).
+		MaxTimes(1)
+	client.EXPECT().CreateScanReport(gomock.Eq(3), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
+		Return([]byte("3"), nil).
+		MinTimes(1).
+		MaxTimes(1)
+	client.EXPECT().CreateScanReport(gomock.Eq(4), gomock.Eq(rest.ScanReportTypeXML), gomock.Any()).
+		Return(report1, nil).
+		MinTimes(1).
+		MaxTimes(1)
+
+	// Add expectations for AddFile with all possible file names
+	exporter.EXPECT().AddFile(export.ResultsMappingFileName, gomock.Any()).Return(nil).AnyTimes()
+	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 1), gomock.Any()).Return(nil)
+	exporter.EXPECT().AddFile(fmt.Sprintf(scansMetadataFileName, 4), gomock.Any()).Return(nil)
+	exporter.EXPECT().AddFile(fmt.Sprintf(scansFileName, 1), report1).
+		DoAndReturn(func(_ string, data []byte) error {
+			assert.Equal(t, string(report1), string(data))
+			return nil
+		}).
+		MinTimes(1).
+		MaxTimes(1)
+	exporter.EXPECT().AddFile(fmt.Sprintf(scansFileName, 3), gomock.Any()).
+		Return(fmt.Errorf("EOF")).
+		MinTimes(1).
+		MaxTimes(1)
+	exporter.EXPECT().AddFile(fmt.Sprintf(scansFileName, 4), gomock.Any()).
+		Return(nil).
+		MinTimes(1).
+		MaxTimes(1)
+
+	metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
+	metadataRecord := &metadata.Record{
+		Queries: []*metadata.RecordQuery{},
+	}
+	metadataProvider.EXPECT().GetMetadataRecord(gomock.Any(), gomock.Any()).Return(metadataRecord, nil).AnyTimes()
+
+	// Use minimal delays (nanoseconds instead of milliseconds)
+	args := &Args{
+		Export: []string{export.ResultsOption},
+	}
+	err := fetchSelectedData(client, exporter, args, 1, time.Nanosecond, time.Nanosecond,
+		metadataProvider, queryProvider, nil)
+	assert.NoError(t, err)
+}
+
 //nolint:funlen
 func TestFetchSelectedData(t *testing.T) {
 	teamName := TeamName
