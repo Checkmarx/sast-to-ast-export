@@ -526,6 +526,7 @@ func fetchPresetsData(
 	return nil
 }
 
+//nolint:gocyclo
 func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryProvider, exporter export2.Exporter,
 	resultsProjectActiveSince int, retryAttempts int, retryMinSleep, retryMaxSleep time.Duration,
 	metadataProvider metadata.Provider, teamName, projectsIDs string, args *Args,
@@ -686,7 +687,8 @@ func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryPr
 			exportErr := exporter.AddFile(fmt.Sprintf(scansFileName, reportJob.ProjectID), transformedReportData)
 			if exportErr != nil {
 				l.Debug().Err(exportErr).Msg("failed saving result")
-				reportConsumeOutputs <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
+				reportConsumeOutputs <- ReportConsumeOutput{Err: exportErr, ProjectID: reportJob.ProjectID,
+					ScanID: reportJob.ScanID, Record: metadataRecord}
 			} else {
 				reportConsumeOutputs <- ReportConsumeOutput{Err: nil, ProjectID: reportJob.ProjectID, ScanID: reportJob.ScanID, Record: metadataRecord}
 			}
