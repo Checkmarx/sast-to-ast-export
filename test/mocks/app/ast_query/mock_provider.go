@@ -83,3 +83,33 @@ func (mr *MockASTQueryProviderMockRecorder) GetQueryID(arg0, arg1, arg2, arg3 an
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryID", reflect.TypeOf((*MockASTQueryProvider)(nil).GetQueryID), arg0, arg1, arg2, arg3)
 }
+
+// GetRawCustomStatesList mocks base method.
+func (m *MockASTQueryProvider) GetRawCustomStatesList() (*soap.GetResultStateListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRawCustomStatesList")
+	ret0, _ := ret[0].(*soap.GetResultStateListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRawCustomStatesList indicates an expected call of GetRawCustomStatesList.
+func (mr *MockASTQueryProviderMockRecorder) GetRawCustomStatesList() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRawCustomStatesList", reflect.TypeOf((*MockASTQueryProvider)(nil).GetRawCustomStatesList))
+}
+
+// GetStateMapping mocks base method.
+func (m *MockASTQueryProvider) GetStateMapping() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStateMapping")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStateMapping indicates an expected call of GetStateMapping.
+func (mr *MockASTQueryProviderMockRecorder) GetStateMapping() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateMapping", reflect.TypeOf((*MockASTQueryProvider)(nil).GetStateMapping))
+}
