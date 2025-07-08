@@ -10,13 +10,15 @@ on:
 jobs:
   ast-scan:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Checkmarx AST Github Action
-        uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 # v2.0.233
+        uses: checkmarx/ast-github-action@86e9ae570a811f9a1fb85903647a307aa3bf6253 # 2.0.44
         with:
           base_uri: ${{ secrets.AST_RND_SCANS_BASE_URI }}
           cx_tenant: ${{ secrets.AST_RND_SCANS_TENANT }}
           cx_client_id: ${{ secrets.AST_RND_SCANS_CLIENT_ID }}
           cx_client_secret: ${{ secrets.AST_RND_SCANS_CLIENT_SECRET }}
-          additional_params: --tags AceOfSpades --project-groups sast-and-engines/sast/languages-and-frameworks/aceofspades --threshold "sast-high=1;sast-medium=1;sast-low=1;sca-high=1;sca-medium=1;sca-low=1;iac-security-high=1;iac-security-medium=1;iac-security-low=1;"
+          additional_params: --tags AceOfSpades --project-groups sast-and-engines/sast/languages-and-frameworks/aceofspades --threshold "sast-critical=1; sast-high=1; sast-medium=1; sast-low=1; sca-critical=1; sca-high=1; sca-medium=1; sca-low=1; iac-security-critical=1; iac-security-high=1; iac-security-medium=1;iac-security-low=1"
