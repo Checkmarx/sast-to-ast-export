@@ -13,10 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       - name: Checkmarx AST Github Action
-        uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 # v2.0.23
+        uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 # v2.0.233
         with:
           base_uri: ${{ secrets.AST_RND_SCANS_BASE_URI }}
           cx_tenant: ${{ secrets.AST_RND_SCANS_TENANT }}
           cx_client_id: ${{ secrets.AST_RND_SCANS_CLIENT_ID }}
           cx_client_secret: ${{ secrets.AST_RND_SCANS_CLIENT_SECRET }}
-          additional_params: --tags AceOfSpades --project-groups sast-and-engines/microengines --threshold "sast-high=1;sast-medium=1;sast-low=1;sca-high=1;sca-medium=1;sca-low=1;iac-security-high=1;iac-security-medium=1;iac-security-low=1;"
+          additional_params: --tags AceOfSpades --project-groups sast-and-engines/sast/languages-and-frameworks/aceofspades --threshold "sast-high=1;sast-medium=1;sast-low=1;sca-high=1;sca-medium=1;sca-low=1;iac-security-high=1;iac-security-medium=1;iac-security-low=1;"
