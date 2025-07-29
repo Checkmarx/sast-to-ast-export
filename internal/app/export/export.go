@@ -55,6 +55,8 @@ const (
 	CustomExtensionsFileName = "custom_extensions.xml"
 	// ProjectExcludeSettings
 	ProjectExcludeSettingsFileName = "project_filters_exclusions.json"
+	// FlagsFileName name of the file containing CLI flags used
+	FlagsFileName = "cli_flags.json"
 	// DateTimeFormat the formal to use for DT
 	DateTimeFormat = "2006-01-02-15-04-05"
 

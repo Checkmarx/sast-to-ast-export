@@ -131,7 +131,7 @@ func RunExport(args *Args) error {
 
 	// Fetch custom extensions if provided via cli
 	if err := fetchCustomExtensions(args, &exportValues); err != nil {
-		return errors.Wrap(err, "failed to fetch custom extensions")
+		log.Error().Err(err).Msg("failed to fetch custom extensions")
 	}
 
 	soapClient := soap.NewClient(args.URL, client.Token, retryHTTPClient)
@@ -187,18 +187,18 @@ func RunExport(args *Args) error {
 
 	addErr := addCustomQueryIDs(astQueryProvider, astQueryMappingProvider)
 	if addErr != nil {
-		return errors.Wrap(addErr, "could not add custom query ids to mapping")
+		log.Error().Err(addErr).Msg("error adding custom query ids to mapping")
 	}
 
 	addFileErr := addQueryMappingFile(astQueryMappingProvider, &exportValues)
 	if addFileErr != nil {
-		return errors.Wrap(addFileErr, "could not add query mapping file")
+		log.Error().Err(addFileErr).Msg("error adding query mapping file")
 	}
 
 	fetchErr := fetchSelectedData(client, &exportValues, args, scanReportCreateAttempts, scanReportCreateMinSleep,
 		scanReportCreateMaxSleep, metadataSource, astQueryProvider, presetProvider)
 	if fetchErr != nil {
-		return errors.Wrap(fetchErr, "could not fetch selected data")
+		log.Error().Err(fetchErr).Msg("error fetching selected data")
 	}
 
 	// export data to file
@@ -268,6 +268,9 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	}
 	for _, exportOption := range export2.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
+			if err := fetchFlags(args, exporter); err != nil {
+				return err
+			}
 			switch exportOption {
 			case export2.UsersOption:
 				if err := fetchUsersData(client, exporter, args); err != nil {
@@ -1182,4 +1185,16 @@ func fetchProjectExcludeSettings(client rest.Client, exporter export2.Exporter, 
 	}
 
 	return nil
+}
+
+func fetchFlags(args *Args, exporter export2.Exporter) error {
+	flagsMap := make(map[string]interface{})
+	flagsMap["export"] = strings.Join(args.Export, ",")
+
+	flagsJSON, err := json.Marshal(flagsMap)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal flags")
+	}
+
+	return exporter.AddFile(export2.FlagsFileName, flagsJSON)
 }
