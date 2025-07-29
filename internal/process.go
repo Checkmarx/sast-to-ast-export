@@ -268,9 +268,6 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 	}
 	for _, exportOption := range export2.GetOptions() {
 		if sliceutils.Contains(exportOption, options) {
-			if err := fetchFlags(args, exporter); err != nil {
-				return err
-			}
 			switch exportOption {
 			case export2.UsersOption:
 				if err := fetchUsersData(client, exporter, args); err != nil {
@@ -1185,16 +1182,4 @@ func fetchProjectExcludeSettings(client rest.Client, exporter export2.Exporter, 
 	}
 
 	return nil
-}
-
-func fetchFlags(args *Args, exporter export2.Exporter) error {
-	flagsMap := make(map[string]interface{})
-	flagsMap["export"] = strings.Join(args.Export, ",")
-
-	flagsJSON, err := json.Marshal(flagsMap)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal flags")
-	}
-
-	return exporter.AddFile(export2.FlagsFileName, flagsJSON)
 }
