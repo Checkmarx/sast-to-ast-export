@@ -1,0 +1,26 @@
+# Go migration tool OnPrem-to-AST REST API
+
+## Introduction
+This cli tool allows users migration of their metadata through RESTAPI/SOAP from their on prem machines to a encripted file that will be later consumed in a AST tenant. 
+
+## Key Features
+- **RESTful API**: Follow REST principles for resource naming, HTTP methods, and status codes.
+- **Error Handling**: Implement custom error types and use appropriate HTTP status codes.
+- **Input Validation**: Validate API inputs to ensure data integrity and security.
+- **Concurrency**: Utilize Go's goroutines and channels for performance optimization.
+- **Middleware**: Implement middleware for logging, authentication, and other cross-cutting concerns.
+- **Rate Limiting**: Protect your API from abuse with rate limiting.
+- **Authentication**: Implement secure authentication and authorization mechanisms.
+- **Logging**: Use Go's `log` from `github.com/rs/zerolog/log` package for structured logging.
+- **Testing**: Write unit tests using Go's `testing` package to ensure API reliability.
+
+## Best Practices
+- **Use `const` for Constants**: Prefer `const` over `let` for variable declarations.
+- **CamelCase Naming**: Use camelCase for variable and function names, and PascalCase for component names.
+- **Proper Logging**: Implement structured logging for better traceability.
+- **Middleware**: Use middleware for common tasks like logging, authentication, and rate limiting.
+- **Testing**: Write comprehensive unit tests to cover all API endpoints.
+
+## Conclusion
+By following this guide, you can build robust, secure, and scalable REST APIs. Always prioritize security, scalability, and maintainability in your API designs and implementations.
+

@@ -130,72 +130,53 @@ func (e *Provider) GetCustomStatesList() (*soap.GetResultStateListResponse, erro
 		}
 	}
 
-	// Process the SOAP response states
-	newStates := []soap.ResultState{}
+	// Process the SOAP response states - only keep custom states in final output
+	customStates := []soap.ResultState{}
 	for _, state := range responseStates {
 		// Check if this state's ResultID matches a default state
 		if defaultStateByID, existsByID := defaultStateByID[state.ResultID]; existsByID {
 			// Check if the ResultName matches the default state for this ID
 			if state.ResultName != defaultStateByID.ResultName {
-				// Overwrite detected: same ID, different name
+				// Overwrite detected: same ID, different name - this is a custom state
 				log.Warn().Msgf("Detected overwrite for ID %d: default name '%s', SOAP name '%s'",
 					state.ResultID, defaultStateByID.ResultName, state.ResultName)
 				maxID++
-				newState := soap.ResultState{
+				customState := soap.ResultState{
 					ResultName:       state.ResultName,
 					ResultID:         maxID,
 					ResultPermission: state.ResultPermission,
 				}
-				newStates = append(newStates, newState)
-				// Ensure the default state is included
-				if !containsState(newStates, defaultStateByID.ResultID) {
-					newStates = append(newStates, defaultStateByID)
-				}
+				customStates = append(customStates, customState)
 				continue
 			}
-		}
-
-		// Check if this state's ResultName matches a default state
-		if defaultStateByName, existsByName := defaultStateByName[state.ResultName]; existsByName {
+			// If names match, this is a default state, skip it for custom states export
+		} else if defaultStateByName, existsByName := defaultStateByName[state.ResultName]; existsByName {
+			// Check if this state's ResultName matches a default state
 			if state.ResultID != defaultStateByName.ResultID {
-				// Overwrite detected: same name, different ID
+				// Overwrite detected: same name, different ID - this is a custom state
 				maxID++
-				newState := soap.ResultState{
+				customState := soap.ResultState{
 					ResultName:       state.ResultName,
 					ResultID:         maxID,
 					ResultPermission: state.ResultPermission,
 				}
 				log.Info().Msgf("Assigned new ID %d to overwritten state '%s'", maxID, state.ResultName)
-				newStates = append(newStates, newState)
-				// Ensure the default state is included
-				if !containsState(newStates, defaultStateByName.ResultID) {
-					log.Info().Msgf("Adding original default state: %s (ID: %d)", defaultStateByName.ResultName, defaultStateByName.ResultID)
-					newStates = append(newStates, defaultStateByName)
-				}
-			} else {
-				// Not overwritten (same name and ID), keep as is
-				newStates = append(newStates, state)
+				customStates = append(customStates, customState)
 			}
+			// If IDs match, this is a default state, skip it for custom states export
 		} else {
 			// Not a default state name, treat as a custom state and keep as is
-			newStates = append(newStates, state)
+			customStates = append(customStates, state)
 		}
 	}
 
-	// Add any missing default states that weren't in the SOAP response
-	for _, defaultState := range defaultStates {
-		if !containsState(newStates, defaultState.ResultID) {
-			newStates = append(newStates, defaultState)
-		}
-	}
-
-	// Sort states by ResultID for consistency
-	sort.Slice(newStates, func(i, j int) bool {
-		return newStates[i].ResultID < newStates[j].ResultID
+	// Sort custom states by ResultID for consistency
+	sort.Slice(customStates, func(i, j int) bool {
+		return customStates[i].ResultID < customStates[j].ResultID
 	})
 
-	// Add the processed states to the output
-	output.GetResultStateListResult.ResultStateList.ResultState = newStates
+	// Add only the custom states to the output
+	output.GetResultStateListResult.ResultStateList.ResultState = customStates
 
 	return &output, nil
 }
