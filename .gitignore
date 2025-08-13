@@ -22,3 +22,5 @@ coverage.out
 terraform/.terraform
 terraform/.terraform.lock.hcl
 !external/windows/amd64/*.exe
+
+.cursorrules

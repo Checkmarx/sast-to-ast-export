@@ -250,16 +250,6 @@ func (e *Provider) GetStateMapping() (map[string]string, error) {
 	return stateMapping, nil
 }
 
-// Helper function to check if a state with a specific ResultID exists in the list
-func containsState(states []soap.ResultState, resultID int) bool {
-	for _, state := range states {
-		if state.ResultID == resultID {
-			return true
-		}
-	}
-	return false
-}
-
 func (e *Provider) getMappedID(sastID string) string {
 	for _, queryMap := range e.mapping {
 		if queryMap.SastID == sastID {
