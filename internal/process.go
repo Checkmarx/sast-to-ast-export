@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -735,7 +736,73 @@ func fetchResultsData(client rest.Client, astQueryProvider interfaces.ASTQueryPr
 	return nil
 }
 
+// sortMetadataRecords sorts metadata records and their nested structures for deterministic output
+func sortMetadataRecords(records []*metadata.Record) {
+	// Sort records by the first query's first result's first path's ResultID (if available)
+	// This provides a consistent ordering across runs
+	sort.Slice(records, func(i, j int) bool {
+		// Get primary sort key - first available ResultID
+		getFirstResultID := func(record *metadata.Record) string {
+			if len(record.Queries) > 0 && len(record.Queries[0].Results) > 0 && len(record.Queries[0].Results[0].Paths) > 0 {
+				return record.Queries[0].Results[0].Paths[0].ResultID
+			}
+			return ""
+		}
+
+		firstIDi := getFirstResultID(records[i])
+		firstIDj := getFirstResultID(records[j])
+
+		if firstIDi != firstIDj {
+			return firstIDi < firstIDj
+		}
+
+		// If ResultIDs are the same, compare by query count and result count as secondary sort
+		if len(records[i].Queries) != len(records[j].Queries) {
+			return len(records[i].Queries) < len(records[j].Queries)
+		}
+
+		// Compare by first query ID as tertiary sort
+		if len(records[i].Queries) > 0 && len(records[j].Queries) > 0 {
+			return records[i].Queries[0].QueryID < records[j].Queries[0].QueryID
+		}
+
+		return false
+	})
+
+	// Sort within each record to ensure internal consistency
+	for _, record := range records {
+		// Sort queries by QueryID
+		sort.Slice(record.Queries, func(i, j int) bool {
+			return record.Queries[i].QueryID < record.Queries[j].QueryID
+		})
+
+		for _, query := range record.Queries {
+			// Sort results by ResultID
+			sort.Slice(query.Results, func(i, j int) bool {
+				return query.Results[i].ResultID < query.Results[j].ResultID
+			})
+
+			for _, result := range query.Results {
+				// Sort paths by ResultID, PathID, and SimilarityID for complete determinism
+				sort.Slice(result.Paths, func(i, j int) bool {
+					if result.Paths[i].ResultID != result.Paths[j].ResultID {
+						return result.Paths[i].ResultID < result.Paths[j].ResultID
+					}
+					if result.Paths[i].PathID != result.Paths[j].PathID {
+						return result.Paths[i].PathID < result.Paths[j].PathID
+					}
+					// Use SimilarityID as final tie-breaker for deterministic ordering
+					return result.Paths[i].SimilarityID < result.Paths[j].SimilarityID
+				})
+			}
+		}
+	}
+}
+
 func addAllResultsMappingToFile(metadataRecord []*metadata.Record, exporter export2.Exporter) error {
+	// Sort metadata records to ensure deterministic output
+	sortMetadataRecords(metadataRecord)
+
 	metadataResultsCSV := resultsmapping.GenerateCSV(metadataRecord)
 	metadataResultsCSVByte := resultsmapping.WriteAllToSanitizedCsv(metadataResultsCSV)
 	exportResultsErr := exporter.AddFile(export2.ResultsMappingFileName, metadataResultsCSVByte)
