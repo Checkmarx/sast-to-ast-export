@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -121,10 +122,12 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 		}()
 
 		// consume calculation jobs
-		similarityCalculationResults := make(chan SimilarityCalculationResult, len(query.Results))
+		var resultsMutex sync.Mutex
+		similarityCalculationResults := make([]SimilarityCalculationResult, 0, len(query.Results))
 		var wg sync.WaitGroup
 		for consumerID := 1; consumerID <= worker.GetNumCPU(); consumerID++ {
 			wg.Add(1)
+			// Worker goroutine
 			go func() {
 				defer wg.Done()
 				for job := range similarityCalculationJobs {
@@ -134,24 +137,31 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 						job.QueryID,
 						job.SimIDVersion,
 					)
-					similarityCalculationResults <- SimilarityCalculationResult{
+					result := SimilarityCalculationResult{
 						ResultID:     job.ResultID,
 						PathID:       job.PathID,
 						SimilarityID: similarityID,
 						Err:          similarityIDErr,
 					}
+					resultsMutex.Lock()
+					similarityCalculationResults = append(similarityCalculationResults, result)
+					resultsMutex.Unlock()
 				}
 			}()
 		}
 
-		go func() {
-			wg.Wait()
-			close(similarityCalculationResults) // Ensure it's closed only after all workers finish
-		}()
+		// Wait for all workers to finish
+		wg.Wait()
 
+		// Sort results by ResultID and PathID
+		sort.Slice(similarityCalculationResults, func(i, j int) bool {
+			if similarityCalculationResults[i].ResultID == similarityCalculationResults[j].ResultID {
+				return similarityCalculationResults[i].PathID < similarityCalculationResults[j].PathID
+			}
+			return similarityCalculationResults[i].ResultID < similarityCalculationResults[j].ResultID
+		})
 		// handle calculation results
-		for _, result := range query.Results {
-			r := <-similarityCalculationResults
+		for _, r := range similarityCalculationResults {
 			if r.Err != nil {
 				return nil, errors.Wrap(r.Err, "failed calculating similarity id")
 			}
@@ -174,15 +184,32 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 				}
 			}
 			if recordPath == nil {
+				// Find the original SAST similarity ID from query results
+				originalSASTSimilarityID := ""
+				for _, originalResult := range query.Results {
+					if originalResult.ResultID == r.ResultID && originalResult.PathID == r.PathID {
+						originalSASTSimilarityID = originalResult.SimilarityID
+						break
+					}
+				}
+
 				recordPath = &RecordPath{
 					PathID:           r.PathID,
 					SimilarityID:     r.SimilarityID,
-					ResultID:         result.ResultID,
-					SASTSimilarityID: result.SimilarityID,
+					ResultID:         r.ResultID,
+					SASTSimilarityID: originalSASTSimilarityID,
 				}
 				recordResult.Paths = append(recordResult.Paths, recordPath)
 			}
 		}
+
+		// Sort query.Results by ResultID and PathID
+		sort.Slice(query.Results, func(i, j int) bool {
+			if query.Results[i].ResultID == query.Results[j].ResultID {
+				return query.Results[i].PathID < query.Results[j].PathID
+			}
+			return query.Results[i].ResultID < query.Results[j].ResultID
+		})
 	}
 
 	return output, nil
