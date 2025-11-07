@@ -1,6 +1,6 @@
 module github.com/checkmarxDev/ast-sast-export
 
-go 1.25.4
+go 1.24.9
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
