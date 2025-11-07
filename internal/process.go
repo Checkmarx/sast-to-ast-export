@@ -454,7 +454,10 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 		return errors.Wrap(errExp, "error with exporting custom queries list to file")
 	}
 
-	fetchCustomStateData(client, exporter)
+	customStateErr := fetchCustomStateData(client, exporter)
+	if customStateErr != nil {
+		return customStateErr
+	}
 
 	return nil
 }
