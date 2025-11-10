@@ -32,7 +32,9 @@ Fetches SAST triaged results and exports as an encrypted package, which can then
 
 [Thanos](https://github.com/orgs/CheckmarxDev/teams/ast-thanos) (previously)
 
-[AceOfSpades](https://github.com/orgs/CheckmarxDev/teams/sast-aceofspades) (current)
+[AceOfSpades](https://github.com/orgs/CheckmarxDev/teams/sast-aceofspades) (previously)
+
+[Adamastor](https://github.com/orgs/CheckmarxDev/teams/sast-adamastor) (current)
 
 ## Getting Started
 

@@ -299,6 +299,10 @@ func fetchSelectedData(client rest.Client, exporter export2.Exporter, args *Args
 					retryMaxSleep, metadataProvider, args.TeamName, args.ProjectsIDs, args); err != nil {
 					return err
 				}
+			case export2.CustomStatesOption:
+				if err := fetchCustomStateData(astQueryProvider, exporter); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -450,6 +454,15 @@ func fetchQueriesData(client interfaces.ASTQueryProvider, exporter export2.Expor
 		return errors.Wrap(errExp, "error with exporting custom queries list to file")
 	}
 
+	customStateErr := fetchCustomStateData(client, exporter)
+	if customStateErr != nil {
+		return customStateErr
+	}
+
+	return nil
+}
+
+func fetchCustomStateData(client interfaces.ASTQueryProvider, exporter export2.Exporter) error {
 	log.Info().Msg("collecting custom states")
 	customStateResp, err := client.GetCustomStatesList()
 	if err != nil {

@@ -2054,3 +2054,25 @@ func TestFetchInstallationData(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestCustomStates(t *testing.T) {
+	t.Run("fetch custom states", func(t *testing.T) {
+		var customStatesObj soap.GetResultStateListResponse
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		queryProvider := mock_interfaces_query_common.NewMockASTQueryProvider(ctrl)
+		exporter := mock_app_export.NewMockExporter(gomock.NewController(t))
+
+		customStates, ioCustomStatesErr := os.ReadFile("../test/data/queries/custom_states.xml")
+		assert.NoError(t, ioCustomStatesErr)
+		_ = xml.Unmarshal(customStates, &customStatesObj)
+
+		queryProvider.EXPECT().GetCustomStatesList().Return(&customStatesObj, nil).Times(1)
+		exporter.EXPECT().AddFile(export.CustomStatesFileName, gomock.Any()).Return(nil).Times(1)
+
+		result := fetchCustomStateData(queryProvider, exporter)
+
+		assert.NoError(t, result)
+	})
+}

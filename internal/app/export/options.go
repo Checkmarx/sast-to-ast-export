@@ -17,9 +17,11 @@ const (
 	EngineConfigurationsOption = "configs"
 	// Filters and exclude settings
 	FiltersOption = "filters"
+	// CustomStates represents Custom States of query results
+	CustomStatesOption = "customStates"
 )
 
 func GetOptions() []string {
 	return []string{UsersOption, TeamsOption, ResultsOption, ProjectsOption, QueriesOption,
-		PresetsOption, EngineConfigurationsOption, FiltersOption}
+		PresetsOption, EngineConfigurationsOption, FiltersOption, CustomStatesOption}
 }
