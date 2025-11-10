@@ -1,6 +1,6 @@
 module github.com/checkmarxDev/ast-sast-export
 
-go 1.25.4
+go 1.24.9
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
@@ -20,6 +20,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
