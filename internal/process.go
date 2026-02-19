@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -47,12 +48,13 @@ import (
 )
 
 const (
-	scansFileName         = "%d.xml"
-	scansMetadataFileName = "%d.json"
-	resultsPageLimit      = 10000
-	httpRetryWaitMin      = 1 * time.Second //nolint:revive
-	httpRetryWaitMax      = 30 * time.Second
-	httpRetryMax          = 4
+	scansFileName           = "%d.xml"
+	scansMetadataFileName   = "%d.json"
+	resultsPageLimit        = 10000
+	httpRetryWaitMin        = 1 * time.Second //nolint:revive
+	httpRetryWaitMax        = 30 * time.Second
+	httpRetryMax            = 8
+	httpRateLimitRetryDelay = 200 * time.Millisecond
 
 	scanReportCreateAttempts = 10
 	scanReportCreateMinSleep = 1 * time.Second
@@ -1068,8 +1070,8 @@ func getRetryHTTPClient() *retryablehttp.Client {
 		RetryWaitMin: httpRetryWaitMin,
 		RetryWaitMax: httpRetryWaitMax,
 		RetryMax:     httpRetryMax,
-		CheckRetry:   retryablehttp.DefaultRetryPolicy,
-		Backoff:      retryablehttp.DefaultBackoff,
+		CheckRetry:   customRetryPolicy,
+		Backoff:      customBackoff,
 		RequestLogHook: func(_ retryablehttp.Logger, request *http.Request, i int) {
 			log.Debug().
 				Str("method", request.Method).
@@ -1085,6 +1087,68 @@ func getRetryHTTPClient() *retryablehttp.Client {
 				Msg("response")
 		},
 	}
+}
+
+// customRetryPolicy determines whether a request should be retried, with special handling for rate limiting
+func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	// Use default policy first
+	shouldRetry, checkErr := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+
+	// If default policy says retry, return that
+	if shouldRetry {
+		return true, checkErr
+	}
+
+	// Additionally check for 429 Too Many Requests
+	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
+		log.Debug().
+			Str("url", resp.Request.URL.String()).
+			Msg("Rate limited (429), will retry with backoff")
+		return true, nil
+	}
+
+	return shouldRetry, checkErr
+}
+
+// customBackoff provides exponential backoff with special handling for rate limiting
+func customBackoff(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+	// If we got a 429, check for Retry-After header first
+	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
+		// Check for Retry-After header (can be in seconds or HTTP date)
+		if retryAfter := resp.Header.Get("Retry-After"); retryAfter != "" {
+			// Try parsing as seconds first
+			if seconds, err := strconv.Atoi(retryAfter); err == nil && seconds > 0 {
+				delay := time.Duration(seconds) * time.Second
+				if delay > max {
+					delay = max
+				}
+				log.Debug().
+					Dur("delay", delay).
+					Int("attempt", attemptNum).
+					Str("retry_after", retryAfter).
+					Msg("Rate limit backoff delay from Retry-After header")
+				return delay
+			}
+		}
+
+		// If no Retry-After header, use exponential backoff starting at httpRateLimitRetryDelay
+		baseDelay := httpRateLimitRetryDelay * time.Duration(1<<uint(attemptNum))
+
+		// Cap at max
+		if baseDelay > max {
+			return max
+		}
+
+		log.Debug().
+			Dur("delay", baseDelay).
+			Int("attempt", attemptNum).
+			Msg("Rate limit backoff delay")
+
+		return baseDelay
+	}
+
+	// Otherwise use default exponential backoff
+	return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
 }
 
 func addQueryMappingFile(queryMappingProvider interfaces.QueryMappingRepo, exporter export2.Exporter) error {
@@ -1233,7 +1297,10 @@ func fetchProjectExcludeSettings(client rest.Client, exporter export2.Exporter, 
 				log.Info().Int("projectID", project.ID).Msg("collecting project exclude settings")
 				excludeSettings, err := client.GetProjectExcludeSettings(project.ID)
 				if err != nil {
-					return errors.Wrapf(err, "failed to get exclude settings for project %d", project.ID)
+					log.Error().Err(err).
+						Int("projectID", project.ID).
+						Msg("Skipping project due to error getting exclude settings")
+					continue
 				}
 				allExcludeSettings = append(allExcludeSettings, excludeSettings)
 			}
@@ -1244,7 +1311,10 @@ func fetchProjectExcludeSettings(client rest.Client, exporter export2.Exporter, 
 			log.Info().Int("projectID", project.ID).Msg("collecting project exclude settings")
 			excludeSettings, err := client.GetProjectExcludeSettings(project.ID)
 			if err != nil {
-				return errors.Wrapf(err, "failed to get exclude settings for project %d", project.ID)
+				log.Error().Err(err).
+					Int("projectID", project.ID).
+					Msg("Skipping project due to error getting exclude settings")
+				continue
 			}
 			allExcludeSettings = append(allExcludeSettings, excludeSettings)
 		}
