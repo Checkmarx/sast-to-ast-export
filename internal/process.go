@@ -1111,7 +1111,7 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 }
 
 // customBackoff provides exponential backoff with special handling for rate limiting
-func customBackoff(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+func customBackoff(minDelay, maxDelay time.Duration, attemptNum int, resp *http.Response) time.Duration {
 	// If we got a 429, check for Retry-After header first
 	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
 		// Check for Retry-After header (can be in seconds or HTTP date)
@@ -1119,8 +1119,8 @@ func customBackoff(min, max time.Duration, attemptNum int, resp *http.Response) 
 			// Try parsing as seconds first
 			if seconds, err := strconv.Atoi(retryAfter); err == nil && seconds > 0 {
 				delay := time.Duration(seconds) * time.Second
-				if delay > max {
-					delay = max
+				if delay > maxDelay {
+					delay = maxDelay
 				}
 				log.Debug().
 					Dur("delay", delay).
@@ -1132,11 +1132,19 @@ func customBackoff(min, max time.Duration, attemptNum int, resp *http.Response) 
 		}
 
 		// If no Retry-After header, use exponential backoff starting at httpRateLimitRetryDelay
-		baseDelay := httpRateLimitRetryDelay * time.Duration(1<<uint(attemptNum))
+		// Cap exponent to prevent integer overflow (G115)
+		exp := attemptNum
+		if exp < 0 {
+			exp = 0
+		}
+		if exp > 20 {
+			exp = 20
+		}
+		baseDelay := httpRateLimitRetryDelay * time.Duration(1<<uint(exp))
 
 		// Cap at max
-		if baseDelay > max {
-			return max
+		if baseDelay > maxDelay {
+			return maxDelay
 		}
 
 		log.Debug().
@@ -1148,7 +1156,7 @@ func customBackoff(min, max time.Duration, attemptNum int, resp *http.Response) 
 	}
 
 	// Otherwise use default exponential backoff
-	return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
+	return retryablehttp.DefaultBackoff(minDelay, maxDelay, attemptNum, resp)
 }
 
 func addQueryMappingFile(queryMappingProvider interfaces.QueryMappingRepo, exporter export2.Exporter) error {
