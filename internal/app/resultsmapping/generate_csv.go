@@ -52,6 +52,6 @@ func WriteAllToSanitizedCsv(records [][]string) []byte {
 }
 
 func sanitize(cell string) string {
-	escapedCell := strings.Replace(cell, `"`, `""`, -1)
+	escapedCell := strings.ReplaceAll(cell, `"`, `""`)
 	return fmt.Sprintf(`"'%s"`, escapedCell)
 }

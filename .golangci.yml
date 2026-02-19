@@ -1,3 +1,5 @@
+version: "2"
+
 linters-settings:
   dupl:
     threshold: 100
@@ -22,16 +24,17 @@ linters-settings:
       - wrapperFunc
   gocyclo:
     min-complexity: 15
-  goimports:
-    local-prefixes: github.com/golangci/golangci-lint
-  golint:
-    min-confidence: 0
-  gomnd:
-    settings:
-      mnd:
-        checks: argument,case,condition,return
+  revive:
+    confidence: 0
+  mnd:
+    checks:
+      - argument
+      - case
+      - condition
+      - return
   govet:
-    shadow: true
+    enable:
+      - shadow
     settings:
       printf:
         funcs:
@@ -41,8 +44,6 @@ linters-settings:
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
   lll:
     line-length: 140
-  maligned:
-    suggest-new: true
   misspell:
     locale: US
 
@@ -59,11 +60,8 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - gofmt
-    - goimports
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - lll
@@ -72,16 +70,10 @@ linters:
     - revive
     - rowserrcheck
     - staticcheck
-    - stylecheck
     - unconvert
     - unparam
     - unused
     - whitespace
-
-  don't enable:
-    - typecheck
-    - typechecker
-    - depguard
 
 issues:
   exclude-dirs:
@@ -94,7 +86,3 @@ issues:
       linters:
         - revive
 
-service:
-  golangci-lint-version: 1.63.4 # Updated to match latest stable version
-  prepare:
-    - echo "Custom preparation commands go here"

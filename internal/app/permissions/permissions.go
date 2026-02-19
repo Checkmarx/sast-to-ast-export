@@ -34,11 +34,12 @@ func GetFromExportOptions(exportOptions []string) []interface{} {
 	resultsPermissions := []string{useOdataPermission, generateScanReportPermission, viewResults}
 
 	for _, exportOption := range exportOptions {
-		if exportOption == export.UsersOption {
+		switch exportOption {
+		case export.UsersOption:
 			output = append(output, usersPermissions...)
-		} else if exportOption == export.TeamsOption {
+		case export.TeamsOption:
 			output = append(output, teamsPermissions...)
-		} else if exportOption == export.ResultsOption {
+		case export.ResultsOption:
 			output = append(output, resultsPermissions...)
 		}
 	}

@@ -1111,7 +1111,7 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 }
 
 // customBackoff provides exponential backoff with special handling for rate limiting
-func customBackoff(minDelay, maxDelay time.Duration, attemptNum int, resp *http.Response) time.Duration {
+func customBackoff(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
 	// If we got a 429, check for Retry-After header first
 	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
 		// Check for Retry-After header (can be in seconds or HTTP date)
@@ -1119,8 +1119,8 @@ func customBackoff(minDelay, maxDelay time.Duration, attemptNum int, resp *http.
 			// Try parsing as seconds first
 			if seconds, err := strconv.Atoi(retryAfter); err == nil && seconds > 0 {
 				delay := time.Duration(seconds) * time.Second
-				if delay > maxDelay {
-					delay = maxDelay
+				if delay > max {
+					delay = max
 				}
 				log.Debug().
 					Dur("delay", delay).
@@ -1132,19 +1132,16 @@ func customBackoff(minDelay, maxDelay time.Duration, attemptNum int, resp *http.
 		}
 
 		// If no Retry-After header, use exponential backoff starting at httpRateLimitRetryDelay
-		// Cap exponent to prevent integer overflow (G115)
-		exp := attemptNum
-		if exp < 0 {
-			exp = 0
+		// Cap attemptNum to prevent overflow
+		safeAttempt := attemptNum
+		if safeAttempt > 10 {
+			safeAttempt = 10
 		}
-		if exp > 20 {
-			exp = 20
-		}
-		baseDelay := httpRateLimitRetryDelay * time.Duration(1<<uint(exp))
+		baseDelay := httpRateLimitRetryDelay * time.Duration(1<<uint(safeAttempt))
 
 		// Cap at max
-		if baseDelay > maxDelay {
-			return maxDelay
+		if baseDelay > max {
+			return max
 		}
 
 		log.Debug().
@@ -1156,7 +1153,7 @@ func customBackoff(minDelay, maxDelay time.Duration, attemptNum int, resp *http.
 	}
 
 	// Otherwise use default exponential backoff
-	return retryablehttp.DefaultBackoff(minDelay, maxDelay, attemptNum, resp)
+	return retryablehttp.DefaultBackoff(min, max, attemptNum, resp)
 }
 
 func addQueryMappingFile(queryMappingProvider interfaces.QueryMappingRepo, exporter export2.Exporter) error {
@@ -1248,7 +1245,9 @@ func fetchCustomExtensions(args *Args, exporter export2.Exporter) error {
 	// Split the input string by space to get language, extension and language group
 	parts := strings.Split(args.CustomExtensions, " ")
 	if len(parts) < 3 || len(parts)%3 != 0 {
-		return fmt.Errorf("invalid custom extensions format. Expected: Language Extension LanguageGroup [Language Extension LanguageGroup ...]")
+		return fmt.Errorf(
+			"invalid custom extensions format. Expected: Language Extension LanguageGroup [...]",
+		)
 	}
 
 	customExtensions := &CustomExtensionsList{
@@ -1286,7 +1285,12 @@ func fetchCustomExtensions(args *Args, exporter export2.Exporter) error {
 	return nil
 }
 
-func fetchProjectExcludeSettings(client rest.Client, exporter export2.Exporter, projects []*rest.Project, projectIDs string) error {
+func fetchProjectExcludeSettings(
+	client rest.Client,
+	exporter export2.Exporter,
+	projects []*rest.Project,
+	projectIDs string,
+) error {
 	var allExcludeSettings []*rest.ProjectExcludeSettings
 
 	// If specific project IDs are provided, filter the projects

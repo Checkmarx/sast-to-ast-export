@@ -112,7 +112,8 @@ func (c *APIClient) Authenticate(username, password string) error {
 		Int("statusCode", resp.StatusCode).
 		Logger()
 
-	if resp.StatusCode == http.StatusOK {
+	switch resp.StatusCode {
+	case http.StatusOK:
 		responseBody, ioErr := io.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate ok failed read response")
@@ -128,7 +129,7 @@ func (c *APIClient) Authenticate(username, password string) error {
 			return fmt.Errorf("authentication error - could not decode response")
 		}
 		return nil
-	} else if resp.StatusCode == http.StatusBadRequest {
+	case http.StatusBadRequest:
 		responseBody, ioErr := io.ReadAll(resp.Body)
 		if ioErr != nil {
 			logger.Debug().Err(ioErr).Msg("authenticate bad request failed to read response")
