@@ -70,6 +70,28 @@ type ReportConsumeOutput struct {
 	Record    *metadata.Record
 }
 
+type triagedScanJob struct {
+	ProjectID  int
+	LastScanID int
+}
+
+type triagedScanResult struct {
+	ProjectID  int
+	LastScanID int
+	HasResults bool
+	Count      int
+	Err        error
+}
+
+type excludeSettingsResult struct {
+	Settings *rest.ProjectExcludeSettings
+}
+
+type engineConfigResult struct {
+	Config JoinedConfig
+	Skip   bool
+}
+
 //nolint:gocyclo,funlen
 func RunExport(args *Args) error {
 	consumerCount := worker.GetNumCPU()
@@ -857,25 +879,60 @@ func getTriagedScans(client rest.Client, fromDate, teamName, projectsIDs string)
 			Int("count", len(*projects)).
 			Msg("processing project last scans")
 
-		for _, project := range *projects {
-			// get triaged results
-			triagedResults, triagedResultsErr := client.GetTriagedResultsByScanID(project.LastScanID)
-			if triagedResultsErr != nil {
-				log.Debug().Err(triagedResultsErr).
-					Int("projectID", project.ID).
-					Int("scanID", project.LastScanID).
-					Msg("failed fetching triaged results")
-				return output, triagedResultsErr
+		pageProjects := *projects
+		jobs := make(chan triagedScanJob, len(pageProjects))
+		results := make(chan triagedScanResult, len(pageProjects))
+
+		for w := 0; w < worker.GetIOWorkerCount(); w++ {
+			go func() {
+				for job := range jobs {
+					triagedResults, triagedResultsErr := client.GetTriagedResultsByScanID(job.LastScanID)
+					if triagedResultsErr != nil {
+						log.Debug().Err(triagedResultsErr).
+							Int("projectID", job.ProjectID).
+							Int("scanID", job.LastScanID).
+							Msg("failed fetching triaged results")
+						results <- triagedScanResult{Err: triagedResultsErr}
+						continue
+					}
+					results <- triagedScanResult{
+						ProjectID:  job.ProjectID,
+						LastScanID: job.LastScanID,
+						HasResults: len(*triagedResults) > 0,
+						Count:      len(*triagedResults),
+					}
+				}
+			}()
+		}
+		for _, project := range pageProjects {
+			jobs <- triagedScanJob{ProjectID: project.ID, LastScanID: project.LastScanID}
+		}
+		close(jobs)
+
+		// collect all results; track first error but don't fail-fast so all workers finish
+		var pageErr error
+		for range pageProjects {
+			r := <-results
+			if r.Err != nil {
+				if pageErr == nil {
+					pageErr = r.Err
+				}
+				continue
 			}
-			if len(*triagedResults) > 0 {
-				output = append(output, TriagedScan{project.ID, project.LastScanID})
-				log.Info().Msgf("%d triaged results found from projectId=%d scanId=%d", len(*triagedResults), project.ID, project.LastScanID)
+			if r.HasResults {
+				output = append(output, TriagedScan{r.ProjectID, r.LastScanID})
+				log.Info().Msgf("%d triaged results found from projectId=%d scanId=%d", r.Count, r.ProjectID, r.LastScanID)
 			}
+		}
+		if pageErr != nil {
+			sort.Slice(output, func(i, j int) bool { return output[i].ProjectID < output[j].ProjectID })
+			return output, pageErr
 		}
 
 		// prepare to fetch next page
 		projectOffset += projectLimit
 	}
+	sort.Slice(output, func(i, j int) bool { return output[i].ProjectID < output[j].ProjectID })
 	return output, nil
 }
 
@@ -904,68 +961,65 @@ func getProjectConfigurations(client rest.Client, projects []*rest.Project, expo
 		engineConfigMap[mapping.EngineConfigurationID] = mapping.Name
 	}
 
-	// If specific project IDs are provided, filter the projects
+	// Build filtered project list
+	var targetProjects []*rest.Project
 	if projectIDs != "" {
-		// Split the project IDs string into individual IDs
 		ids := strings.Split(projectIDs, ",")
 		idMap := make(map[string]bool)
 		for _, id := range ids {
 			idMap[id] = true
 		}
-
-		// Filter projects based on provided IDs
 		for _, project := range projects {
-			//nolint:dupl,gocritic
 			if idMap[strconv.Itoa(project.ID)] {
+				targetProjects = append(targetProjects, project)
+			}
+		}
+	} else {
+		targetProjects = projects
+	}
+
+	configJobs := make(chan *rest.Project, len(targetProjects))
+	configResults := make(chan engineConfigResult, len(targetProjects))
+
+	for w := 0; w < worker.GetIOWorkerCount(); w++ {
+		go func() {
+			for project := range configJobs {
 				configs, err := client.GetEngineConfigurations(project.ID)
 				if err != nil {
 					log.Error().Err(err).
 						Int("projectID", project.ID).
 						Msg("Skipping project due to error with getting engine configurations details")
+					configResults <- engineConfigResult{Skip: true}
 					continue
 				}
 				var engineConfiguration rest.EngineConfigurations
 				if err := json.Unmarshal(configs, &engineConfiguration); err != nil {
 					log.Error().Err(err).Msg("Skipping project due to failed unmarshalling of scan settings")
+					configResults <- engineConfigResult{Skip: true}
 					continue
 				}
-
 				engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
 				keys := engineKeysMap[engineConfigName]
+				configResults <- engineConfigResult{
+					Config: JoinedConfig{
+						ProjectID:               engineConfiguration.Project.ID,
+						EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
+						EngineConfigurationName: engineConfigName,
+						ConfigurationKeys:       keys,
+					},
+				}
+			}
+		}()
+	}
+	for _, project := range targetProjects {
+		configJobs <- project
+	}
+	close(configJobs)
 
-				engineConfigs = append(engineConfigs, JoinedConfig{
-					ProjectID:               engineConfiguration.Project.ID,
-					EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
-					EngineConfigurationName: engineConfigName,
-					ConfigurationKeys:       keys,
-				})
-			}
-		}
-	} else {
-		// If no specific IDs provided, process all projects
-		//nolint:dupl
-		for _, project := range projects {
-			configs, err := client.GetEngineConfigurations(project.ID)
-			if err != nil {
-				log.Error().Err(err).
-					Int("projectID", project.ID).
-					Msg("Skipping project due to error with getting engine configurations details")
-				continue
-			}
-			var engineConfiguration rest.EngineConfigurations
-			if err := json.Unmarshal(configs, &engineConfiguration); err != nil {
-				log.Error().Err(err).Msg("Skipping project due to failed unmarshalling of scan settings")
-				continue
-			}
-
-			engineConfigName := engineConfigMap[engineConfiguration.EngineConfiguration.ID]
-			keys := engineKeysMap[engineConfigName]
-			engineConfigs = append(engineConfigs, JoinedConfig{
-				ProjectID:               engineConfiguration.Project.ID,
-				EngineConfigurationID:   engineConfiguration.EngineConfiguration.ID,
-				EngineConfigurationName: engineConfigName,
-				ConfigurationKeys:       keys,
-			})
+	for range targetProjects {
+		r := <-configResults
+		if !r.Skip {
+			engineConfigs = append(engineConfigs, r.Config)
 		}
 	}
 
@@ -1293,42 +1347,51 @@ func fetchProjectExcludeSettings(
 ) error {
 	var allExcludeSettings []*rest.ProjectExcludeSettings
 
-	// If specific project IDs are provided, filter the projects
+	// Build filtered project list
+	var targetProjects []*rest.Project
 	if projectIDs != "" {
-		// Split the project IDs string into individual IDs
 		ids := strings.Split(projectIDs, ",")
 		idMap := make(map[string]bool)
 		for _, id := range ids {
 			idMap[id] = true
 		}
-
-		// Filter projects based on provided IDs
 		for _, project := range projects {
-			//nolint:dupl,gocritic
 			if idMap[strconv.Itoa(project.ID)] {
+				targetProjects = append(targetProjects, project)
+			}
+		}
+	} else {
+		targetProjects = projects
+	}
+
+	excludeJobs := make(chan *rest.Project, len(targetProjects))
+	excludeResults := make(chan excludeSettingsResult, len(targetProjects))
+
+	for w := 0; w < worker.GetIOWorkerCount(); w++ {
+		go func() {
+			for project := range excludeJobs {
 				log.Info().Int("projectID", project.ID).Msg("collecting project exclude settings")
 				excludeSettings, err := client.GetProjectExcludeSettings(project.ID)
 				if err != nil {
 					log.Error().Err(err).
 						Int("projectID", project.ID).
 						Msg("Skipping project due to error getting exclude settings")
+					excludeResults <- excludeSettingsResult{}
 					continue
 				}
-				allExcludeSettings = append(allExcludeSettings, excludeSettings)
+				excludeResults <- excludeSettingsResult{Settings: excludeSettings}
 			}
-		}
-	} else {
-		// If no specific IDs provided, process all projects
-		for _, project := range projects {
-			log.Info().Int("projectID", project.ID).Msg("collecting project exclude settings")
-			excludeSettings, err := client.GetProjectExcludeSettings(project.ID)
-			if err != nil {
-				log.Error().Err(err).
-					Int("projectID", project.ID).
-					Msg("Skipping project due to error getting exclude settings")
-				continue
-			}
-			allExcludeSettings = append(allExcludeSettings, excludeSettings)
+		}()
+	}
+	for _, project := range targetProjects {
+		excludeJobs <- project
+	}
+	close(excludeJobs)
+
+	for range targetProjects {
+		r := <-excludeResults
+		if r.Settings != nil {
+			allExcludeSettings = append(allExcludeSettings, r.Settings)
 		}
 	}
 
