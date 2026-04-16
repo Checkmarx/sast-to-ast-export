@@ -367,6 +367,8 @@ func (c *APIClient) GetTriagedResultsByScanID(scanID int) (*[]TriagedScanResult,
 	}
 	q := req.URL.Query()
 	q.Add("$filter", "Comment ne null")
+	q.Add("$top", "1")
+	q.Add("$select", "Id")
 	req.URL.RawQuery = q.Encode()
 	body, getErr := c.getResponseBodyFromRequest(req)
 	if getErr != nil {
