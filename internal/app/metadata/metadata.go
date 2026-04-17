@@ -72,24 +72,29 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 			return nil, errors.Wrap(methodLineErr, "could not get method lines")
 		}
 		var filesToDownload []interfaces.SourceFile
+		fileMap := make(map[string]interfaces.SourceFile)
 		for _, result := range query.Results {
 			firstFile := filepath.Join(result.ResultID, result.FirstNode.FileName)
 			lastFile := filepath.Join(result.ResultID, result.LastNode.FileName)
 
 			if ok1 := findSourceFile(result.ResultID, firstFile, filesToDownload); ok1 == nil {
-				filesToDownload = append(filesToDownload, interfaces.SourceFile{
+				sf := interfaces.SourceFile{
 					ResultID:   result.ResultID,
 					RemoteName: result.FirstNode.FileName,
 					LocalName:  filepath.Join(e.tmpDir, result.ResultID, result.FirstNode.FileName),
-				})
+				}
+				filesToDownload = append(filesToDownload, sf)
+				fileMap[result.ResultID+"|"+result.FirstNode.FileName] = sf
 			}
 
 			if ok2 := findSourceFile(result.ResultID, lastFile, filesToDownload); ok2 == nil {
-				filesToDownload = append(filesToDownload, interfaces.SourceFile{
+				sf := interfaces.SourceFile{
 					ResultID:   result.ResultID,
 					RemoteName: result.LastNode.FileName,
 					LocalName:  filepath.Join(e.tmpDir, result.ResultID, result.LastNode.FileName),
-				})
+				}
+				filesToDownload = append(filesToDownload, sf)
+				fileMap[result.ResultID+"|"+result.LastNode.FileName] = sf
 			}
 		}
 		downloadErr := e.sourceProvider.DownloadSourceFiles(scanID, filesToDownload, e.rmvDir)
@@ -102,8 +107,8 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 		q := query
 		go func() {
 			for _, result := range q.Results {
-				firstSourceFile := findSourceFile(result.ResultID, result.FirstNode.FileName, filesToDownload)
-				lastSourceFile := findSourceFile(result.ResultID, result.LastNode.FileName, filesToDownload)
+				firstSourceFile := fileMap[result.ResultID+"|"+result.FirstNode.FileName]
+				lastSourceFile := fileMap[result.ResultID+"|"+result.LastNode.FileName]
 				resultPath := findResultPath(result.PathID, methodLinesByPath)
 				if resultPath == nil {
 					log.Info().Msgf("Result path not found for ID: %s, on file name: %s and pathId %s",
@@ -160,46 +165,37 @@ func (e *Factory) GetMetadataRecord(scanID string, queries []*Query) (*Record, e
 			}
 			return similarityCalculationResults[i].ResultID < similarityCalculationResults[j].ResultID
 		})
+		// build lookup maps for O(1) access during result handling
+		recordResultByID := make(map[string]*RecordResult)
+		recordPathByKey := make(map[string]*RecordPath)
+		origSimByKey := make(map[string]string)
+		for _, orig := range query.Results {
+			origSimByKey[orig.ResultID+"|"+orig.PathID] = orig.SimilarityID
+		}
+
 		// handle calculation results
 		for _, r := range similarityCalculationResults {
 			if r.Err != nil {
 				return nil, errors.Wrap(r.Err, "failed calculating similarity id")
 			}
-			var recordResult *RecordResult
-			for _, x := range output.Queries[queryIdx].Results {
-				if x.ResultID == r.ResultID {
-					recordResult = x
-					break
-				}
-			}
-			if recordResult == nil {
+
+			recordResult, exists := recordResultByID[r.ResultID]
+			if !exists {
 				recordResult = &RecordResult{ResultID: r.ResultID}
 				output.Queries[queryIdx].Results = append(output.Queries[queryIdx].Results, recordResult)
+				recordResultByID[r.ResultID] = recordResult
 			}
-			var recordPath *RecordPath
-			for _, x := range recordResult.Paths {
-				if x.PathID == r.PathID {
-					recordPath = x
-					break
-				}
-			}
-			if recordPath == nil {
-				// Find the original SAST similarity ID from query results
-				originalSASTSimilarityID := ""
-				for _, originalResult := range query.Results {
-					if originalResult.ResultID == r.ResultID && originalResult.PathID == r.PathID {
-						originalSASTSimilarityID = originalResult.SimilarityID
-						break
-					}
-				}
 
-				recordPath = &RecordPath{
+			pathKey := r.ResultID + "|" + r.PathID
+			if _, exists := recordPathByKey[pathKey]; !exists {
+				recordPath := &RecordPath{
 					PathID:           r.PathID,
 					SimilarityID:     r.SimilarityID,
 					ResultID:         r.ResultID,
-					SASTSimilarityID: originalSASTSimilarityID,
+					SASTSimilarityID: origSimByKey[pathKey],
 				}
 				recordResult.Paths = append(recordResult.Paths, recordPath)
+				recordPathByKey[pathKey] = recordPath
 			}
 		}
 
