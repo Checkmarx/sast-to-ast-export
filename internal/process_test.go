@@ -1044,6 +1044,11 @@ func TestFetchResultsData(t *testing.T) {
 			GetTriagedResultsByScanID(gomock.Eq(1)).
 			Return(nil, fmt.Errorf("failed getting triaged scan")).
 			AnyTimes()
+		// concurrent workers may call scan 2 before scan 1's error is known
+		client.EXPECT().
+			GetTriagedResultsByScanID(gomock.Eq(2)).
+			Return(nil, fmt.Errorf("failed getting triaged scan")).
+			AnyTimes()
 		exporter := mock_app_export.NewMockExporter(ctrl)
 		metadataProvider := mock_app_metadata.NewMockProvider(ctrl)
 		args := &Args{}
