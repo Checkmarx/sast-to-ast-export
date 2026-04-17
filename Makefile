@@ -1,7 +1,7 @@
 EXTERNAL_PATH = ./external
 BUILD_PATH = ./build
 PRODUCT_NAME = cxsast_exporter
-PRODUCT_VERSION = $(shell cat VERSION)
+PRODUCT_VERSION ?= $(shell cat VERSION)
 PRODUCT_BUILD = $(shell date +%Y%m%d%H%M%S)
 LD_FLAGS = -ldflags="-s -w -X github.com/checkmarxDev/ast-sast-export/cmd.productName=$(PRODUCT_NAME) -X github.com/checkmarxDev/ast-sast-export/cmd.productVersion=$(PRODUCT_VERSION) -X github.com/checkmarxDev/ast-sast-export/cmd.productBuild=$(PRODUCT_BUILD)"
 
