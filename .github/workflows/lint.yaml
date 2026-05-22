@@ -6,10 +6,16 @@ on:
       - master
       - dev
 
+permissions:
+  contents: read
+
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # for actions/checkout to fetch code
+      pull-requests: read  # for golangci/golangci-lint-action to fetch pull requests
+    runs-on: cx-public-ubuntu-x64
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 

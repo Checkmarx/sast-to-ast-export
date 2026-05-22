@@ -10,10 +10,13 @@ on:
       - master
       - dev
 
+permissions:
+  contents: read
+
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     steps:
       - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
 
