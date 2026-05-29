@@ -25,7 +25,7 @@ jobs:
           go-version: 1.25.8
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6.1.0
+        uses: step-security/golangci-lint-action@1797facf9ea427614d729a4e9cab0fae1a7852d9 # v9.2.0
         with:
           version: v2.10.1
           args: --timeout=5m
