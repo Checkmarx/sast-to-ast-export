@@ -3,7 +3,7 @@ name: backend-go
 on:
   pull_request:
     branches:
-      - main
+      - master
 
 permissions:
   contents: read
