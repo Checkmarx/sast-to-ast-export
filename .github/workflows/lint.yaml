@@ -29,4 +29,5 @@ jobs:
         with:
           version: v2.10.1
           args: --timeout=5m
-          only-new-issues: true
+          only-new-issues: true          
+          verify: false  # config verify fetches a JSON schema from golangci-lint.run, which the runner egress policy blocks
