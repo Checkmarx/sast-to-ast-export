@@ -16,6 +16,6 @@ jobs:
       pull-requests: write # posting status comments back to the PR
     uses: CheckmarxDev/gh-actions-library/.github/workflows/backend-go.yml@d81579141947cdfb34398e7d23dc3d65adf3ebe6
     with:
-      base-branch: 'main'
+      base-branch: 'master'
       trivy-dockerfiles: Dockerfile
     secrets: inherit # zizmor: ignore[secrets-inherit] reusable workflow in trusted CheckmarxDev/gh-actions-library
