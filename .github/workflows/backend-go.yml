@@ -1,0 +1,21 @@
+name: backend-go
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    permissions:
+      contents: read
+      id-token: write # OIDC auth for AWS/ECR pushes inside the reusable workflow
+      pull-requests: write # posting status comments back to the PR
+    uses: CheckmarxDev/gh-actions-library/.github/workflows/backend-go.yml@d81579141947cdfb34398e7d23dc3d65adf3ebe6
+    with:
+      base-branch: 'main'
+      trivy-dockerfiles: Dockerfile
+    secrets: inherit # zizmor: ignore[secrets-inherit] reusable workflow in trusted CheckmarxDev/gh-actions-library
